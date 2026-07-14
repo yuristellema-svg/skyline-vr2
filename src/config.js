@@ -1,61 +1,55 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-friendly-1.2.0',
+  version: 'fable-iteration-3-calm-1.3.1',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
-    // Faster starting point without making the player absurdly fast.
-    spawnSpeed: 86,
+    // Noticeably slower than the previous build.
+    spawnSpeed: 72,
+    minimumSpeed: 24,
 
-    // Prevent the flight from collapsing into an unrecoverable slow fall.
-    minimumSpeed: 38,
-
-    angularResponse: 14,
-    angularRelease: 18,
+    // Smoother and less violent turning.
+    angularResponse: 10,
+    angularRelease: 14,
 
     aero: Object.freeze({
-      liftSlope: 3.4,
+      liftSlope: 3.2,
 
-      // Normal pull-ups and turning should rarely cause a complete stall.
-      stallAngle: 52 * DEG,
-      postStallAngle: 82 * DEG,
-      postStallLiftFraction: 0.78,
+      // Forgiving, but an extreme pull can still stall.
+      stallAngle: 45 * DEG,
+      postStallAngle: 78 * DEG,
+      postStallLiftFraction: 0.72,
 
-      // The flight path follows the direction you point more effectively.
-      liftRateCoefficient: 0.021,
-      maximumG: 7,
+      liftRateCoefficient: 0.017,
+      maximumG: 6,
 
-      // Low drag, but still enough that speed has some meaning.
-      parasiticDrag: 2.5e-5,
-      inducedDrag: 6e-5,
+      // Moderate drag: speed matters, but it should not collapse instantly.
+      parasiticDrag: 1.2e-4,
+      inducedDrag: 2.8e-4,
 
-      // Stalls gently correct the player instead of violently forcing them down.
-      stallPitchAcceleration: 0.22,
-
-      // Gravity still bends the flight downward, but less aggressively.
-      gravityPathBend: 0.58,
+      // Gentle stall recovery.
+      stallPitchAcceleration: 0.35,
+      gravityPathBend: 0.78,
     }),
 
     boost3: Object.freeze({
-      // A moderate dive should be enough to start charging.
-      chargeSpeed: 68,
-      chargePathAngle: -5 * DEG,
-      chargeSeconds: 1.2,
+      // Requires a real but not extreme dive.
+      chargeSpeed: 80,
+      chargePathAngle: -10 * DEG,
+      chargeSeconds: 2,
 
-      // Plenty of time to notice the charge and perform the pull-up.
-      armedSeconds: 8,
+      armedSeconds: 7,
       drainSeconds: 3,
 
-      // A clear upward movement triggers boost.
-      triggerPitchRate: 10 * DEG,
+      triggerPitchRate: 15 * DEG,
 
-      // Strong, but not ridiculously overpowered.
-      duration: 4,
-      deltaSpeed: 45,
+      // Much weaker than the previous version.
+      duration: 2.5,
+      deltaSpeed: 16,
     }),
 
     telemetry: Object.freeze({
@@ -71,20 +65,22 @@ export const CONFIG = Object.freeze({
     pitchFullDeflection: 25 * DEG,
     rollFullDeflection: 30 * DEG,
 
-    pitchMaxRate: 110 * DEG,
-    rollMaxRate: 160 * DEG,
+    pitchMaxRate: 75 * DEG,
+    rollMaxRate: 120 * DEG,
 
-    responseExponent: 1.6,
+    responseExponent: 1.7,
 
     yawMenuThreshold: 45 * DEG,
     yawMenuHold: 1,
 
     sensorStaleAfter: 0.8,
-    inputSlewSeconds: 0.06,
 
-    highSpeedControlStart: 105,
-    highSpeedControlFull: 140,
-    highSpeedControlScale: 0.88,
+    // Less twitchy.
+    inputSlewSeconds: 0.12,
+
+    highSpeedControlStart: 90,
+    highSpeedControlFull: 120,
+    highSpeedControlScale: 0.72,
   }),
 
   sensitivity: Object.freeze({
@@ -116,11 +112,14 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-    monoSpeedFov: 13,
+
+    // Less dramatic speed zoom.
+    monoSpeedFov: 6,
+
     stereoFov: 80,
 
-    fovSpeedStart: 55,
-    fovSpeedFull: 135,
+    fovSpeedStart: 70,
+    fovSpeedFull: 125,
 
     thirdBack: 11,
     thirdUp: 3.5,
@@ -137,25 +136,30 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    streakCount: 220,
-    streakStartSpeed: 45,
-    streakFullSpeed: 120,
-    streakDepth: 65,
-    streakRadius: 10,
+    // Much less visual clutter.
+    streakCount: 100,
+    streakStartSpeed: 75,
+    streakFullSpeed: 130,
+    streakDepth: 45,
+    streakRadius: 8,
 
-    boostIntensity: 2.1,
+    boostIntensity: 1.1,
 
-    gVignetteStart: 4,
-    gVignetteFull: 7,
+    gVignetteStart: 5.5,
+    gVignetteFull: 8.5,
 
-    maxViewSqueeze: 0.02,
-    maxVrShake: 0.18 * DEG,
+    maxViewSqueeze: 0.005,
 
-    negativeGTintStart: -0.35,
+    // Disable permanent speed shake.
+    maxVrShake: 0,
 
-    stallBuffetAngle: 0.3 * DEG,
+    negativeGTintStart: -0.7,
 
-    promptDepth: 2.5,
+    // Disable stall shaking.
+    stallBuffetAngle: 0,
+
+    // Hides the giant PULL / BOOST text beyond the camera range.
+    promptDepth: 5000,
   }),
 
   menu: Object.freeze({
