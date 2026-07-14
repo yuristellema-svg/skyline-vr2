@@ -7,22 +7,48 @@ export class MonoHud {
     this.camera = root.querySelector('[data-camera]');
     this.performance = root.querySelector('[data-performance]');
     this._elapsed = 0;
+
+    if (this.boost) {
+      this.boost.style.display = 'none';
+    }
   }
 
   setVisible(visible) {
-    this.root.classList.toggle('hidden', !visible);
+    this.root.classList.toggle(
+      'hidden',
+      !visible
+    );
   }
 
-  update(dt, flight, cameraMode, metrics, droppedSteps) {
+  update(
+    dt,
+    flight,
+    cameraMode,
+    metrics,
+    droppedSteps
+  ) {
     this._elapsed += dt;
-    if (this._elapsed < 0.1) return;
+
+    if (this._elapsed < 0.1) {
+      return;
+    }
+
     this._elapsed = 0;
-    this.speed.textContent = `${Math.round(flight.speedKmh)} km/h`;
-    this.g.textContent = `${flight.gLoad.toFixed(1)} g`;
-    this.boost.textContent = flight.boosting
-      ? 'BOOST'
-      : `${Math.round(flight.boostCharge * 100)}%`;
-    this.camera.textContent = cameraMode === 'first' ? 'FIRST PERSON' : 'THIRD PERSON';
-    this.performance.textContent = `${metrics.calls} calls · ${Math.round(metrics.triangles / 1000)}k tris · ${droppedSteps} dropped`;
+
+    this.speed.textContent =
+      `${Math.round(flight.speedKmh)} km/h`;
+
+    this.g.textContent =
+      `${flight.gLoad.toFixed(1)} g`;
+
+    this.camera.textContent =
+      cameraMode === 'first'
+        ? 'FIRST PERSON'
+        : 'THIRD PERSON';
+
+    this.performance.textContent =
+      `${metrics.calls} calls · ` +
+      `${Math.round(metrics.triangles / 1000)}k tris · ` +
+      `${droppedSteps} dropped`;
   }
 }
