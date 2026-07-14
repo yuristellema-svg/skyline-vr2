@@ -9,7 +9,30 @@ export class MonoHud {
     this._elapsed = 0;
 
     if (this.boost) {
-      this.boost.style.display = 'none';
+      let boostRow = this.boost;
+
+      while (
+        boostRow.parentElement &&
+        boostRow.parentElement !== root
+      ) {
+        const parent = boostRow.parentElement;
+
+        const containsOtherHudValues =
+          parent.querySelector(
+            '[data-speed], ' +
+            '[data-g], ' +
+            '[data-camera], ' +
+            '[data-performance]'
+          );
+
+        if (containsOtherHudValues) {
+          break;
+        }
+
+        boostRow = parent;
+      }
+
+      boostRow.style.display = 'none';
     }
   }
 
