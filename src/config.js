@@ -1,21 +1,19 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-research-conservative-1.4.0',
+  version: 'fable-iteration-3-soft-stall-no-boost-1.4.1',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
-    // Research-backed conservative wingsuit speed envelope.
     spawnSpeed: 28,
     minimumSpeed: 15,
     preferredCruiseSpeed: 29,
     softMaximumSpeed: 44,
     maximumSpeed: 52,
 
-    // Numerical safety.
     maximumAcceleration: 24,
     maximumDeceleration: 24,
 
@@ -23,21 +21,17 @@ export const CONFIG = Object.freeze({
     angularRelease: 18,
 
     energy: Object.freeze({
-      // Dives convert altitude to speed slightly more strongly.
       gravityBlendAngle: 35 * DEG,
       diveGravityMultiplier: 1.18,
 
-      // Climbs still lose speed, but retain more momentum while above minimum speed.
       climbGravityMultiplier: 0.72,
 
-      // Refund part of ordinary drag only near level flight.
       levelAssistFullAngle: 2 * DEG,
       levelAssistZeroAngle: 7 * DEG,
       levelAssistSpeedBand: 3,
       levelFlightAssistance: 0.55,
       levelAssistDragFraction: 0.75,
 
-      // Progressive drag prevents runaway speed.
       maximumOverspeedDrag: 18,
       overspeedExponent: 2,
     }),
@@ -45,43 +39,65 @@ export const CONFIG = Object.freeze({
     aero: Object.freeze({
       liftSlope: 3.6,
 
-      // Warning begins before actual lift loss.
-      stallWarningAngle: 12 * DEG,
-      stallAngle: 18 * DEG,
-      postStallAngle: 32 * DEG,
-      postStallLiftFraction: 0.55,
+      /*
+       * Ordinary fast pull-ups should not stall.
+       * Warning begins late and actual lift loss begins much later.
+       */
+      stallWarningAngle: 30 * DEG,
+      stallAngle: 45 * DEG,
+      postStallAngle: 75 * DEG,
 
-      // Stall develops and clears gradually.
-      stallAttackTime: 0.22,
-      stallReleaseTime: 0.45,
+      /*
+       * Even during an extreme stall, retain most lift.
+       * This prevents the flight path from feeling frozen.
+       */
+      postStallLiftFraction: 0.88,
 
-      // Forced recovery begins only in a developed stall.
-      stallRecoveryStart: 0.55,
-      stallRecoveryStrength: 0.65,
+      /*
+       * Stall develops slowly but clears quickly
+       * when the player stops pulling.
+       */
+      stallAttackTime: 0.55,
+      stallReleaseTime: 0.12,
 
-      liftRateCoefficient: 0.014,
+      /*
+       * Completely disable forced pitch-down control.
+       * Stalling affects lift but never steals control.
+       */
+      stallRecoveryStart: 1,
+      stallRecoveryStrength: 0,
+
+      /*
+       * Slightly faster response so the flight path follows
+       * the player's chosen direction more readily.
+       */
+      liftRateCoefficient: 0.016,
       maximumG: 6,
 
-      // Much lower induced drag than the earlier build.
       parasiticDrag: 0.00042,
       inducedDrag: 0.00020,
 
       gravityPathBend: 1,
     }),
 
+    /*
+     * Boost disabled completely.
+     *
+     * The flightModel remains compatible, but these conditions
+     * can never be reached during normal gameplay.
+     */
     boost3: Object.freeze({
-      chargeSpeed: 34,
-      chargePathAngle: -12 * DEG,
-      chargeSeconds: 1.1,
+      chargeSpeed: 999,
+      chargePathAngle: -89 * DEG,
+      chargeSeconds: 999,
 
-      // One-second pull-up window; failed charge drains gently.
-      armedSeconds: 1,
-      drainSeconds: 5,
+      armedSeconds: 0,
+      drainSeconds: 1,
 
-      triggerPitchRate: 18 * DEG,
+      triggerPitchRate: 999 * DEG,
 
-      duration: 1.35,
-      deltaSpeed: 9,
+      duration: 1,
+      deltaSpeed: 0,
     }),
 
     telemetry: Object.freeze({
@@ -163,28 +179,24 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    // Subtle speed cues only.
     streakCount: 120,
     streakStartSpeed: 30,
     streakFullSpeed: 50,
     streakDepth: 48,
     streakRadius: 8,
 
-    boostIntensity: 1.25,
+    boostIntensity: 1,
 
     gVignetteStart: 5,
     gVignetteFull: 8,
 
     maxViewSqueeze: 0,
 
-    // No involuntary VR camera shake.
     maxVrShake: 0,
     stallBuffetAngle: 0,
 
     negativeGTintStart: -0.7,
 
-    // Hide the large DIVE / PULL / BOOST text.
-    // The existing reticle ring still displays charge subtly.
     promptDepth: 5000,
   }),
 
