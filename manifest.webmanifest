@@ -1,0 +1,16 @@
+{
+  "name": "Skyline VR - Iteration 3 Open World",
+  "short_name": "Skyline VR",
+  "description": "A fast head-controlled open-world flying game for iPhone VR holders.",
+  "id": "./",
+  "start_url": "./?v=iteration-3-open-world-1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#9bb7bd",
+  "theme_color": "#9bb7bd",
+  "icons": [
+    { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

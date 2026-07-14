@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#9bb7bd" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Skyline VR" />
+  <title>Skyline VR - Iteration 3 Open World</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="stylesheet" href="./styles.css?v=iteration-3-open-world-1" />
+</head>
+<body>
+  <canvas id="game" aria-label="Skyline VR Iteration 3 open-world flight game"></canvas>
+
+  <main id="start-panel" class="start-panel">
+    <div class="iteration">FABLE / ITERATION 3 / OPEN WORLD</div>
+    <h1>Skyline<br />VR</h1>
+    <p class="lead">Fast free flight across mountains, forests, water, bridges, canyon, and Skyline City.</p>
+    <div class="start-actions">
+      <button id="phone-start" class="primary">Start phone VR</button>
+      <button id="desktop-start">Desktop flight test</button>
+    </div>
+    <p id="start-status" class="status" role="status">
+      Phone: use the Home Screen icon for true fullscreen. Desktop: move the pointer to screen centre after launch.
+    </p>
+    <p class="comfort">Fast aerobatic VR can cause motion sickness. Begin with a short session and stop immediately if you feel unwell.</p>
+  </main>
+
+  <aside id="install-hint" class="install-hint hidden" role="status">
+    <strong>Fullscreen phone VR</strong>
+    <span>In Safari tap Share → Add to Home Screen, then open Skyline VR from its icon.</span>
+    <button id="install-dismiss" type="button">Got it</button>
+  </aside>
+
+  <div id="orientation-warning" class="orientation-warning hidden" role="status">
+    <strong>Rotate to landscape</strong>
+    <span>Hold your head level. The game will recalibrate automatically.</span>
+  </div>
+
+  <div id="eye-message" class="eye-message hidden" aria-live="polite">
+    <span class="eye eye-left"></span>
+    <span class="eye eye-right"></span>
+  </div>
+
+  <section id="mono-hud" class="mono-hud hidden" aria-label="Desktop flight telemetry">
+    <div><strong data-speed>0 km/h</strong><span data-g>1.0 g</span></div>
+    <div><span>BOOST</span><strong data-boost>0%</strong></div>
+    <div><span data-camera>FIRST PERSON</span><small>C camera / Esc menu / R respawn / T telemetry</small></div>
+    <small data-performance>0 calls / 0k tris / 0 dropped</small>
+  </section>
+
+  <script type="module" src="./bundle.js?v=iteration-3-open-world-1"></script>
+</body>
+</html>
