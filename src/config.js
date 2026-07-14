@@ -1,55 +1,87 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-calm-1.3.1',
+  version: 'fable-iteration-3-research-conservative-1.4.0',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
-    // Noticeably slower than the previous build.
-    spawnSpeed: 72,
-    minimumSpeed: 24,
+    // Research-backed conservative wingsuit speed envelope.
+    spawnSpeed: 28,
+    minimumSpeed: 15,
+    preferredCruiseSpeed: 29,
+    softMaximumSpeed: 44,
+    maximumSpeed: 52,
 
-    // Smoother and less violent turning.
-    angularResponse: 10,
-    angularRelease: 14,
+    // Numerical safety.
+    maximumAcceleration: 24,
+    maximumDeceleration: 24,
+
+    angularResponse: 14,
+    angularRelease: 18,
+
+    energy: Object.freeze({
+      // Dives convert altitude to speed slightly more strongly.
+      gravityBlendAngle: 35 * DEG,
+      diveGravityMultiplier: 1.18,
+
+      // Climbs still lose speed, but retain more momentum while above minimum speed.
+      climbGravityMultiplier: 0.72,
+
+      // Refund part of ordinary drag only near level flight.
+      levelAssistFullAngle: 2 * DEG,
+      levelAssistZeroAngle: 7 * DEG,
+      levelAssistSpeedBand: 3,
+      levelFlightAssistance: 0.55,
+      levelAssistDragFraction: 0.75,
+
+      // Progressive drag prevents runaway speed.
+      maximumOverspeedDrag: 18,
+      overspeedExponent: 2,
+    }),
 
     aero: Object.freeze({
-      liftSlope: 3.2,
+      liftSlope: 3.6,
 
-      // Forgiving, but an extreme pull can still stall.
-      stallAngle: 45 * DEG,
-      postStallAngle: 78 * DEG,
-      postStallLiftFraction: 0.72,
+      // Warning begins before actual lift loss.
+      stallWarningAngle: 12 * DEG,
+      stallAngle: 18 * DEG,
+      postStallAngle: 32 * DEG,
+      postStallLiftFraction: 0.55,
 
-      liftRateCoefficient: 0.017,
+      // Stall develops and clears gradually.
+      stallAttackTime: 0.22,
+      stallReleaseTime: 0.45,
+
+      // Forced recovery begins only in a developed stall.
+      stallRecoveryStart: 0.55,
+      stallRecoveryStrength: 0.65,
+
+      liftRateCoefficient: 0.014,
       maximumG: 6,
 
-      // Moderate drag: speed matters, but it should not collapse instantly.
-      parasiticDrag: 1.2e-4,
-      inducedDrag: 2.8e-4,
+      // Much lower induced drag than the earlier build.
+      parasiticDrag: 0.00042,
+      inducedDrag: 0.00020,
 
-      // Gentle stall recovery.
-      stallPitchAcceleration: 0.35,
-      gravityPathBend: 0.78,
+      gravityPathBend: 1,
     }),
 
     boost3: Object.freeze({
-      // Requires a real but not extreme dive.
-      chargeSpeed: 80,
-      chargePathAngle: -10 * DEG,
-      chargeSeconds: 2,
+      chargeSpeed: 34,
+      chargePathAngle: -12 * DEG,
+      chargeSeconds: 1.1,
 
-      armedSeconds: 7,
-      drainSeconds: 3,
+      // One-second pull-up window; failed charge drains gently.
+      armedSeconds: 1,
+      drainSeconds: 5,
 
-      triggerPitchRate: 15 * DEG,
+      triggerPitchRate: 18 * DEG,
 
-      // Much weaker than the previous version.
-      duration: 2.5,
-      deltaSpeed: 16,
+      duration: 1.35,
+      deltaSpeed: 9,
     }),
 
     telemetry: Object.freeze({
@@ -65,22 +97,20 @@ export const CONFIG = Object.freeze({
     pitchFullDeflection: 25 * DEG,
     rollFullDeflection: 30 * DEG,
 
-    pitchMaxRate: 75 * DEG,
-    rollMaxRate: 120 * DEG,
+    pitchMaxRate: 110 * DEG,
+    rollMaxRate: 160 * DEG,
 
-    responseExponent: 1.7,
+    responseExponent: 1.6,
 
     yawMenuThreshold: 45 * DEG,
     yawMenuHold: 1,
 
     sensorStaleAfter: 0.8,
+    inputSlewSeconds: 0.06,
 
-    // Less twitchy.
-    inputSlewSeconds: 0.12,
-
-    highSpeedControlStart: 90,
-    highSpeedControlFull: 120,
-    highSpeedControlScale: 0.72,
+    highSpeedControlStart: 100,
+    highSpeedControlFull: 130,
+    highSpeedControlScale: 0.85,
   }),
 
   sensitivity: Object.freeze({
@@ -112,14 +142,11 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-
-    // Less dramatic speed zoom.
-    monoSpeedFov: 6,
-
+    monoSpeedFov: 12,
     stereoFov: 80,
 
-    fovSpeedStart: 70,
-    fovSpeedFull: 125,
+    fovSpeedStart: 60,
+    fovSpeedFull: 130,
 
     thirdBack: 11,
     thirdUp: 3.5,
@@ -136,29 +163,28 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    // Much less visual clutter.
-    streakCount: 100,
-    streakStartSpeed: 75,
-    streakFullSpeed: 130,
-    streakDepth: 45,
+    // Subtle speed cues only.
+    streakCount: 120,
+    streakStartSpeed: 30,
+    streakFullSpeed: 50,
+    streakDepth: 48,
     streakRadius: 8,
 
-    boostIntensity: 1.1,
+    boostIntensity: 1.25,
 
-    gVignetteStart: 5.5,
-    gVignetteFull: 8.5,
+    gVignetteStart: 5,
+    gVignetteFull: 8,
 
-    maxViewSqueeze: 0.005,
+    maxViewSqueeze: 0,
 
-    // Disable permanent speed shake.
+    // No involuntary VR camera shake.
     maxVrShake: 0,
+    stallBuffetAngle: 0,
 
     negativeGTintStart: -0.7,
 
-    // Disable stall shaking.
-    stallBuffetAngle: 0,
-
-    // Hides the giant PULL / BOOST text beyond the camera range.
+    // Hide the large DIVE / PULL / BOOST text.
+    // The existing reticle ring still displays charge subtly.
     promptDepth: 5000,
   }),
 
@@ -252,6 +278,10 @@ export function clamp(value, min, max) {
 }
 
 export function smoothstep(min, max, value) {
+  if (min === max) {
+    return value < min ? 0 : 1;
+  }
+
   const t = clamp(
     (value - min) / (max - min),
     0,
