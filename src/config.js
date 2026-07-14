@@ -1,57 +1,61 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-playable-1.1.0',
+  version: 'fable-iteration-3-friendly-1.2.0',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
-    // Faster and much more forgiving starting state.
-    spawnSpeed: 82,
-    minimumSpeed: 30,
+    // Faster starting point without making the player absurdly fast.
+    spawnSpeed: 86,
+
+    // Prevent the flight from collapsing into an unrecoverable slow fall.
+    minimumSpeed: 38,
 
     angularResponse: 14,
     angularRelease: 18,
 
     aero: Object.freeze({
-      liftSlope: 3.2,
+      liftSlope: 3.4,
 
-      // Normal movement should almost never cause a stall.
-      stallAngle: 48 * DEG,
-      postStallAngle: 75 * DEG,
-      postStallLiftFraction: 0.82,
+      // Normal pull-ups and turning should rarely cause a complete stall.
+      stallAngle: 52 * DEG,
+      postStallAngle: 82 * DEG,
+      postStallLiftFraction: 0.78,
 
-      liftRateCoefficient: 0.016,
+      // The flight path follows the direction you point more effectively.
+      liftRateCoefficient: 0.021,
       maximumG: 7,
 
-      // Extremely low passive drag so straight flight keeps its speed.
-      parasiticDrag: 1e-5,
-      inducedDrag: 2e-5,
+      // Low drag, but still enough that speed has some meaning.
+      parasiticDrag: 2.5e-5,
+      inducedDrag: 6e-5,
 
-      // Very weak forced nose-down behaviour during a stall.
-      stallPitchAcceleration: 0.35,
+      // Stalls gently correct the player instead of violently forcing them down.
+      stallPitchAcceleration: 0.22,
 
-      gravityPathBend: 0.8,
+      // Gravity still bends the flight downward, but less aggressively.
+      gravityPathBend: 0.58,
     }),
 
     boost3: Object.freeze({
-      // Boost can now be charged with a mild dive.
-      chargeSpeed: 72,
-      chargePathAngle: -8 * DEG,
-      chargeSeconds: 1.5,
+      // A moderate dive should be enough to start charging.
+      chargeSpeed: 68,
+      chargePathAngle: -5 * DEG,
+      chargeSeconds: 1.2,
 
-      // More time to perform the pull-up.
+      // Plenty of time to notice the charge and perform the pull-up.
       armedSeconds: 8,
       drainSeconds: 3,
 
-      // Much easier pull-up trigger.
-      triggerPitchRate: 18 * DEG,
+      // A clear upward movement triggers boost.
+      triggerPitchRate: 10 * DEG,
 
-      // Strong boost intended to allow repeated altitude gains.
+      // Strong, but not ridiculously overpowered.
       duration: 4,
-      deltaSpeed: 55,
+      deltaSpeed: 45,
     }),
 
     telemetry: Object.freeze({
@@ -78,9 +82,9 @@ export const CONFIG = Object.freeze({
     sensorStaleAfter: 0.8,
     inputSlewSeconds: 0.06,
 
-    highSpeedControlStart: 100,
-    highSpeedControlFull: 130,
-    highSpeedControlScale: 0.85,
+    highSpeedControlStart: 105,
+    highSpeedControlFull: 140,
+    highSpeedControlScale: 0.88,
   }),
 
   sensitivity: Object.freeze({
@@ -112,11 +116,11 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-    monoSpeedFov: 12,
+    monoSpeedFov: 13,
     stereoFov: 80,
 
-    fovSpeedStart: 60,
-    fovSpeedFull: 130,
+    fovSpeedStart: 55,
+    fovSpeedFull: 135,
 
     thirdBack: 11,
     thirdUp: 3.5,
@@ -133,14 +137,13 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    // More visible wind and boost effects.
     streakCount: 220,
     streakStartSpeed: 45,
-    streakFullSpeed: 115,
+    streakFullSpeed: 120,
     streakDepth: 65,
     streakRadius: 10,
 
-    boostIntensity: 2.4,
+    boostIntensity: 2.1,
 
     gVignetteStart: 4,
     gVignetteFull: 7,
@@ -150,8 +153,7 @@ export const CONFIG = Object.freeze({
 
     negativeGTintStart: -0.35,
 
-    // Stronger warning shake, although stalls are now rare.
-    stallBuffetAngle: 0.35 * DEG,
+    stallBuffetAngle: 0.3 * DEG,
 
     promptDepth: 2.5,
   }),
