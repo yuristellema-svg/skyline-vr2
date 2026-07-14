@@ -67,6 +67,11 @@ export class FlightModel {
     this.stallAmount = 0;
     this.pathAngle = 0;
     this.gLoad = 1;
+    this.gravityAcceleration = 0;
+    this.dragAcceleration = 0;
+    this.assistanceAcceleration = 0;
+    this.overspeedDragAcceleration = 0;
+    this.boostAcceleration = 0;
     this.totalDistance = 0;
     this.elapsed = 0;
 
@@ -88,10 +93,12 @@ export class FlightModel {
     this._alignmentQuaternion = new THREE.Quaternion();
     this._inverseAttitude = new THREE.Quaternion();
 
-    // Both buffers are allocated once. The live ring is written without creating
-    // objects; the second buffer preserves the first glitch trap capture.
-    this._telemetryData = new Float64Array(TELEMETRY_CAPACITY * TELEMETRY_STRIDE);
-    this._glitchTelemetryData = new Float64Array(TELEMETRY_CAPACITY * TELEMETRY_STRIDE);
+    this._telemetryData = new Float64Array(
+      TELEMETRY_CAPACITY * TELEMETRY_STRIDE
+    );
+    this._glitchTelemetryData = new Float64Array(
+      TELEMETRY_CAPACITY * TELEMETRY_STRIDE
+    );
     this._telemetryWriteIndex = 0;
     this._telemetryCount = 0;
     this._glitchTelemetryWriteIndex = 0;
@@ -104,25 +111,40 @@ export class FlightModel {
     this.telemetryGlitchPathAngleDelta = 0;
   }
 
-  reset(x = 0, y = 760, z = 420, speed = this.config.physics.spawnSpeed) {
+  reset(
+    x = 0,
+    y = 760,
+    z = 420,
+    speed = this.config.physics.spawnSpeed
+  ) {
     this.position.set(x, y, z);
     this.attitude.identity();
     this.angularVelocity.set(0, 0, 0);
     this.speed = speed;
     this.velocity.set(0, 0, -speed);
+
     this.boostCharge = 0;
     this.boostRemaining = 0;
     this.boostArmedRemaining = 0;
     this.boostDrainRemaining = 0;
     this.boostChargeCondition = false;
     this.boostJustTriggered = false;
+
     this.angleOfAttack = 0;
     this.liftCoefficient = 0;
     this.stallAmount = 0;
     this.pathAngle = 0;
     this.gLoad = 1;
+
+    this.gravityAcceleration = 0;
+    this.dragAcceleration = 0;
+    this.assistanceAcceleration = 0;
+    this.overspeedDragAcceleration = 0;
+    this.boostAcceleration = 0;
+
     this.totalDistance = 0;
     this.elapsed = 0;
+
     this._velocityDirection.set(0, 0, -1);
     this._alignmentAxis.set(0, 0, 0);
     this._telemetryPendingEventFlags |= TELEMETRY_EVENT_RESPAWN;
@@ -131,242 +153,983 @@ export class FlightModel {
 
   step(dt, controls) {
     const physics = this.config.physics;
+    const energy = physics.energy;
     const aero = physics.aero;
     const boostConfig = physics.boost3;
+
     this.elapsed += dt;
     this.boostJustTriggered = false;
     this._previousVelocity.copy(this.velocity);
 
     this._velocityDirection.copy(this.velocity);
-    if (this._velocityDirection.lengthSq() < 1e-8) this._velocityDirection.copy(LOCAL_FORWARD).applyQuaternion(this.attitude);
-    else this._velocityDirection.normalize();
-    this._nose.copy(LOCAL_FORWARD).applyQuaternion(this.attitude).normalize();
-    this._craftUp.copy(LOCAL_UP).applyQuaternion(this.attitude).normalize();
-    this._craftRight.copy(LOCAL_RIGHT).applyQuaternion(this.attitude).normalize();
-    this._updateAerodynamicState(aero);
+
+    if (this._velocityDirection.lengthSq() < 1e-8) {
+      this._velocityDirection
+        .copy(LOCAL_FORWARD)
+        .applyQuaternion(this.attitude);
+    } else {
+      this._velocityDirection.normalize();
+    }
+
+    this._nose
+      .copy(LOCAL_FORWARD)
+      .applyQuaternion(this.attitude)
+      .normalize();
+
+    this._craftUp
+      .copy(LOCAL_UP)
+      .applyQuaternion(this.attitude)
+      .normalize();
+
+    this._craftRight
+      .copy(LOCAL_RIGHT)
+      .applyQuaternion(this.attitude)
+      .normalize();
+
+    this._updateAerodynamicState(aero, dt * 0.5);
 
     const highSpeedBlend = smoothstep(
       this.config.controls.highSpeedControlStart,
       this.config.controls.highSpeedControlFull,
       this.speed
     );
-    const rateScale = THREE.MathUtils.lerp(1, this.config.controls.highSpeedControlScale, highSpeedBlend);
-    this._targetAngularVelocity.set(controls.pitchRate * rateScale, 0, -controls.rollRate * rateScale);
-    const responseX = this._targetAngularVelocity.x === 0 ? physics.angularRelease : physics.angularResponse;
-    const responseY = this._targetAngularVelocity.y === 0 ? physics.angularRelease : physics.angularResponse;
-    const responseZ = this._targetAngularVelocity.z === 0 ? physics.angularRelease : physics.angularResponse;
-    this.angularVelocity.x = damp(this.angularVelocity.x, this._targetAngularVelocity.x, responseX, dt);
-    this.angularVelocity.y = damp(this.angularVelocity.y, this._targetAngularVelocity.y, responseY, dt);
-    this.angularVelocity.z = damp(this.angularVelocity.z, this._targetAngularVelocity.z, responseZ, dt);
-    if (Math.abs(this.angleOfAttack) > aero.stallAngle) {
-      const restoringAcceleration = -Math.sign(this.angleOfAttack) *
-        aero.stallPitchAcceleration * (Math.abs(this.angleOfAttack) - aero.stallAngle);
-      this.angularVelocity.x += restoringAcceleration * dt;
+
+    const rateScale = THREE.MathUtils.lerp(
+      1,
+      this.config.controls.highSpeedControlScale,
+      highSpeedBlend
+    );
+
+    this._targetAngularVelocity.set(
+      controls.pitchRate * rateScale,
+      0,
+      -controls.rollRate * rateScale
+    );
+
+    const responseX =
+      this._targetAngularVelocity.x === 0
+        ? physics.angularRelease
+        : physics.angularResponse;
+
+    const responseY =
+      this._targetAngularVelocity.y === 0
+        ? physics.angularRelease
+        : physics.angularResponse;
+
+    const responseZ =
+      this._targetAngularVelocity.z === 0
+        ? physics.angularRelease
+        : physics.angularResponse;
+
+    this.angularVelocity.x = damp(
+      this.angularVelocity.x,
+      this._targetAngularVelocity.x,
+      responseX,
+      dt
+    );
+
+    this.angularVelocity.y = damp(
+      this.angularVelocity.y,
+      this._targetAngularVelocity.y,
+      responseY,
+      dt
+    );
+
+    this.angularVelocity.z = damp(
+      this.angularVelocity.z,
+      this._targetAngularVelocity.z,
+      responseZ,
+      dt
+    );
+
+    const stallRecovery = smoothstep(
+      aero.stallRecoveryStart,
+      1,
+      this.stallAmount
+    );
+
+    if (
+      stallRecovery > 0 &&
+      Math.abs(this.angleOfAttack) > 1e-6
+    ) {
+      const restoringAcceleration =
+        -Math.sign(this.angleOfAttack) *
+        aero.stallRecoveryStrength *
+        stallRecovery;
+
+      this.angularVelocity.x +=
+        restoringAcceleration * dt;
     }
 
-    const rotationMagnitude = this.angularVelocity.length();
+    const rotationMagnitude =
+      this.angularVelocity.length();
+
     if (rotationMagnitude > 1e-8) {
-      this._rotationAxis.copy(this.angularVelocity).multiplyScalar(1 / rotationMagnitude);
-      this._deltaQuaternion.setFromAxisAngle(this._rotationAxis, rotationMagnitude * dt);
-      this.attitude.multiply(this._deltaQuaternion).normalize();
+      this._rotationAxis
+        .copy(this.angularVelocity)
+        .multiplyScalar(
+          1 / rotationMagnitude
+        );
+
+      this._deltaQuaternion.setFromAxisAngle(
+        this._rotationAxis,
+        rotationMagnitude * dt
+      );
+
+      this.attitude
+        .multiply(this._deltaQuaternion)
+        .normalize();
     }
 
-    this._nose.copy(LOCAL_FORWARD).applyQuaternion(this.attitude).normalize();
-    this._craftUp.copy(LOCAL_UP).applyQuaternion(this.attitude).normalize();
-    this._craftRight.copy(LOCAL_RIGHT).applyQuaternion(this.attitude).normalize();
+    this._nose
+      .copy(LOCAL_FORWARD)
+      .applyQuaternion(this.attitude)
+      .normalize();
 
-    // Gravity bends the path as well as changing speed. Without this normal
-    // component a slow, level craft could never truly fall into a stall.
-    this._gravityPerpendicular.copy(this._worldDown)
-      .addScaledVector(this._velocityDirection, -this._worldDown.dot(this._velocityDirection));
-    this._velocityDirection.addScaledVector(
-      this._gravityPerpendicular,
-      aero.gravityPathBend * physics.gravity * dt / Math.max(this.speed, physics.minimumSpeed)
-    ).normalize();
-    this._updateAerodynamicState(aero);
+    this._craftUp
+      .copy(LOCAL_UP)
+      .applyQuaternion(this.attitude)
+      .normalize();
 
-    const dot = clamp(this._velocityDirection.dot(this._nose), -1, 1);
+    this._craftRight
+      .copy(LOCAL_RIGHT)
+      .applyQuaternion(this.attitude)
+      .normalize();
+
+    this._gravityPerpendicular
+      .copy(this._worldDown)
+      .addScaledVector(
+        this._velocityDirection,
+        -this._worldDown.dot(
+          this._velocityDirection
+        )
+      );
+
+    this._velocityDirection
+      .addScaledVector(
+        this._gravityPerpendicular,
+        (
+          aero.gravityPathBend *
+          physics.gravity *
+          dt
+        ) /
+          Math.max(
+            this.speed,
+            physics.minimumSpeed
+          )
+      )
+      .normalize();
+
+    this._updateAerodynamicState(
+      aero,
+      dt * 0.5
+    );
+
+    const dot = clamp(
+      this._velocityDirection.dot(
+        this._nose
+      ),
+      -1,
+      1
+    );
+
     const angle = Math.acos(dot);
-    this._alignmentAxis.set(0, 0, 0);
+
+    this._alignmentAxis.set(
+      0,
+      0,
+      0
+    );
+
     if (angle >= ALIGNMENT_EPSILON) {
-      this._alignmentAxis.crossVectors(this._velocityDirection, this._nose);
-      if (this._alignmentAxis.lengthSq() < ALIGNMENT_AXIS_EPSILON_SQ) {
-        // Only the true antiparallel degeneracy needs an invented axis. Every
-        // valid cross product already has the exact shortest-arc sign.
-        this._alignmentAxis.crossVectors(this._nose, WORLD_UP);
-        if (this._alignmentAxis.lengthSq() < 1e-6) {
-          this._alignmentAxis.crossVectors(this._nose, WORLD_RIGHT);
+      this._alignmentAxis.crossVectors(
+        this._velocityDirection,
+        this._nose
+      );
+
+      if (
+        this._alignmentAxis.lengthSq() <
+        ALIGNMENT_AXIS_EPSILON_SQ
+      ) {
+        this._alignmentAxis.crossVectors(
+          this._nose,
+          WORLD_UP
+        );
+
+        if (
+          this._alignmentAxis.lengthSq() <
+          1e-6
+        ) {
+          this._alignmentAxis.crossVectors(
+            this._nose,
+            WORLD_RIGHT
+          );
         }
       }
+
       this._alignmentAxis.normalize();
-      const liftRate = aero.liftRateCoefficient * Math.abs(this.liftCoefficient) * this.speed;
-      const gLimitedRate = aero.maximumG * physics.gravity / Math.max(this.speed, physics.minimumSpeed);
-      const alignmentRate = Math.min(liftRate, gLimitedRate);
-      const alignmentStep = Math.min(angle, alignmentRate * dt);
-      this._alignmentQuaternion.setFromAxisAngle(this._alignmentAxis, alignmentStep);
-      this._velocityDirection.applyQuaternion(this._alignmentQuaternion).normalize();
+
+      const liftRate =
+        aero.liftRateCoefficient *
+        Math.abs(
+          this.liftCoefficient
+        ) *
+        this.speed;
+
+      const gLimitedRate =
+        (
+          aero.maximumG *
+          physics.gravity
+        ) /
+        Math.max(
+          this.speed,
+          physics.minimumSpeed
+        );
+
+      const alignmentRate = Math.min(
+        liftRate,
+        gLimitedRate
+      );
+
+      const alignmentStep = Math.min(
+        angle,
+        alignmentRate * dt
+      );
+
+      this._alignmentQuaternion.setFromAxisAngle(
+        this._alignmentAxis,
+        alignmentStep
+      );
+
+      this._velocityDirection
+        .applyQuaternion(
+          this._alignmentQuaternion
+        )
+        .normalize();
     }
 
-    this.pathAngle = Math.asin(clamp(this._velocityDirection.y, -1, 1));
-    const gravityAlongPath = -physics.gravity * this._velocityDirection.y;
-    const drag = aero.parasiticDrag * this.speed * this.speed +
-      aero.inducedDrag * this.liftCoefficient * this.liftCoefficient * this.speed * this.speed;
-    this._updateBoost(dt, controls, boostConfig);
+    this.pathAngle = Math.asin(
+      clamp(
+        this._velocityDirection.y,
+        -1,
+        1
+      )
+    );
+
+    this._updateBoost(
+      dt,
+      controls,
+      boostConfig
+    );
 
     let boostAcceleration = 0;
+
     if (this.boostRemaining > 0) {
-      boostAcceleration = boostConfig.deltaSpeed / boostConfig.duration;
-      this.boostRemaining = Math.max(0, this.boostRemaining - dt);
+      boostAcceleration =
+        boostConfig.deltaSpeed /
+        boostConfig.duration;
+
+      this.boostRemaining = Math.max(
+        0,
+        this.boostRemaining - dt
+      );
     }
 
-    this.speed = Math.max(
-      physics.minimumSpeed,
-      this.speed + (gravityAlongPath - drag + boostAcceleration) * dt
+    const diveFactor = smoothstep(
+      0,
+      energy.gravityBlendAngle,
+      Math.max(
+        0,
+        -this.pathAngle
+      )
     );
-    this.velocity.copy(this._velocityDirection).multiplyScalar(this.speed);
-    this.position.addScaledVector(this.velocity, dt);
-    this.totalDistance += this.speed * dt;
 
-    this._specificForce.copy(this.velocity).sub(this._previousVelocity).multiplyScalar(1 / dt);
-    this._specificForce.y += physics.gravity;
-    const rawG = this._specificForce.dot(this._craftUp) / physics.gravity;
-    this.gLoad = damp(this.gLoad, rawG, 6.7, dt);
+    const climbFactor = smoothstep(
+      0,
+      energy.gravityBlendAngle,
+      Math.max(
+        0,
+        this.pathAngle
+      )
+    );
 
-    const pathAngle = this.pathAngle;
+    const climbEnergyAvailable =
+      smoothstep(
+        physics.minimumSpeed + 2,
+        physics.preferredCruiseSpeed,
+        this.speed
+      );
+
+    const gravityMultiplier =
+      this.pathAngle < 0
+        ? 1 +
+          (
+            energy.diveGravityMultiplier -
+            1
+          ) *
+            diveFactor
+        : 1 -
+          (
+            1 -
+            energy.climbGravityMultiplier
+          ) *
+            climbFactor *
+            climbEnergyAvailable;
+
+    const gravityAcceleration =
+      -physics.gravity *
+      Math.sin(this.pathAngle) *
+      gravityMultiplier;
+
+    const clSquared =
+      this.liftCoefficient *
+      this.liftCoefficient;
+
+    const dragAcceleration =
+      (
+        aero.parasiticDrag +
+        aero.inducedDrag *
+          clSquared
+      ) *
+      this.speed *
+      this.speed;
+
+    const levelFactor =
+      1 -
+      smoothstep(
+        energy.levelAssistFullAngle,
+        energy.levelAssistZeroAngle,
+        Math.abs(
+          this.pathAngle
+        )
+      );
+
+    const cruiseNeed =
+      1 -
+      smoothstep(
+        physics.preferredCruiseSpeed,
+        physics.preferredCruiseSpeed +
+          energy.levelAssistSpeedBand,
+        this.speed
+      );
+
+    const stallSuppression =
+      Math.pow(
+        1 -
+          clamp(
+            this.stallAmount,
+            0,
+            1
+          ),
+        2
+      );
+
+    const requestedAssistance =
+      energy.levelFlightAssistance *
+      levelFactor *
+      cruiseNeed *
+      stallSuppression;
+
+    const assistanceAcceleration =
+      Math.min(
+        requestedAssistance,
+        dragAcceleration *
+          energy.levelAssistDragFraction
+      );
+
+    const overspeedFactor =
+      smoothstep(
+        physics.softMaximumSpeed,
+        physics.maximumSpeed,
+        this.speed
+      );
+
+    const overspeedDragAcceleration =
+      energy.maximumOverspeedDrag *
+      Math.pow(
+        overspeedFactor,
+        energy.overspeedExponent
+      );
+
+    const rawAcceleration =
+      gravityAcceleration -
+      dragAcceleration +
+      assistanceAcceleration +
+      boostAcceleration -
+      overspeedDragAcceleration;
+
+    const totalAcceleration = clamp(
+      rawAcceleration,
+      -physics.maximumDeceleration,
+      physics.maximumAcceleration
+    );
+
+    this.speed = clamp(
+      this.speed +
+        totalAcceleration * dt,
+      physics.minimumSpeed,
+      physics.maximumSpeed
+    );
+
+    this.gravityAcceleration =
+      gravityAcceleration;
+
+    this.dragAcceleration =
+      dragAcceleration;
+
+    this.assistanceAcceleration =
+      assistanceAcceleration;
+
+    this.overspeedDragAcceleration =
+      overspeedDragAcceleration;
+
+    this.boostAcceleration =
+      boostAcceleration;
+
+    this.velocity
+      .copy(
+        this._velocityDirection
+      )
+      .multiplyScalar(
+        this.speed
+      );
+
+    this.position.addScaledVector(
+      this.velocity,
+      dt
+    );
+
+    this.totalDistance +=
+      this.speed * dt;
+
+    this._specificForce
+      .copy(this.velocity)
+      .sub(
+        this._previousVelocity
+      )
+      .multiplyScalar(
+        1 / dt
+      );
+
+    this._specificForce.y +=
+      physics.gravity;
+
+    const rawG =
+      this._specificForce.dot(
+        this._craftUp
+      ) /
+      physics.gravity;
+
+    this.gLoad = damp(
+      this.gLoad,
+      rawG,
+      6.7,
+      dt
+    );
+
+    const pathAngle =
+      this.pathAngle;
+
     let pathAngleDelta = 0;
-    if (this._telemetryHasPreviousPathAngle) {
-      pathAngleDelta = pathAngle - this._telemetryPreviousPathAngle;
+
+    if (
+      this._telemetryHasPreviousPathAngle
+    ) {
+      pathAngleDelta =
+        pathAngle -
+        this._telemetryPreviousPathAngle;
     }
-    this._telemetryPreviousPathAngle = pathAngle;
-    this._telemetryHasPreviousPathAngle = true;
+
+    this._telemetryPreviousPathAngle =
+      pathAngle;
+
+    this._telemetryHasPreviousPathAngle =
+      true;
+
     this._writeTelemetry(
       dt,
       controls,
       pathAngle,
-      clamp(this._velocityDirection.dot(this._nose), -1, 1),
+      clamp(
+        this._velocityDirection.dot(
+          this._nose
+        ),
+        -1,
+        1
+      ),
       pathAngleDelta
     );
   }
 
-  _updateAerodynamicState(aero) {
-    this._pitchPlaneVelocity.copy(this._velocityDirection)
-      .addScaledVector(this._craftRight, -this._velocityDirection.dot(this._craftRight));
-    if (this._pitchPlaneVelocity.lengthSq() < 1e-10) {
+  _updateAerodynamicState(
+    aero,
+    dt
+  ) {
+    this._pitchPlaneVelocity
+      .copy(
+        this._velocityDirection
+      )
+      .addScaledVector(
+        this._craftRight,
+        -this._velocityDirection.dot(
+          this._craftRight
+        )
+      );
+
+    if (
+      this._pitchPlaneVelocity.lengthSq() <
+      1e-10
+    ) {
       this.angleOfAttack = 0;
       this.liftCoefficient = 0;
-      this.stallAmount = 0;
+
+      const response =
+        1 -
+        Math.exp(
+          -dt /
+            Math.max(
+              1e-4,
+              aero.stallReleaseTime
+            )
+        );
+
+      this.stallAmount +=
+        (
+          0 -
+          this.stallAmount
+        ) *
+        response;
+
       return;
     }
+
     this._pitchPlaneVelocity.normalize();
-    this._alignmentAxis.crossVectors(this._pitchPlaneVelocity, this._nose);
-    const sine = this._alignmentAxis.dot(this._craftRight);
-    const cosine = clamp(this._pitchPlaneVelocity.dot(this._nose), -1, 1);
-    this.angleOfAttack = Math.atan2(sine, cosine);
-    const magnitude = Math.abs(this.angleOfAttack);
-    const maximumLift = aero.liftSlope * aero.stallAngle;
+
+    this._alignmentAxis.crossVectors(
+      this._pitchPlaneVelocity,
+      this._nose
+    );
+
+    const sine =
+      this._alignmentAxis.dot(
+        this._craftRight
+      );
+
+    const cosine = clamp(
+      this._pitchPlaneVelocity.dot(
+        this._nose
+      ),
+      -1,
+      1
+    );
+
+    this.angleOfAttack =
+      Math.atan2(
+        sine,
+        cosine
+      );
+
+    const magnitude = Math.abs(
+      this.angleOfAttack
+    );
+
+    const rawStallAmount =
+      smoothstep(
+        aero.stallWarningAngle,
+        aero.postStallAngle,
+        magnitude
+      );
+
+    const timeConstant =
+      rawStallAmount >
+      this.stallAmount
+        ? aero.stallAttackTime
+        : aero.stallReleaseTime;
+
+    const response =
+      1 -
+      Math.exp(
+        -dt /
+          Math.max(
+            1e-4,
+            timeConstant
+          )
+      );
+
+    this.stallAmount = clamp(
+      this.stallAmount +
+        (
+          rawStallAmount -
+          this.stallAmount
+        ) *
+          response,
+      0,
+      1
+    );
+
+    const maximumLift =
+      aero.liftSlope *
+      aero.stallAngle;
+
     let liftMagnitude;
-    if (magnitude <= aero.stallAngle) {
-      liftMagnitude = aero.liftSlope * magnitude;
-    } else if (magnitude < aero.postStallAngle) {
-      const t = (magnitude - aero.stallAngle) / (aero.postStallAngle - aero.stallAngle);
-      liftMagnitude = THREE.MathUtils.lerp(maximumLift, maximumLift * aero.postStallLiftFraction, t);
+
+    if (
+      magnitude <=
+      aero.stallAngle
+    ) {
+      liftMagnitude =
+        aero.liftSlope *
+        magnitude;
     } else {
-      liftMagnitude = maximumLift * aero.postStallLiftFraction;
+      const postStallBlend =
+        smoothstep(
+          aero.stallAngle,
+          aero.postStallAngle,
+          magnitude
+        );
+
+      const retainedLift =
+        1 -
+        (
+          1 -
+          aero.postStallLiftFraction
+        ) *
+          postStallBlend;
+
+      liftMagnitude =
+        maximumLift *
+        retainedLift;
     }
-    this.liftCoefficient = Math.sign(this.angleOfAttack) * liftMagnitude;
-    this.stallAmount = smoothstep(aero.stallAngle, aero.postStallAngle, magnitude);
+
+    this.liftCoefficient =
+      Math.sign(
+        this.angleOfAttack
+      ) *
+      liftMagnitude;
   }
 
-  _updateBoost(dt, controls, boostConfig) {
-    this.boostChargeCondition = this.speed > boostConfig.chargeSpeed &&
-      this.pathAngle < boostConfig.chargePathAngle;
-    if (this.boostRemaining > 0) return;
+  _updateBoost(
+    dt,
+    controls,
+    boostConfig
+  ) {
+    this.boostChargeCondition =
+      this.speed >
+        boostConfig.chargeSpeed &&
+      this.pathAngle <
+        boostConfig.chargePathAngle;
 
-    if (this.boostArmedRemaining > 0) {
-      if (controls.pitchRate > boostConfig.triggerPitchRate) {
+    if (
+      this.boostRemaining > 0
+    ) {
+      return;
+    }
+
+    if (
+      this.boostArmedRemaining >
+      0
+    ) {
+      if (
+        controls.pitchRate >
+        boostConfig.triggerPitchRate
+      ) {
         this.boostCharge = 0;
         this.boostArmedRemaining = 0;
         this.boostDrainRemaining = 0;
-        this.boostRemaining = boostConfig.duration;
-        this.boostJustTriggered = true;
+        this.boostRemaining =
+          boostConfig.duration;
+        this.boostJustTriggered =
+          true;
+
         return;
       }
-      this.boostArmedRemaining = Math.max(0, this.boostArmedRemaining - dt);
-      if (this.boostArmedRemaining === 0) this.boostDrainRemaining = boostConfig.drainSeconds;
+
+      this.boostArmedRemaining =
+        Math.max(
+          0,
+          this.boostArmedRemaining -
+            dt
+        );
+
+      if (
+        this.boostArmedRemaining ===
+        0
+      ) {
+        this.boostDrainRemaining =
+          boostConfig.drainSeconds;
+      }
+
       return;
     }
 
-    if (this.boostDrainRemaining > 0) {
-      this.boostCharge = Math.max(0, this.boostCharge - dt / boostConfig.drainSeconds);
-      this.boostDrainRemaining = Math.max(0, this.boostDrainRemaining - dt);
+    if (
+      this.boostDrainRemaining >
+      0
+    ) {
+      this.boostCharge =
+        Math.max(
+          0,
+          this.boostCharge -
+            dt /
+              boostConfig.drainSeconds
+        );
+
+      this.boostDrainRemaining =
+        Math.max(
+          0,
+          this.boostDrainRemaining -
+            dt
+        );
+
       return;
     }
 
-    if (this.boostChargeCondition) {
-      this.boostCharge = clamp(this.boostCharge + dt / boostConfig.chargeSeconds, 0, 1);
-      if (this.boostCharge >= 0.999999) {
+    if (
+      this.boostChargeCondition
+    ) {
+      this.boostCharge = clamp(
+        this.boostCharge +
+          dt /
+            boostConfig.chargeSeconds,
+        0,
+        1
+      );
+
+      if (
+        this.boostCharge >=
+        0.999999
+      ) {
         this.boostCharge = 1;
-        this.boostArmedRemaining = boostConfig.armedSeconds;
+        this.boostArmedRemaining =
+          boostConfig.armedSeconds;
       }
     }
   }
 
-  _writeTelemetry(dt, controls, pathAngle, noseVelocityDot, pathAngleDelta) {
-    const index = this._telemetryWriteIndex;
-    const offset = index * TELEMETRY_STRIDE;
-    const data = this._telemetryData;
-    const controlFlags = Number.isFinite(controls.collisionRespawnFlag)
-      ? controls.collisionRespawnFlag
+  _writeTelemetry(
+    dt,
+    controls,
+    pathAngle,
+    noseVelocityDot,
+    pathAngleDelta
+  ) {
+    const index =
+      this._telemetryWriteIndex;
+
+    const offset =
+      index *
+      TELEMETRY_STRIDE;
+
+    const data =
+      this._telemetryData;
+
+    const controlFlags =
+      Number.isFinite(
+        controls.collisionRespawnFlag
+      )
+        ? controls.collisionRespawnFlag
+        : 0;
+
+    data[offset + T_TIME] =
+      this.elapsed;
+
+    data[offset + T_DT] =
+      dt;
+
+    data[
+      offset +
+        T_POSITION_X
+    ] = this.position.x;
+
+    data[
+      offset +
+        T_POSITION_Y
+    ] = this.position.y;
+
+    data[
+      offset +
+        T_POSITION_Z
+    ] = this.position.z;
+
+    data[offset + T_SPEED] =
+      this.speed;
+
+    data[
+      offset +
+        T_PATH_ANGLE
+    ] = pathAngle;
+
+    data[
+      offset +
+        T_NOSE_VELOCITY_DOT
+    ] = noseVelocityDot;
+
+    data[offset + T_AXIS_X] =
+      this._alignmentAxis.x;
+
+    data[offset + T_AXIS_Y] =
+      this._alignmentAxis.y;
+
+    data[offset + T_AXIS_Z] =
+      this._alignmentAxis.z;
+
+    data[
+      offset +
+        T_ATTITUDE_X
+    ] = this.attitude.x;
+
+    data[
+      offset +
+        T_ATTITUDE_Y
+    ] = this.attitude.y;
+
+    data[
+      offset +
+        T_ATTITUDE_Z
+    ] = this.attitude.z;
+
+    data[
+      offset +
+        T_ATTITUDE_W
+    ] = this.attitude.w;
+
+    data[
+      offset +
+        T_ANGULAR_VELOCITY_X
+    ] = this.angularVelocity.x;
+
+    data[
+      offset +
+        T_ANGULAR_VELOCITY_Y
+    ] = this.angularVelocity.y;
+
+    data[
+      offset +
+        T_ANGULAR_VELOCITY_Z
+    ] = this.angularVelocity.z;
+
+    data[
+      offset +
+        T_INPUT_PITCH_RATE
+    ] = controls.pitchRate;
+
+    data[
+      offset +
+        T_INPUT_ROLL_RATE
+    ] = controls.rollRate;
+
+    data[
+      offset +
+        T_INPUT_YAW_RATE
+    ] = Number.isFinite(
+      controls.yawRate
+    )
+      ? controls.yawRate
       : 0;
 
-    data[offset + T_TIME] = this.elapsed;
-    data[offset + T_DT] = dt;
-    data[offset + T_POSITION_X] = this.position.x;
-    data[offset + T_POSITION_Y] = this.position.y;
-    data[offset + T_POSITION_Z] = this.position.z;
-    data[offset + T_SPEED] = this.speed;
-    data[offset + T_PATH_ANGLE] = pathAngle;
-    data[offset + T_NOSE_VELOCITY_DOT] = noseVelocityDot;
-    data[offset + T_AXIS_X] = this._alignmentAxis.x;
-    data[offset + T_AXIS_Y] = this._alignmentAxis.y;
-    data[offset + T_AXIS_Z] = this._alignmentAxis.z;
-    data[offset + T_ATTITUDE_X] = this.attitude.x;
-    data[offset + T_ATTITUDE_Y] = this.attitude.y;
-    data[offset + T_ATTITUDE_Z] = this.attitude.z;
-    data[offset + T_ATTITUDE_W] = this.attitude.w;
-    data[offset + T_ANGULAR_VELOCITY_X] = this.angularVelocity.x;
-    data[offset + T_ANGULAR_VELOCITY_Y] = this.angularVelocity.y;
-    data[offset + T_ANGULAR_VELOCITY_Z] = this.angularVelocity.z;
-    data[offset + T_INPUT_PITCH_RATE] = controls.pitchRate;
-    data[offset + T_INPUT_ROLL_RATE] = controls.rollRate;
-    data[offset + T_INPUT_YAW_RATE] = Number.isFinite(controls.yawRate) ? controls.yawRate : 0;
-    data[offset + T_BOOST_CHARGE] = this.boostCharge;
-    data[offset + T_BOOST_REMAINING] = this.boostRemaining;
-    data[offset + T_BOOST_TRIGGERED] = this.boostJustTriggered ? 1 : 0;
-    data[offset + T_BOOST_ARMED_REMAINING] = this.boostArmedRemaining;
-    data[offset + T_BOOST_DRAIN_REMAINING] = this.boostDrainRemaining;
-    data[offset + T_COLLISION_RESPAWN_FLAG] = this._telemetryPendingEventFlags | controlFlags;
-    data[offset + T_PATH_ANGLE_DELTA] = pathAngleDelta;
-    data[offset + T_ANGLE_OF_ATTACK] = this.angleOfAttack;
-    data[offset + T_LIFT_COEFFICIENT] = this.liftCoefficient;
-    data[offset + T_STALL_AMOUNT] = this.stallAmount;
+    data[
+      offset +
+        T_BOOST_CHARGE
+    ] = this.boostCharge;
 
-    this._telemetryPendingEventFlags = 0;
-    this._telemetryWriteIndex = (index + 1) % TELEMETRY_CAPACITY;
-    if (this._telemetryCount < TELEMETRY_CAPACITY) this._telemetryCount += 1;
+    data[
+      offset +
+        T_BOOST_REMAINING
+    ] = this.boostRemaining;
 
-    if (!this.telemetryGlitchDetected && Math.abs(pathAngleDelta) > PATH_ANGLE_GLITCH_THRESHOLD) {
-      this.telemetryGlitchDetected = true;
-      this.telemetryGlitchTime = this.elapsed;
-      this.telemetryGlitchPathAngleDelta = pathAngleDelta;
-      this._glitchTelemetryData.set(this._telemetryData);
-      this._glitchTelemetryWriteIndex = this._telemetryWriteIndex;
-      this._glitchTelemetryCount = this._telemetryCount;
+    data[
+      offset +
+        T_BOOST_TRIGGERED
+    ] = this.boostJustTriggered
+      ? 1
+      : 0;
+
+    data[
+      offset +
+        T_BOOST_ARMED_REMAINING
+    ] = this.boostArmedRemaining;
+
+    data[
+      offset +
+        T_BOOST_DRAIN_REMAINING
+    ] = this.boostDrainRemaining;
+
+    data[
+      offset +
+        T_COLLISION_RESPAWN_FLAG
+    ] =
+      this._telemetryPendingEventFlags |
+      controlFlags;
+
+    data[
+      offset +
+        T_PATH_ANGLE_DELTA
+    ] = pathAngleDelta;
+
+    data[
+      offset +
+        T_ANGLE_OF_ATTACK
+    ] = this.angleOfAttack;
+
+    data[
+      offset +
+        T_LIFT_COEFFICIENT
+    ] = this.liftCoefficient;
+
+    data[
+      offset +
+        T_STALL_AMOUNT
+    ] = this.stallAmount;
+
+    this._telemetryPendingEventFlags =
+      0;
+
+    this._telemetryWriteIndex =
+      (
+        index +
+        1
+      ) %
+      TELEMETRY_CAPACITY;
+
+    if (
+      this._telemetryCount <
+      TELEMETRY_CAPACITY
+    ) {
+      this._telemetryCount +=
+        1;
+    }
+
+    if (
+      !this.telemetryGlitchDetected &&
+      Math.abs(
+        pathAngleDelta
+      ) >
+        PATH_ANGLE_GLITCH_THRESHOLD
+    ) {
+      this.telemetryGlitchDetected =
+        true;
+
+      this.telemetryGlitchTime =
+        this.elapsed;
+
+      this.telemetryGlitchPathAngleDelta =
+        pathAngleDelta;
+
+      this._glitchTelemetryData.set(
+        this._telemetryData
+      );
+
+      this._glitchTelemetryWriteIndex =
+        this._telemetryWriteIndex;
+
+      this._glitchTelemetryCount =
+        this._telemetryCount;
     }
   }
 
   flagTelemetryEvent(flags) {
-    this._telemetryPendingEventFlags |= flags;
+    this._telemetryPendingEventFlags |=
+      flags;
   }
 
   clearTelemetry() {
@@ -375,94 +1138,298 @@ export class FlightModel {
     this._glitchTelemetryWriteIndex = 0;
     this._glitchTelemetryCount = 0;
     this._telemetryPendingEventFlags = 0;
-    this._telemetryHasPreviousPathAngle = false;
+    this._telemetryHasPreviousPathAngle =
+      false;
     this.telemetryGlitchDetected = false;
     this.telemetryGlitchTime = 0;
-    this.telemetryGlitchPathAngleDelta = 0;
+    this.telemetryGlitchPathAngleDelta =
+      0;
   }
 
-  readTelemetrySnapshot(glitchCapture = false) {
-    const data = glitchCapture ? this._glitchTelemetryData : this._telemetryData;
-    const count = glitchCapture ? this._glitchTelemetryCount : this._telemetryCount;
-    const writeIndex = glitchCapture ? this._glitchTelemetryWriteIndex : this._telemetryWriteIndex;
-    const start = count < TELEMETRY_CAPACITY ? 0 : writeIndex;
-    const frames = new Array(count);
+  readTelemetrySnapshot(
+    glitchCapture = false
+  ) {
+    const data =
+      glitchCapture
+        ? this._glitchTelemetryData
+        : this._telemetryData;
 
-    for (let i = 0; i < count; i += 1) {
-      const offset = ((start + i) % TELEMETRY_CAPACITY) * TELEMETRY_STRIDE;
+    const count =
+      glitchCapture
+        ? this._glitchTelemetryCount
+        : this._telemetryCount;
+
+    const writeIndex =
+      glitchCapture
+        ? this._glitchTelemetryWriteIndex
+        : this._telemetryWriteIndex;
+
+    const start =
+      count <
+      TELEMETRY_CAPACITY
+        ? 0
+        : writeIndex;
+
+    const frames =
+      new Array(count);
+
+    for (
+      let i = 0;
+      i < count;
+      i += 1
+    ) {
+      const offset =
+        (
+          (
+            start +
+            i
+          ) %
+          TELEMETRY_CAPACITY
+        ) *
+        TELEMETRY_STRIDE;
+
       frames[i] = {
-        t: data[offset + T_TIME],
-        dt: data[offset + T_DT],
+        t:
+          data[
+            offset +
+              T_TIME
+          ],
+
+        dt:
+          data[
+            offset +
+              T_DT
+          ],
+
         pos: [
-          data[offset + T_POSITION_X],
-          data[offset + T_POSITION_Y],
-          data[offset + T_POSITION_Z],
+          data[
+            offset +
+              T_POSITION_X
+          ],
+          data[
+            offset +
+              T_POSITION_Y
+          ],
+          data[
+            offset +
+              T_POSITION_Z
+          ],
         ],
-        speed: data[offset + T_SPEED],
-        pathAngle: data[offset + T_PATH_ANGLE],
-        noseVelocityDot: data[offset + T_NOSE_VELOCITY_DOT],
-        axis: [data[offset + T_AXIS_X], data[offset + T_AXIS_Y], data[offset + T_AXIS_Z]],
+
+        speed:
+          data[
+            offset +
+              T_SPEED
+          ],
+
+        pathAngle:
+          data[
+            offset +
+              T_PATH_ANGLE
+          ],
+
+        noseVelocityDot:
+          data[
+            offset +
+              T_NOSE_VELOCITY_DOT
+          ],
+
+        axis: [
+          data[
+            offset +
+              T_AXIS_X
+          ],
+          data[
+            offset +
+              T_AXIS_Y
+          ],
+          data[
+            offset +
+              T_AXIS_Z
+          ],
+        ],
+
         attitude: [
-          data[offset + T_ATTITUDE_X],
-          data[offset + T_ATTITUDE_Y],
-          data[offset + T_ATTITUDE_Z],
-          data[offset + T_ATTITUDE_W],
+          data[
+            offset +
+              T_ATTITUDE_X
+          ],
+          data[
+            offset +
+              T_ATTITUDE_Y
+          ],
+          data[
+            offset +
+              T_ATTITUDE_Z
+          ],
+          data[
+            offset +
+              T_ATTITUDE_W
+          ],
         ],
+
         angularVelocity: [
-          data[offset + T_ANGULAR_VELOCITY_X],
-          data[offset + T_ANGULAR_VELOCITY_Y],
-          data[offset + T_ANGULAR_VELOCITY_Z],
+          data[
+            offset +
+              T_ANGULAR_VELOCITY_X
+          ],
+          data[
+            offset +
+              T_ANGULAR_VELOCITY_Y
+          ],
+          data[
+            offset +
+              T_ANGULAR_VELOCITY_Z
+          ],
         ],
+
         input: {
-          pitchRate: data[offset + T_INPUT_PITCH_RATE],
-          rollRate: data[offset + T_INPUT_ROLL_RATE],
-          yawRate: data[offset + T_INPUT_YAW_RATE],
+          pitchRate:
+            data[
+              offset +
+                T_INPUT_PITCH_RATE
+            ],
+
+          rollRate:
+            data[
+              offset +
+                T_INPUT_ROLL_RATE
+            ],
+
+          yawRate:
+            data[
+              offset +
+                T_INPUT_YAW_RATE
+            ],
         },
+
         boost: {
-          charge: data[offset + T_BOOST_CHARGE],
-          remaining: data[offset + T_BOOST_REMAINING],
-          armedRemaining: data[offset + T_BOOST_ARMED_REMAINING],
-          drainRemaining: data[offset + T_BOOST_DRAIN_REMAINING],
-          triggered: data[offset + T_BOOST_TRIGGERED] === 1,
+          charge:
+            data[
+              offset +
+                T_BOOST_CHARGE
+            ],
+
+          remaining:
+            data[
+              offset +
+                T_BOOST_REMAINING
+            ],
+
+          armedRemaining:
+            data[
+              offset +
+                T_BOOST_ARMED_REMAINING
+            ],
+
+          drainRemaining:
+            data[
+              offset +
+                T_BOOST_DRAIN_REMAINING
+            ],
+
+          triggered:
+            data[
+              offset +
+                T_BOOST_TRIGGERED
+            ] === 1,
         },
+
         aerodynamics: {
-          angleOfAttack: data[offset + T_ANGLE_OF_ATTACK],
-          liftCoefficient: data[offset + T_LIFT_COEFFICIENT],
-          stallAmount: data[offset + T_STALL_AMOUNT],
+          angleOfAttack:
+            data[
+              offset +
+                T_ANGLE_OF_ATTACK
+            ],
+
+          liftCoefficient:
+            data[
+              offset +
+                T_LIFT_COEFFICIENT
+            ],
+
+          stallAmount:
+            data[
+              offset +
+                T_STALL_AMOUNT
+            ],
         },
-        collisionRespawnFlag: data[offset + T_COLLISION_RESPAWN_FLAG],
-        pathAngleDelta: data[offset + T_PATH_ANGLE_DELTA],
+
+        collisionRespawnFlag:
+          data[
+            offset +
+              T_COLLISION_RESPAWN_FLAG
+          ],
+
+        pathAngleDelta:
+          data[
+            offset +
+              T_PATH_ANGLE_DELTA
+          ],
       };
     }
 
     return {
       version: 1,
-      capacity: TELEMETRY_CAPACITY,
+      capacity:
+        TELEMETRY_CAPACITY,
       count,
       glitchCapture,
+
       glitch: {
-        detected: this.telemetryGlitchDetected,
-        t: this.telemetryGlitchTime,
-        pathAngleDelta: this.telemetryGlitchPathAngleDelta,
+        detected:
+          this.telemetryGlitchDetected,
+
+        t:
+          this.telemetryGlitchTime,
+
+        pathAngleDelta:
+          this
+            .telemetryGlitchPathAngleDelta,
       },
+
       frames,
     };
   }
 
-  exportTelemetrySnapshot(glitchCapture = false, space = 0) {
-    return JSON.stringify(this.readTelemetrySnapshot(glitchCapture), null, space);
+  exportTelemetrySnapshot(
+    glitchCapture = false,
+    space = 0
+  ) {
+    return JSON.stringify(
+      this.readTelemetrySnapshot(
+        glitchCapture
+      ),
+      null,
+      space
+    );
   }
 
   getForward(target) {
-    return target.copy(LOCAL_FORWARD).applyQuaternion(this.attitude).normalize();
+    return target
+      .copy(LOCAL_FORWARD)
+      .applyQuaternion(
+        this.attitude
+      )
+      .normalize();
   }
 
   getUp(target) {
-    return target.copy(LOCAL_UP).applyQuaternion(this.attitude).normalize();
+    return target
+      .copy(LOCAL_UP)
+      .applyQuaternion(
+        this.attitude
+      )
+      .normalize();
   }
 
   getRight(target) {
-    return target.copy(LOCAL_RIGHT).applyQuaternion(this.attitude).normalize();
+    return target
+      .copy(LOCAL_RIGHT)
+      .applyQuaternion(
+        this.attitude
+      )
+      .normalize();
   }
 
   get speedKmh() {
