@@ -1,0 +1,335 @@
+{
+  "format": "skyline-world-features",
+  "version": 3,
+  "coordinateSystem": {
+    "units": "meters",
+    "xAxis": "east",
+    "zAxis": "north",
+    "origin": "world-center"
+  },
+  "water": {
+    "river": {
+      "id": "skyline-river",
+      "bedWidthMeters": 50,
+      "bankWidthMeters": 190,
+      "points": [
+        [
+          -4070,
+          62,
+          3490
+        ],
+        [
+          -3470,
+          59.29121421597351,
+          3200
+        ],
+        [
+          -2920,
+          56.5739025563284,
+          2820
+        ],
+        [
+          -2440,
+          53.95442162984539,
+          2390
+        ],
+        [
+          -1930,
+          51.393303984305675,
+          2020
+        ],
+        [
+          -1430,
+          48.49020437896772,
+          1510
+        ],
+        [
+          -920,
+          45.38126532813061,
+          940
+        ],
+        [
+          -410,
+          42.05486569237215,
+          300
+        ],
+        [
+          170,
+          38.66280467252222,
+          -300
+        ],
+        [
+          820,
+          35.426024898947,
+          -760
+        ],
+        [
+          1500,
+          31.65806145361152,
+          -1390
+        ],
+        [
+          2230,
+          27.255912149225416,
+          -2190
+        ],
+        [
+          3050,
+          22.246525324449408,
+          -3110
+        ],
+        [
+          4030,
+          17,
+          -3950
+        ]
+      ]
+    },
+    "lake": {
+      "id": "mirror-lake",
+      "center": [
+        -2110,
+        2110
+      ],
+      "radius": [
+        770,
+        570
+      ],
+      "shoreFeatherMeters": 190,
+      "surfaceMeters": 43,
+      "floorMeters": 31,
+      "y": 43
+    }
+  },
+  "city": {
+    "id": "skyline-city",
+    "plateau": {
+      "min": [
+        420,
+        -1390
+      ],
+      "max": [
+        1480,
+        -330
+      ],
+      "elevationMeters": 94,
+      "featherMeters": 145
+    },
+    "grid": {
+      "blockMinMeters": 60,
+      "blockMaxMeters": 90,
+      "streetMeters": 18,
+      "towerPairPositions": [
+        [
+          1020,
+          -480
+        ],
+        [
+          650,
+          -1140
+        ]
+      ],
+      "openAtriumPosition": [
+        1130,
+        -720
+      ]
+    }
+  },
+  "canyons": [
+    {
+      "id": "red-needle-canyon",
+      "points": [
+        [
+          840,
+          4050
+        ],
+        [
+          1260,
+          3400
+        ],
+        [
+          1760,
+          2740
+        ],
+        [
+          2220,
+          2040
+        ],
+        [
+          2690,
+          1280
+        ],
+        [
+          3100,
+          440
+        ],
+        [
+          3460,
+          -520
+        ],
+        [
+          3760,
+          -1540
+        ]
+      ],
+      "innerWidthMeters": 82,
+      "outerWidthMeters": 470,
+      "depthMeters": 122,
+      "rimHeightMeters": 48
+    }
+  ],
+  "bridges": [
+    {
+      "id": "old-stone-arches",
+      "type": "stone_arch",
+      "position": [
+        -3260,
+        3100
+      ],
+      "spanMeters": 116,
+      "deckWidthMeters": 12,
+      "orientation": "cross-river",
+      "y": 70.3578793765116,
+      "waterY": 58.357879376511605,
+      "headingDegrees": 34.64094751191629
+    },
+    {
+      "id": "lake-rail-viaduct",
+      "type": "rail_viaduct",
+      "position": [
+        -1570,
+        1650
+      ],
+      "spanMeters": 205,
+      "deckWidthMeters": 10,
+      "orientation": "cross-river",
+      "y": 76.29494518311355,
+      "waterY": 49.29494518311355,
+      "headingDegrees": 45.567266409857936
+    },
+    {
+      "id": "central-suspension",
+      "type": "suspension",
+      "position": [
+        -420,
+        300
+      ],
+      "spanMeters": 275,
+      "deckWidthMeters": 14,
+      "orientation": "cross-river",
+      "y": 74.08019739035986,
+      "waterY": 42.08019739035986,
+      "headingDegrees": 51.44953470384228
+    },
+    {
+      "id": "city-canal-bridge",
+      "type": "urban_arch",
+      "position": [
+        820,
+        -760
+      ],
+      "spanMeters": 132,
+      "deckWidthMeters": 20,
+      "orientation": "cross-river",
+      "y": 46.426024898947,
+      "waterY": 35.426024898947,
+      "headingDegrees": 35.28674897505972
+    },
+    {
+      "id": "southern-highline",
+      "type": "steel_truss",
+      "position": [
+        2290,
+        -2260
+      ],
+      "spanMeters": 232,
+      "deckWidthMeters": 11,
+      "orientation": "cross-river",
+      "y": 64.88123059583158,
+      "waterY": 26.881230595831582,
+      "headingDegrees": 48.28924267849183
+    }
+  ],
+  "landmarks": [
+    {
+      "id": "north-tower-thread",
+      "type": "tower_pair",
+      "position": [
+        1020,
+        -480
+      ],
+      "headingDegrees": 35,
+      "y": 92.52027893066406
+    },
+    {
+      "id": "south-tower-thread",
+      "type": "tower_pair",
+      "position": [
+        650,
+        -1140
+      ],
+      "headingDegrees": -28,
+      "y": 94.70497131347656
+    },
+    {
+      "id": "open-atrium",
+      "type": "open_atrium",
+      "position": [
+        1130,
+        -720
+      ],
+      "headingDegrees": 0,
+      "y": 92.4326400756836
+    },
+    {
+      "id": "red-canyon-arch",
+      "type": "natural_arch",
+      "position": [
+        2940,
+        830
+      ],
+      "headingDegrees": 72,
+      "y": 96.59033013982567
+    },
+    {
+      "id": "mirror-observatory",
+      "type": "observatory",
+      "position": [
+        -3150,
+        2700
+      ],
+      "headingDegrees": 108,
+      "y": 187.161106230319
+    },
+    {
+      "id": "alpine-needle",
+      "type": "rock_needle",
+      "position": [
+        310,
+        3440
+      ],
+      "headingDegrees": 0,
+      "y": 279.5458226662073
+    },
+    {
+      "id": "forest-stone-circle",
+      "type": "stone_circle",
+      "position": [
+        -2740,
+        -1210
+      ],
+      "headingDegrees": 0,
+      "y": 92.95968432824955
+    },
+    {
+      "id": "southern-wind-array",
+      "type": "wind_array",
+      "position": [
+        3320,
+        -3070
+      ],
+      "headingDegrees": 44,
+      "y": 159.56086030582057
+    }
+  ]
+}
