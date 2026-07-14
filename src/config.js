@@ -1,100 +1,94 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-soft-stall-no-boost-1.4.1',
+  version: 'fable-iteration-3-open-speed-1.4.2',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
-    spawnSpeed: 28,
-    minimumSpeed: 15,
-    preferredCruiseSpeed: 29,
-    softMaximumSpeed: 44,
-    maximumSpeed: 52,
+    // Starts at 162 km/h.
+    spawnSpeed: 45,
 
-    maximumAcceleration: 24,
-    maximumDeceleration: 24,
+    // Prevents completely dead, uncontrollable flight.
+    minimumSpeed: 25,
+
+    preferredCruiseSpeed: 45,
+
+    // Effectively removes the old 178 km/h speed ceiling.
+    // 1000 m/s is only an extreme numerical safety limit.
+    softMaximumSpeed: 900,
+    maximumSpeed: 1000,
+
+    maximumAcceleration: 30,
+
+    // Prevents speed from disappearing instantly during a pull-up.
+    maximumDeceleration: 4.5,
 
     angularResponse: 14,
     angularRelease: 18,
 
     energy: Object.freeze({
-      gravityBlendAngle: 35 * DEG,
-      diveGravityMultiplier: 1.18,
+      gravityBlendAngle: 30 * DEG,
 
-      climbGravityMultiplier: 0.72,
+      // Diving produces noticeably more speed.
+      diveGravityMultiplier: 1.35,
 
-      levelAssistFullAngle: 2 * DEG,
-      levelAssistZeroAngle: 7 * DEG,
-      levelAssistSpeedBand: 3,
-      levelFlightAssistance: 0.55,
-      levelAssistDragFraction: 0.75,
+      // Climbing still costs speed, but far less.
+      climbGravityMultiplier: 0.28,
 
-      maximumOverspeedDrag: 18,
+      // Nearly maintain speed during ordinary level flight.
+      levelAssistFullAngle: 3 * DEG,
+      levelAssistZeroAngle: 10 * DEG,
+      levelAssistSpeedBand: 8,
+      levelFlightAssistance: 1.2,
+      levelAssistDragFraction: 0.9,
+
+      // No artificial high-speed braking.
+      maximumOverspeedDrag: 0,
       overspeedExponent: 2,
     }),
 
     aero: Object.freeze({
-      liftSlope: 3.6,
+      liftSlope: 3.2,
 
-      /*
-       * Ordinary fast pull-ups should not stall.
-       * Warning begins late and actual lift loss begins much later.
-       */
-      stallWarningAngle: 30 * DEG,
-      stallAngle: 45 * DEG,
-      postStallAngle: 75 * DEG,
+      // Stall remains possible only during a very extreme sustained pull.
+      stallWarningAngle: 45 * DEG,
+      stallAngle: 65 * DEG,
+      postStallAngle: 95 * DEG,
 
-      /*
-       * Even during an extreme stall, retain most lift.
-       * This prevents the flight path from feeling frozen.
-       */
-      postStallLiftFraction: 0.88,
+      // A stall barely reduces lift and never locks controls.
+      postStallLiftFraction: 0.92,
 
-      /*
-       * Stall develops slowly but clears quickly
-       * when the player stops pulling.
-       */
-      stallAttackTime: 0.55,
-      stallReleaseTime: 0.12,
+      stallAttackTime: 0.8,
+      stallReleaseTime: 0.08,
 
-      /*
-       * Completely disable forced pitch-down control.
-       * Stalling affects lift but never steals control.
-       */
       stallRecoveryStart: 1,
       stallRecoveryStrength: 0,
 
-      /*
-       * Slightly faster response so the flight path follows
-       * the player's chosen direction more readily.
-       */
-      liftRateCoefficient: 0.016,
-      maximumG: 6,
+      // Makes the real movement direction follow where you look much faster.
+      liftRateCoefficient: 0.03,
+      maximumG: 14,
 
-      parasiticDrag: 0.00042,
-      inducedDrag: 0.00020,
+      // Much less speed destruction during pull-ups.
+      parasiticDrag: 0.000035,
+      inducedDrag: 0.00002,
 
-      gravityPathBend: 1,
+      // Greatly reduces the persistent downward pull.
+      gravityPathBend: 0.2,
     }),
 
-    /*
-     * Boost disabled completely.
-     *
-     * The flightModel remains compatible, but these conditions
-     * can never be reached during normal gameplay.
-     */
+    // Boost is fully disabled.
     boost3: Object.freeze({
-      chargeSpeed: 999,
-      chargePathAngle: -89 * DEG,
-      chargeSeconds: 999,
+      chargeSpeed: 1000000000,
+      chargePathAngle: -180 * DEG,
+      chargeSeconds: 1000000000,
 
       armedSeconds: 0,
       drainSeconds: 1,
 
-      triggerPitchRate: 999 * DEG,
+      triggerPitchRate: 1000000000,
 
       duration: 1,
       deltaSpeed: 0,
@@ -113,8 +107,8 @@ export const CONFIG = Object.freeze({
     pitchFullDeflection: 25 * DEG,
     rollFullDeflection: 30 * DEG,
 
-    pitchMaxRate: 110 * DEG,
-    rollMaxRate: 160 * DEG,
+    pitchMaxRate: 100 * DEG,
+    rollMaxRate: 150 * DEG,
 
     responseExponent: 1.6,
 
@@ -122,11 +116,11 @@ export const CONFIG = Object.freeze({
     yawMenuHold: 1,
 
     sensorStaleAfter: 0.8,
-    inputSlewSeconds: 0.06,
+    inputSlewSeconds: 0.07,
 
-    highSpeedControlStart: 100,
-    highSpeedControlFull: 130,
-    highSpeedControlScale: 0.85,
+    highSpeedControlStart: 120,
+    highSpeedControlFull: 220,
+    highSpeedControlScale: 0.72,
   }),
 
   sensitivity: Object.freeze({
@@ -158,11 +152,11 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-    monoSpeedFov: 12,
+    monoSpeedFov: 10,
     stereoFov: 80,
 
-    fovSpeedStart: 60,
-    fovSpeedFull: 130,
+    fovSpeedStart: 45,
+    fovSpeedFull: 180,
 
     thirdBack: 11,
     thirdUp: 3.5,
@@ -179,23 +173,23 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    streakCount: 120,
-    streakStartSpeed: 30,
-    streakFullSpeed: 50,
-    streakDepth: 48,
-    streakRadius: 8,
+    streakCount: 160,
+    streakStartSpeed: 45,
+    streakFullSpeed: 220,
+    streakDepth: 55,
+    streakRadius: 9,
 
     boostIntensity: 1,
 
-    gVignetteStart: 5,
-    gVignetteFull: 8,
+    gVignetteStart: 7,
+    gVignetteFull: 12,
 
     maxViewSqueeze: 0,
 
     maxVrShake: 0,
     stallBuffetAngle: 0,
 
-    negativeGTintStart: -0.7,
+    negativeGTintStart: -1,
 
     promptDepth: 5000,
   }),
