@@ -1,198 +1,257 @@
+const KMH = 3.6;
+const MPS_TO_FPM = 196.850394;
+
+function finite(
+  value,
+  fallback = 0,
+) {
+  return Number.isFinite(value)
+    ? value
+    : fallback;
+}
+
+function getSpeed(flight) {
+  if (Number.isFinite(flight?.speed)) {
+    return Math.max(
+      0,
+      flight.speed,
+    );
+  }
+
+  if (flight?.velocity?.length) {
+    return Math.max(
+      0,
+      flight.velocity.length(),
+    );
+  }
+
+  return 0;
+}
+
+function getVerticalSpeed(flight) {
+  if (
+    Number.isFinite(
+      flight?.verticalSpeed,
+    )
+  ) {
+    return flight.verticalSpeed;
+  }
+
+  return finite(
+    flight?.velocity?.y,
+  );
+}
+
+function getHeading(flight) {
+  const velocity = flight?.velocity;
+
+  if (
+    !velocity ||
+    !Number.isFinite(velocity.x) ||
+    !Number.isFinite(velocity.z)
+  ) {
+    return 0;
+  }
+
+  const heading =
+    Math.atan2(
+      velocity.x,
+      -velocity.z,
+    ) *
+    180 /
+    Math.PI;
+
+  return (heading + 360) % 360;
+}
+
+function getLoad(flight) {
+  for (const value of [
+    flight?.loadFactor,
+    flight?.gForce,
+    flight?.currentG,
+  ]) {
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return 1;
+}
+
+function getStall(flight) {
+  for (const value of [
+    flight?.stallAmount,
+    flight?.stallSeverity,
+    flight?.stall,
+  ]) {
+    if (Number.isFinite(value)) {
+      return Math.max(
+        0,
+        Math.min(1, value),
+      );
+    }
+  }
+
+  return 0;
+}
+
+function getBoost(flight) {
+  if (
+    Number.isFinite(
+      flight?.boostCharge,
+    )
+  ) {
+    return Math.max(
+      0,
+      Math.min(
+        1,
+        flight.boostCharge,
+      ),
+    );
+  }
+
+  return 0;
+}
+
 export class MonoHud {
   constructor(root) {
     this.root = root;
+    this.visible = false;
 
-    this.speed =
-      root.querySelector('[data-speed]');
+    this.elapsed = 0;
+    this.frames = 0;
+    this.fps = 0;
 
-    this.g =
-      root.querySelector('[data-g]');
+    this.lastRender = -Infinity;
 
-    this.boost =
-      root.querySelector('[data-boost]');
+    this.aircraftName =
+      'SKYLINE GLIDER';
 
-    this.camera =
-      root.querySelector('[data-camera]');
+    root.innerHTML = `
+      <section
+        class="flight-hud"
+        aria-label="Flight information"
+      >
+        <div class="flight-hud__primary">
+          <div class="flight-hud__readout">
+            <span class="flight-hud__label">
+              SPEED
+            </span>
+            <strong data-hud="speed">
+              000
+            </strong>
+            <span class="flight-hud__unit">
+              KM/H
+            </span>
+          </div>
 
-    this.performance =
-      root.querySelector('[data-performance]');
+          <div class="flight-hud__readout">
+            <span class="flight-hud__label">
+              ALT
+            </span>
+            <strong data-hud="altitude">
+              0000
+            </strong>
+            <span class="flight-hud__unit">
+              M
+            </span>
+          </div>
+        </div>
 
-    this.altitude = null;
-    this._elapsed = 0;
+        <div class="flight-hud__secondary">
+          <span>
+            V/S
+            <b data-hud="vertical">
+              +0000
+            </b>
+            FPM
+          </span>
 
-    this._replaceBoostWithAltitude();
-    this._createStereoHud();
-  }
+          <span>
+            HDG
+            <b data-hud="heading">
+              000°
+            </b>
+          </span>
 
-  _replaceBoostWithAltitude() {
-    if (!this.boost) {
-      return;
-    }
+          <span>
+            LOAD
+            <b data-hud="load">
+              1.0G
+            </b>
+          </span>
 
-    const row = this.boost.closest('div');
+          <span>
+            CAM
+            <b data-hud="camera">
+              FIRST
+            </b>
+          </span>
+        </div>
 
-    if (!row) {
-      return;
-    }
+        <div class="flight-hud__status">
+          <span data-hud="aircraft">
+            SKYLINE GLIDER
+          </span>
 
-    row.innerHTML = `
-      <span>ALTITUDE</span>
-      <strong data-altitude>0 m</strong>
+          <span data-hud="state">
+            CRUISE
+          </span>
+        </div>
+
+        <div
+          class="flight-hud__meter"
+          aria-hidden="true"
+        >
+          <i data-hud="meter"></i>
+        </div>
+
+        <div
+          class="flight-hud__debug"
+          data-hud="debug"
+        ></div>
+      </section>
     `;
 
-    this.altitude =
-      row.querySelector('[data-altitude]');
-  }
+    this.nodes = Object.fromEntries(
+      [
+        ...root.querySelectorAll(
+          '[data-hud]',
+        ),
+      ].map((node) => [
+        node.dataset.hud,
+        node,
+      ]),
+    );
 
-  _createStereoHud() {
-    const existing =
-      document.querySelector(
-        '#stereo-flight-hud'
-      );
+    this._aircraftListener = (
+      event,
+    ) => {
+      if (event?.detail?.name) {
+        this.aircraftName =
+          event.detail.name;
+      }
+    };
 
-    if (existing) {
-      this.stereoHud = existing;
-    } else {
-      this.stereoHud =
-        document.createElement('div');
-
-      this.stereoHud.id =
-        'stereo-flight-hud';
-
-      this.stereoHud.setAttribute(
-        'aria-hidden',
-        'true'
-      );
-
-      this.stereoHud.innerHTML = `
-        <div class="stereo-hud-eye">
-          <div class="stereo-hud-card">
-            <strong data-vr-speed>
-              0 km/h
-            </strong>
-
-            <span data-vr-altitude>
-              ALT 0 m
-            </span>
-          </div>
-        </div>
-
-        <div class="stereo-hud-eye">
-          <div class="stereo-hud-card">
-            <strong data-vr-speed>
-              0 km/h
-            </strong>
-
-            <span data-vr-altitude>
-              ALT 0 m
-            </span>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(
-        this.stereoHud
-      );
-    }
-
-    this.stereoSpeeds = [
-      ...this.stereoHud.querySelectorAll(
-        '[data-vr-speed]'
-      ),
-    ];
-
-    this.stereoAltitudes = [
-      ...this.stereoHud.querySelectorAll(
-        '[data-vr-altitude]'
-      ),
-    ];
-
-    if (
-      !document.querySelector(
-        '#stereo-flight-hud-style'
-      )
-    ) {
-      const style =
-        document.createElement('style');
-
-      style.id =
-        'stereo-flight-hud-style';
-
-      style.textContent = `
-        #stereo-flight-hud {
-          display: none;
-          position: fixed;
-          z-index: 14;
-          inset: 0;
-          pointer-events: none;
-        }
-
-        body.stereo.running
-        #stereo-flight-hud {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .stereo-hud-eye {
-          position: relative;
-          min-width: 0;
-        }
-
-        .stereo-hud-card {
-          position: absolute;
-          right: 7%;
-          bottom: 8%;
-          display: grid;
-          justify-items: end;
-          gap: 2px;
-          min-width: 94px;
-          padding: 7px 9px;
-          border: 1px solid
-            rgba(255, 255, 255, 0.18);
-          border-radius: 9px;
-          color: #fff7e8;
-          background:
-            rgba(5, 18, 24, 0.44);
-          box-shadow:
-            0 4px 14px
-            rgba(0, 0, 0, 0.18);
-          text-align: right;
-          font-family:
-            Inter,
-            ui-sans-serif,
-            system-ui,
-            sans-serif;
-          text-shadow:
-            0 2px 6px
-            rgba(0, 0, 0, 0.55);
-        }
-
-        .stereo-hud-card strong {
-          font-size:
-            clamp(13px, 2vw, 18px);
-          line-height: 1;
-          letter-spacing: -0.02em;
-        }
-
-        .stereo-hud-card span {
-          color:
-            rgba(255, 255, 255, 0.68);
-          font-size:
-            clamp(8px, 1.15vw, 11px);
-          font-weight: 750;
-          line-height: 1;
-          letter-spacing: 0.06em;
-        }
-      `;
-
-      document.head.appendChild(style);
-    }
+    window.addEventListener(
+      'skyline:aircraft-changed',
+      this._aircraftListener,
+    );
   }
 
   setVisible(visible) {
+    this.visible = Boolean(visible);
+
     this.root.classList.toggle(
       'hidden',
-      !visible
+      !this.visible,
+    );
+
+    this.root.setAttribute(
+      'aria-hidden',
+      this.visible
+        ? 'false'
+        : 'true',
     );
   }
 
@@ -200,63 +259,171 @@ export class MonoHud {
     dt,
     flight,
     cameraMode,
-    metrics,
-    droppedSteps
+    metrics = {},
+    droppedSteps = 0,
   ) {
-    this._elapsed += dt;
+    if (!this.visible) return;
 
-    if (this._elapsed < 0.1) {
+    const safeDt = Math.max(
+      0,
+      Math.min(0.1, dt || 0),
+    );
+
+    this.elapsed += safeDt;
+    this.frames += 1;
+
+    if (this.elapsed >= 0.5) {
+      this.fps =
+        this.elapsed > 0
+          ? this.frames /
+            this.elapsed
+          : 0;
+
+      this.elapsed = 0;
+      this.frames = 0;
+    }
+
+    const now =
+      performance.now() / 1000;
+
+    if (
+      now - this.lastRender <
+      0.08
+    ) {
       return;
     }
 
-    this._elapsed = 0;
+    this.lastRender = now;
 
     const speed =
-      Math.round(flight.speedKmh);
+      getSpeed(flight);
 
-    const altitude =
-      Math.max(
-        0,
-        Math.round(flight.position.y)
+    const altitude = Math.max(
+      0,
+      finite(flight?.position?.y),
+    );
+
+    const vertical =
+      getVerticalSpeed(flight);
+
+    const heading =
+      getHeading(flight);
+
+    const load =
+      getLoad(flight);
+
+    const stall =
+      getStall(flight);
+
+    const boost =
+      getBoost(flight);
+
+    this.nodes.speed.textContent =
+      String(
+        Math.round(speed * KMH),
+      ).padStart(3, '0');
+
+    this.nodes.altitude.textContent =
+      String(
+        Math.round(altitude),
+      ).padStart(4, '0');
+
+    const verticalSign =
+      vertical >= 0 ? '+' : '−';
+
+    const verticalValue =
+      Math.round(
+        Math.abs(vertical) *
+          MPS_TO_FPM,
       );
 
-    this.speed.textContent =
-      `${speed} km/h`;
+    this.nodes.vertical.textContent =
+      `${verticalSign}${String(
+        verticalValue,
+      ).padStart(4, '0')}`;
 
-    this.g.textContent =
-      `${flight.gLoad.toFixed(1)} g`;
+    this.nodes.heading.textContent =
+      `${String(
+        Math.round(heading) % 360,
+      ).padStart(3, '0')}°`;
 
-    if (this.altitude) {
-      this.altitude.textContent =
-        `${altitude} m`;
+    this.nodes.load.textContent =
+      `${load.toFixed(1)}G`;
+
+    this.nodes.camera.textContent =
+      String(
+        cameraMode || 'FIRST',
+      ).toUpperCase();
+
+    this.nodes.aircraft.textContent =
+      this.aircraftName;
+
+    let state = 'CRUISE';
+
+    let meter = Math.min(
+      1,
+      speed / 120,
+    );
+
+    if (stall > 0.65) {
+      state =
+        'STALL · LOWER NOSE';
+
+      meter = stall;
+    } else if (stall > 0.22) {
+      state = 'AOA HIGH';
+      meter = stall;
+    } else if (boost > 0.04) {
+      state =
+        `ENERGY ${Math.round(
+          boost * 100,
+        )}%`;
+
+      meter = boost;
+    } else if (vertical < -12) {
+      state = 'DIVE';
+    } else if (vertical > 8) {
+      state = 'CLIMB';
     }
 
-    for (
-      const element of
-      this.stereoSpeeds
-    ) {
-      element.textContent =
-        `${speed} km/h`;
-    }
+    this.nodes.state.textContent =
+      state;
 
-    for (
-      const element of
-      this.stereoAltitudes
-    ) {
-      element.textContent =
-        `ALT ${altitude} m`;
-    }
+    this.nodes.state.dataset.warning =
+      stall > 0.22
+        ? 'true'
+        : 'false';
 
-    this.camera.textContent =
-      cameraMode === 'first'
-        ? 'FIRST PERSON'
-        : 'THIRD PERSON';
+    this.nodes.meter.style.transform =
+      `scaleX(${Math.max(
+        0.015,
+        meter,
+      )})`;
 
-    this.performance.textContent =
-      `${metrics.calls} calls · ` +
+    const drawCalls = finite(
+      metrics.drawCalls ??
+        metrics.calls,
+      0,
+    );
+
+    const triangles = finite(
+      metrics.triangles,
+      0,
+    );
+
+    this.nodes.debug.textContent =
+      `${Math.round(this.fps)} FPS · ` +
+      `${drawCalls} DC · ` +
       `${Math.round(
-        metrics.triangles / 1000
-      )}k tris · ` +
-      `${droppedSteps} dropped`;
+        triangles / 1000,
+      )}K TRI · ` +
+      `${droppedSteps} DROP`;
+  }
+
+  dispose() {
+    window.removeEventListener(
+      'skyline:aircraft-changed',
+      this._aircraftListener,
+    );
   }
 }
