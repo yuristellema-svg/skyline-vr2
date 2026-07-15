@@ -1,35 +1,40 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-relaxed-energy-1.4.5',
+  version: 'fable-iteration-3-energy-turning-headlook-1.4.6',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
     maxSubSteps: 8,
     gravity: 9.81,
 
+    // Starts fast, but there is no automatic cruise target anymore.
     spawnSpeed: 58,
     minimumSpeed: 0,
-    preferredCruiseSpeed: 55,
-    softMaximumSpeed: 900,
-    maximumSpeed: 1000,
+    preferredCruiseSpeed: 0,
+    softMaximumSpeed: 5000,
+    maximumSpeed: 5000,
 
-    maximumAcceleration: 10,
-    maximumDeceleration: 16,
+    maximumAcceleration: 22,
+    maximumDeceleration: 32,
 
     angularResponse: 12,
     angularRelease: 16,
 
     energy: Object.freeze({
-      gravityBlendAngle: 28 * DEG,
-      diveGravityMultiplier: 0.78,
-      climbGravityMultiplier: 1.12,
+      gravityBlendAngle: 30 * DEG,
 
-      levelAssistFullAngle: 3 * DEG,
-      levelAssistZeroAngle: 17 * DEG,
-      levelAssistSpeedBand: 22,
-      levelFlightAssistance: 0.48,
-      levelAssistDragFraction: 2.2,
+      // A dive is slightly more rewarding than an equal climb is costly.
+      // This preserves the deliberate high/low energy exploit.
+      diveGravityMultiplier: 1.28,
+      climbGravityMultiplier: 1.08,
+
+      // No engine or invisible cruise control.
+      levelAssistFullAngle: 0,
+      levelAssistZeroAngle: 0,
+      levelAssistSpeedBand: 0,
+      levelFlightAssistance: 0,
+      levelAssistDragFraction: 0,
 
       maximumOverspeedDrag: 0,
       overspeedExponent: 2,
@@ -38,23 +43,26 @@ export const CONFIG = Object.freeze({
     aero: Object.freeze({
       liftSlope: 3.0,
 
-      stallWarningAngle: 28 * DEG,
-      stallAngle: 48 * DEG,
-      postStallAngle: 82 * DEG,
-      postStallLiftFraction: 0.78,
+      stallWarningAngle: 30 * DEG,
+      stallAngle: 50 * DEG,
+      postStallAngle: 85 * DEG,
+      postStallLiftFraction: 0.72,
 
-      stallAttackTime: 0.45,
-      stallReleaseTime: 0.18,
+      stallAttackTime: 0.42,
+      stallReleaseTime: 0.2,
 
+      // Recovery never steals the controls.
       stallRecoveryStart: 1,
       stallRecoveryStrength: 0,
 
-      liftRateCoefficient: 0.031,
-      maximumG: 11,
+      liftRateCoefficient: 0.034,
+      maximumG: 13,
 
-      parasiticDrag: 0.00013,
-      inducedDrag: 0.00004,
-      gravityPathBend: 0.06,
+      // Very light straight-line drag.
+      // Hard turns provide the real braking.
+      parasiticDrag: 0.000002,
+      inducedDrag: 0.000012,
+      gravityPathBend: 0.04,
     }),
 
     boost3: Object.freeze({
@@ -75,29 +83,32 @@ export const CONFIG = Object.freeze({
   }),
 
   controls: Object.freeze({
-    // No dead zone for VR or mouse.
+    // No steering dead zone.
     pitchDeadzone: 0,
     rollDeadzone: 0,
 
-    // Much less physical movement reaches full steering.
     pitchFullDeflection: 12 * DEG,
     rollFullDeflection: 14 * DEG,
 
-    // Responsive but calmer maximum turning rates.
-    pitchMaxRate: 86 * DEG,
-    rollMaxRate: 116 * DEG,
+    pitchMaxRate: 90 * DEG,
+    rollMaxRate: 120 * DEG,
 
     responseExponent: 1.05,
 
-    yawMenuThreshold: 45 * DEG,
-    yawMenuHold: 1,
+    // Looking left/right is now camera look.
+    headLookMaxYaw: 72 * DEG,
+    headLookResponse: 18,
+
+    // Kept for compatibility. Yaw no longer opens the menu.
+    yawMenuThreshold: 180 * DEG,
+    yawMenuHold: 99,
 
     sensorStaleAfter: 0.8,
-    inputSlewSeconds: 0.055,
+    inputSlewSeconds: 0.05,
 
-    highSpeedControlStart: 120,
-    highSpeedControlFull: 320,
-    highSpeedControlScale: 0.72,
+    highSpeedControlStart: 140,
+    highSpeedControlFull: 650,
+    highSpeedControlScale: 0.68,
   }),
 
   sensitivity: Object.freeze({
@@ -129,11 +140,11 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-    monoSpeedFov: 18,
+    monoSpeedFov: 20,
     stereoFov: 80,
 
     fovSpeedStart: 50,
-    fovSpeedFull: 210,
+    fovSpeedFull: 260,
 
     thirdBack: 11,
     thirdUp: 3.5,
@@ -146,27 +157,26 @@ export const CONFIG = Object.freeze({
     rollLagResponse: 14,
 
     near: 0.08,
-    far: 4200,
+    far: 6200,
   }),
 
   effects: Object.freeze({
-    streakCount: 260,
-    streakStartSpeed: 38,
-    streakFullSpeed: 210,
-    streakDepth: 95,
-    streakRadius: 12,
+    streakCount: 280,
+    streakStartSpeed: 35,
+    streakFullSpeed: 260,
+    streakDepth: 110,
+    streakRadius: 13,
 
     boostIntensity: 1,
 
-    gVignetteStart: 8,
-    gVignetteFull: 14,
+    gVignetteStart: 9,
+    gVignetteFull: 15,
 
     maxViewSqueeze: 0,
     maxVrShake: 0,
     stallBuffetAngle: 0,
 
     negativeGTintStart: -1,
-
     promptDepth: 5000,
   }),
 
@@ -207,8 +217,8 @@ export const CONFIG = Object.freeze({
     planeSize: 12000,
     bridgeZ: -900,
 
-    fogNear: 1900,
-    fogFar: 3600,
+    fogNear: 3200,
+    fogFar: 5400,
   }),
 
   world: Object.freeze({
@@ -218,11 +228,12 @@ export const CONFIG = Object.freeze({
     sampleSpacing: 2,
     chunkSize: 256,
 
-    loadRadius: 3200,
-    unloadRadius: 3584,
+    // Nearly the entire authored world stays around the player.
+    loadRadius: 4096,
+    unloadRadius: 4608,
 
-    fullLodRadius: 704,
-    halfLodRadius: 1664,
+    fullLodRadius: 768,
+    halfLodRadius: 2048,
 
     renderSpacingFull: 4,
     renderSpacingHalf: 8,
@@ -230,8 +241,8 @@ export const CONFIG = Object.freeze({
 
     floatingOriginDistance: 2048,
 
-    fogNear: 1900,
-    fogFar: 3600,
+    fogNear: 3200,
+    fogFar: 5400,
 
     spawn: Object.freeze([
       0,
@@ -243,12 +254,12 @@ export const CONFIG = Object.freeze({
 
     assetRoot: './assets/world',
 
-    maxHeapBytes: 450 * 1024 * 1024,
+    maxHeapBytes: 520 * 1024 * 1024,
   }),
 
   performance: Object.freeze({
-    maxDrawCalls: 360,
-    maxVisibleTriangles: 680000,
+    maxDrawCalls: 420,
+    maxVisibleTriangles: 1200000,
   }),
 });
 
@@ -303,7 +314,7 @@ export function rateFromDeflection(
     (magnitude - deadzone) /
       Math.max(
         1e-6,
-        fullDeflection - deadzone
+        fullDeflection - deadzone,
       ),
     0,
     1,
