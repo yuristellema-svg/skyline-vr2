@@ -4,7 +4,6 @@ The attached **Skyline VR — Iteration 3 Brief (Fable, locked)** remains the au
 
 ## Locked flight and UX decisions
 
-- The old axis-continuity sign flip is removed. Velocity follows the true shortest arc, with deterministic handling near 180°, a 600-frame ring buffer, a 45° glitch trap, and **T** export.
 - Body aiming remains crisp and unrestricted; the flight path must now earn its turn through angle of attack and speed. Turning is lift/6 g limited, hard pulls add induced drag, the climb refund is gone, and low-speed nose-up flight stalls and must recover nose-down.
 - Input uses a 60 ms filter. Above 100 m/s, body-rate command eases toward 0.85× by 130 m/s; this does not add an attitude clamp.
 - Boost charges during a fast committed dive, stays armed for six seconds at any attitude, fires on a firm pull-up, and communicates **DIVE TO CHARGE / PULL / BOOST** at reticle depth.

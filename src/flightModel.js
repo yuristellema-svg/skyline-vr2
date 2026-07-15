@@ -28,13 +28,15 @@ const EPSILON = 1e-8;
 const ALIGNMENT_EPSILON = 1e-4;
 
 const TUNING = Object.freeze({
-  maximumSpeed: 5000,
-  maximumAcceleration: 22,
-  maximumDeceleration: 32,
+  maximumSpeed: 50000,
+  maximumAcceleration: 30,
+  maximumDeceleration: 16,
   controlSpeedFloor: 6,
 
-  diveGravityMultiplier: 1.28,
-  climbGravityMultiplier: 1.08,
+  diveGravityMultiplier: 1.42,
+  climbGravityMultiplier: 0.72,
+  climbRetentionStartSpeed: 18,
+  climbRetentionFullSpeed: 75,
 
   gravityBlendAngle:
     30 * Math.PI / 180,
@@ -55,17 +57,33 @@ const TUNING = Object.freeze({
    *
    * Rolling around the forward axis does not count.
    */
-  turnDragCoefficient: 0.11,
-  turnDragExponent: 2,
+  // Ordinary course corrections retain momentum. Only a genuinely hard,
+  // sustained turn becomes an effective airbrake.
+  turnDragCoefficient: 0.018,
+  turnDragExponent: 1.7,
+  maximumTurnDrag: 5.5,
 
   misalignmentStart:
-    2 * Math.PI / 180,
+    6 * Math.PI / 180,
 
   misalignmentFull:
-    28 * Math.PI / 180,
+    42 * Math.PI / 180,
 
-  misalignmentDragCoefficient: 0.0008,
-  misalignmentDragExponent: 1.45,
+  misalignmentDragCoefficient: 0.000045,
+  misalignmentDragExponent: 1.25,
+  maximumMisalignmentDrag: 4,
+
+  // Bank angle now produces a coordinated, speed-dependent heading change.
+  // Faster flight therefore creates a naturally wider, heavier turn.
+  coordinatedTurnStrength: 1,
+  coordinatedTurnMinimumSpeed: 18,
+  coordinatedTurnMinimumBank: 3 * Math.PI / 180,
+  coordinatedTurnMaximumBank: 65 * Math.PI / 180,
+  coordinatedTurnMaximumRate: 42 * Math.PI / 180,
+
+  // Angular input remains responsive, but no longer snaps instantly at speed.
+  highSpeedAngularResponseScale: 0.55,
+  highSpeedAngularReleaseScale: 0.75,
 
   /*
    * 50 km/h remains flyable.
@@ -78,19 +96,16 @@ const TUNING = Object.freeze({
   stalledSteeringFraction: 0.34,
 
   zeroSnapSpeed: 0.65,
-  recoveryTriggerSpeed: 0.65,
-  recoveryReleaseSpeed: 16,
+  recoveryTriggerSpeed: 5,
+  recoveryReleaseSpeed: 22,
 
   recoveryNoseDownRate:
     44 * Math.PI / 180,
 
   recoveryFallResponse: 7,
 
-  telemetryInterval: 0.05,
 });
 
-export const TELEMETRY_EVENT_COLLISION = 1;
-export const TELEMETRY_EVENT_RESPAWN = 2;
 
 export class FlightModel {
   constructor(config = CONFIG) {
@@ -184,21 +199,14 @@ export class FlightModel {
     this._alignmentQuaternion =
       new THREE.Quaternion();
 
+    this._coordinatedTurnQuaternion =
+      new THREE.Quaternion();
+
+    this._horizontalRight =
+      new THREE.Vector3(1, 0, 0);
+
     this._misalignmentAngle = 0;
 
-    this._telemetryFrames = [];
-    this._glitchTelemetryFrames = [];
-    this._telemetryAccumulator = 0;
-    this._telemetryPendingEventFlags = 0;
-
-    this._telemetryHasPreviousPathAngle =
-      false;
-
-    this._telemetryPreviousPathAngle = 0;
-
-    this.telemetryGlitchDetected = false;
-    this.telemetryGlitchTime = 0;
-    this.telemetryGlitchPathAngleDelta = 0;
   }
 
   reset(
@@ -264,13 +272,8 @@ export class FlightModel {
     this.totalDistance = 0;
     this.elapsed = 0;
 
-    this._telemetryAccumulator = 0;
 
-    this._telemetryPendingEventFlags |=
-      TELEMETRY_EVENT_RESPAWN;
 
-    this._telemetryHasPreviousPathAngle =
-      false;
   }
 
   step(dt, controls) {
@@ -347,6 +350,11 @@ export class FlightModel {
       aero,
     );
 
+    this._applyCoordinatedTurn(
+      dt,
+      physics,
+    );
+
     this.pathAngle =
       Math.asin(
         clamp(
@@ -387,7 +395,7 @@ export class FlightModel {
         previousSpeed &&
       totalAcceleration <= 0
     ) {
-      this.speed = 0;
+      this.speed = Math.max(this.speed, 1.8);
 
       this.lowSpeedRecoveryActive =
         true;
@@ -436,10 +444,6 @@ export class FlightModel {
       physics,
     );
 
-    this._recordTelemetry(
-      dt,
-      controls,
-    );
   }
 
   _disableBoost() {
@@ -544,6 +548,22 @@ export class FlightModel {
         highSpeedBlend,
       );
 
+    const angularResponse =
+      physics.angularResponse *
+      THREE.MathUtils.lerp(
+        1,
+        TUNING.highSpeedAngularResponseScale,
+        highSpeedBlend,
+      );
+
+    const angularRelease =
+      physics.angularRelease *
+      THREE.MathUtils.lerp(
+        1,
+        TUNING.highSpeedAngularReleaseScale,
+        highSpeedBlend,
+      );
+
     this._targetAngularVelocity.set(
       controls.pitchRate *
         rateScale,
@@ -564,8 +584,8 @@ export class FlightModel {
 
         this._targetAngularVelocity.x ===
           0
-          ? physics.angularRelease
-          : physics.angularResponse,
+          ? angularRelease
+          : angularResponse,
 
         dt,
       );
@@ -578,8 +598,8 @@ export class FlightModel {
 
         this._targetAngularVelocity.y ===
           0
-          ? physics.angularRelease
-          : physics.angularResponse,
+          ? angularRelease
+          : angularResponse,
 
         dt,
       );
@@ -592,8 +612,8 @@ export class FlightModel {
 
         this._targetAngularVelocity.z ===
           0
-          ? physics.angularRelease
-          : physics.angularResponse,
+          ? angularRelease
+          : angularResponse,
 
         dt,
       );
@@ -699,6 +719,110 @@ export class FlightModel {
         this._craftUp,
       ) *
       recoveryRate;
+  }
+
+  _applyCoordinatedTurn(
+    dt,
+    physics,
+  ) {
+    this._horizontalRight
+      .crossVectors(
+        this._velocityDirection,
+        WORLD_UP,
+      );
+
+    if (
+      this._horizontalRight.lengthSq() <
+      EPSILON
+    ) {
+      return;
+    }
+
+    this._horizontalRight.normalize();
+
+    const maximumBankSine =
+      Math.sin(
+        TUNING.coordinatedTurnMaximumBank,
+      );
+
+    const bankSine =
+      clamp(
+        this._craftUp.dot(
+          this._horizontalRight,
+        ),
+        -maximumBankSine,
+        maximumBankSine,
+      );
+
+    const bankAngle =
+      Math.asin(bankSine);
+
+    if (
+      Math.abs(bankAngle) <
+      TUNING.coordinatedTurnMinimumBank
+    ) {
+      return;
+    }
+
+    const turnRate =
+      clamp(
+        (
+          physics.gravity *
+          Math.tan(bankAngle) *
+          TUNING.coordinatedTurnStrength
+        ) /
+          Math.max(
+            this.speed,
+            TUNING.coordinatedTurnMinimumSpeed,
+          ),
+        -TUNING.coordinatedTurnMaximumRate,
+        TUNING.coordinatedTurnMaximumRate,
+      );
+
+    const yawStep =
+      -turnRate * dt;
+
+    this._coordinatedTurnQuaternion
+      .setFromAxisAngle(
+        WORLD_UP,
+        yawStep,
+      );
+
+    this._velocityDirection
+      .applyQuaternion(
+        this._coordinatedTurnQuaternion,
+      )
+      .normalize();
+
+    this._nose
+      .applyQuaternion(
+        this._coordinatedTurnQuaternion,
+      )
+      .normalize();
+
+    this._craftUp
+      .applyQuaternion(
+        this._coordinatedTurnQuaternion,
+      )
+      .normalize();
+
+    this._craftRight
+      .applyQuaternion(
+        this._coordinatedTurnQuaternion,
+      )
+      .normalize();
+
+    this.attitude
+      .premultiply(
+        this._coordinatedTurnQuaternion,
+      )
+      .normalize();
+
+    this.pathTurnRate =
+      Math.hypot(
+        this.pathTurnRate,
+        turnRate,
+      );
   }
 
   _applyNearZeroRecovery(dt) {
@@ -907,6 +1031,13 @@ export class FlightModel {
         ),
       );
 
+    const climbEnergy =
+      smoothstep(
+        TUNING.climbRetentionStartSpeed,
+        TUNING.climbRetentionFullSpeed,
+        this.speed,
+      );
+
     const gravityMultiplier =
       this.pathAngle < 0
         ? THREE.MathUtils.lerp(
@@ -923,7 +1054,8 @@ export class FlightModel {
             TUNING
               .climbGravityMultiplier,
 
-            climbFactor,
+            climbFactor *
+              climbEnergy,
           );
 
     const gravity =
@@ -951,15 +1083,19 @@ export class FlightModel {
       );
 
     const turnDrag =
-      TUNING.turnDragCoefficient *
-      this.speed *
-      Math.pow(
-        Math.max(
-          0,
-          this.pathTurnRate,
-        ),
+      Math.min(
+        TUNING.maximumTurnDrag,
 
-        TUNING.turnDragExponent,
+        TUNING.turnDragCoefficient *
+        this.speed *
+        Math.pow(
+          Math.max(
+            0,
+            this.pathTurnRate,
+          ),
+
+          TUNING.turnDragExponent,
+        ),
       );
 
     const misalignmentAmount =
@@ -970,18 +1106,22 @@ export class FlightModel {
       );
 
     const misalignmentDrag =
-      TUNING.misalignmentDragCoefficient *
-      this.speed *
-      this.speed *
-      Math.pow(
-        misalignmentAmount,
+      Math.min(
+        TUNING.maximumMisalignmentDrag,
 
-        TUNING
-          .misalignmentDragExponent,
-      ) *
-      (
-        1 -
-        this._recoveryAmount()
+        TUNING.misalignmentDragCoefficient *
+        this.speed *
+        this.speed *
+        Math.pow(
+          misalignmentAmount,
+
+          TUNING
+            .misalignmentDragExponent,
+        ) *
+        (
+          1 -
+          this._recoveryAmount()
+        ),
       );
 
     return {
@@ -1215,213 +1355,6 @@ export class FlightModel {
         6.7,
         dt,
       );
-  }
-
-  _recordTelemetry(
-    dt,
-    controls,
-  ) {
-    let pathAngleDelta = 0;
-
-    if (
-      this._telemetryHasPreviousPathAngle
-    ) {
-      pathAngleDelta =
-        this.pathAngle -
-        this._telemetryPreviousPathAngle;
-    }
-
-    this._telemetryPreviousPathAngle =
-      this.pathAngle;
-
-    this._telemetryHasPreviousPathAngle =
-      true;
-
-    if (
-      !this.telemetryGlitchDetected &&
-      Math.abs(
-        pathAngleDelta,
-      ) >
-        this.config.physics
-          .telemetry
-          .glitchPathDelta
-    ) {
-      this.telemetryGlitchDetected =
-        true;
-
-      this.telemetryGlitchTime =
-        this.elapsed;
-
-      this.telemetryGlitchPathAngleDelta =
-        pathAngleDelta;
-
-      this._glitchTelemetryFrames =
-        this._telemetryFrames.slice();
-    }
-
-    this._telemetryAccumulator +=
-      dt;
-
-    if (
-      this._telemetryAccumulator <
-      TUNING.telemetryInterval
-    ) {
-      return;
-    }
-
-    this._telemetryAccumulator = 0;
-
-    this._telemetryFrames.push({
-      t:
-        this.elapsed,
-
-      dt,
-
-      pos: [
-        this.position.x,
-        this.position.y,
-        this.position.z,
-      ],
-
-      speed:
-        this.speed,
-
-      pathAngle:
-        this.pathAngle,
-
-      angleOfAttack:
-        this.angleOfAttack,
-
-      stallAmount:
-        this.stallAmount,
-
-      gLoad:
-        this.gLoad,
-
-      viewYaw:
-        this.viewYaw,
-
-      pathTurnRate:
-        this.pathTurnRate,
-
-      turnDrag:
-        this.turnDragAcceleration,
-
-      misalignmentDrag:
-        this
-          .misalignmentDragAcceleration,
-
-      input: {
-        pitchRate:
-          controls.pitchRate,
-
-        rollRate:
-          controls.rollRate,
-
-        yawRate:
-          Number.isFinite(
-            controls.yawRate,
-          )
-            ? controls.yawRate
-            : 0,
-      },
-
-      collisionRespawnFlag:
-        this
-          ._telemetryPendingEventFlags |
-        (
-          Number.isFinite(
-            controls
-              .collisionRespawnFlag,
-          )
-            ? controls
-                .collisionRespawnFlag
-            : 0
-        ),
-
-      pathAngleDelta,
-    });
-
-    this._telemetryPendingEventFlags = 0;
-
-    const capacity =
-      this.config.physics
-        .telemetry.frames;
-
-    if (
-      this._telemetryFrames.length >
-      capacity
-    ) {
-      this._telemetryFrames.shift();
-    }
-  }
-
-  flagTelemetryEvent(flags) {
-    this._telemetryPendingEventFlags |=
-      flags;
-  }
-
-  clearTelemetry() {
-    this._telemetryFrames.length = 0;
-    this._glitchTelemetryFrames.length = 0;
-    this._telemetryAccumulator = 0;
-    this._telemetryPendingEventFlags = 0;
-
-    this._telemetryHasPreviousPathAngle =
-      false;
-
-    this.telemetryGlitchDetected = false;
-    this.telemetryGlitchTime = 0;
-    this.telemetryGlitchPathAngleDelta = 0;
-  }
-
-  readTelemetrySnapshot(
-    glitchCapture = false,
-  ) {
-    const frames =
-      glitchCapture
-        ? this._glitchTelemetryFrames
-        : this._telemetryFrames;
-
-    return {
-      version: 5,
-
-      capacity:
-        this.config.physics
-          .telemetry.frames,
-
-      count:
-        frames.length,
-
-      glitchCapture,
-
-      glitch: {
-        detected:
-          this.telemetryGlitchDetected,
-
-        t:
-          this.telemetryGlitchTime,
-
-        pathAngleDelta:
-          this
-            .telemetryGlitchPathAngleDelta,
-      },
-
-      frames,
-    };
-  }
-
-  exportTelemetrySnapshot(
-    glitchCapture = false,
-    space = 0,
-  ) {
-    return JSON.stringify(
-      this.readTelemetrySnapshot(
-        glitchCapture,
-      ),
-      null,
-      space,
-    );
   }
 
   getForward(target) {

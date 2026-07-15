@@ -1,673 +1,331 @@
 import * as THREE from '../vendor/three.module.min.js';
 
-const STORAGE_KEY = 'skyline-aircraft-profile';
+const STORAGE_KEY = 'skyline-aircraft-profile-v4';
+const FORWARD = new THREE.Vector3(0, 0, -1);
 
 export const AIRCRAFT_PROFILES = Object.freeze([
-  Object.freeze({ id: 'glider', name: 'SKYLINE GLIDER' }),
-  Object.freeze({ id: 'stuka', name: 'STUKA' }),
-  Object.freeze({ id: 'scout', name: 'ALPINE SCOUT' }),
+  Object.freeze({ id: 'zero', name: 'A6M ZERO · WHITE 872', engine: 'RADIAL' }),
+  Object.freeze({ id: 'stuka', name: 'JU 87 STUKA', engine: 'INVERTED V12' }),
+  Object.freeze({ id: 'scout', name: 'ALPINE SCOUT', engine: 'LIGHT INLINE' }),
+  Object.freeze({ id: 'glider', name: 'SKYLINE GLIDER', engine: 'WIND' }),
 ]);
 
-function material(color, roughness = 0.76, metalness = 0.05) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+function standard(color, roughness = 0.72, metalness = 0.05, extra = {}) {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
 }
 
-function addBox(
-  parent,
-  size,
-  position,
-  color,
-  rotation = null,
-  options = {},
-) {
-  const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+function basic(color, extra = {}) {
+  return new THREE.MeshBasicMaterial({ color, ...extra });
+}
 
-  const mesh = new THREE.Mesh(
-    geometry,
-    options.material ||
-      material(color, options.roughness, options.metalness),
+function mesh(parent, geometry, material, position = null, rotation = null, scale = null) {
+  const object = new THREE.Mesh(geometry, material);
+  if (position) object.position.set(...position);
+  if (rotation) object.rotation.set(...rotation);
+  if (scale) object.scale.set(...scale);
+  object.castShadow = false;
+  object.receiveShadow = false;
+  parent.add(object);
+  return object;
+}
+
+function box(parent, size, position, material, rotation = null) {
+  return mesh(parent, new THREE.BoxGeometry(...size), material, position, rotation);
+}
+
+function cylinder(parent, radii, height, position, material, rotation = null, segments = 14) {
+  return mesh(
+    parent,
+    new THREE.CylinderGeometry(radii[0], radii[1], height, segments, 1, false),
+    material,
+    position,
+    rotation,
   );
-
-  mesh.position.set(position[0], position[1], position[2]);
-
-  if (rotation) {
-    mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
-  }
-
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  parent.add(mesh);
-
-  return mesh;
 }
 
-function addCylinder(
-  parent,
-  radiusTop,
-  radiusBottom,
-  height,
-  position,
-  color,
-  rotation = null,
-  segments = 10,
-) {
-  const mesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(
-      radiusTop,
-      radiusBottom,
-      height,
-      segments,
-      1,
-      false,
-    ),
-    material(color, 0.68, 0.08),
-  );
-
-  mesh.position.set(position[0], position[1], position[2]);
-
-  if (rotation) {
-    mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
-  }
-
-  parent.add(mesh);
-  return mesh;
+function sphere(parent, radius, position, material, scale = null, detail = 1) {
+  return mesh(parent, new THREE.IcosahedronGeometry(radius, detail), material, position, null, scale);
 }
 
-function addWingPanel(parent, points, color) {
+function roundel(parent, x, z, radius, side = 'top') {
+  const red = basic(0xc63a32, { side: THREE.DoubleSide, toneMapped: false });
+  const disk = mesh(parent, new THREE.CircleGeometry(radius, 28), red);
+  disk.position.set(x, side === 'top' ? 0.075 : -0.075, z);
+  disk.rotation.x = side === 'top' ? -Math.PI / 2 : Math.PI / 2;
+  return disk;
+}
+
+function wingShape(parent, side, bodyMaterial, accentMaterial) {
   const shape = new THREE.Shape();
-
-  shape.moveTo(points[0][0], points[0][1]);
-
-  for (let i = 1; i < points.length; i += 1) {
-    shape.lineTo(points[i][0], points[i][1]);
-  }
-
+  shape.moveTo(0.15, -0.72);
+  shape.lineTo(2.55, -0.30);
+  shape.quadraticCurveTo(3.15, -0.18, 3.32, 0.08);
+  shape.quadraticCurveTo(3.24, 0.38, 2.65, 0.48);
+  shape.lineTo(0.22, 0.62);
   shape.closePath();
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.035,
-    bevelEnabled: false,
-    steps: 1,
+    depth: 0.12,
+    bevelEnabled: true,
+    bevelThickness: 0.025,
+    bevelSize: 0.02,
+    bevelSegments: 1,
   });
+  geometry.rotateX(Math.PI / 2);
+  geometry.translate(0, -0.06, 0);
 
-  geometry.translate(0, 0, -0.0175);
+  const wing = new THREE.Mesh(geometry, bodyMaterial);
+  wing.scale.x = side;
+  wing.position.set(side * 0.12, 0, -0.22);
+  parent.add(wing);
 
-  const mesh = new THREE.Mesh(
-    geometry,
-    material(color, 0.78, 0.02),
+  const stripe = box(
+    parent,
+    [0.23, 0.025, 1.08],
+    [side * 2.24, 0.085, -0.13],
+    accentMaterial,
   );
+  stripe.rotation.y = side * 0.02;
 
-  parent.add(mesh);
-  return mesh;
+  roundel(parent, side * 1.58, -0.12, 0.37, 'top');
+  return wing;
 }
 
-function createGlider() {
+function createZeroExternal() {
   const group = new THREE.Group();
-  group.name = 'aircraft-skyline-glider';
+  group.name = 'external-a6m-zero-white-872';
 
-  const charcoal = 0x1a2227;
-  const fabric = 0x405563;
-  const accent = 0xd17c45;
-
-  const left = addWingPanel(
-    group,
-    [
-      [-0.18, -0.14],
-      [-1.15, -0.46],
-      [-1.55, -0.7],
-      [-0.42, -0.62],
-    ],
-    fabric,
-  );
-
-  left.position.z = -1.55;
-  left.rotation.x = -0.1;
-
-  const right = left.clone();
-  right.scale.x = -1;
-  group.add(right);
-
-  addBox(
-    group,
-    [0.42, 0.18, 1.22],
-    [0, -0.42, -1.68],
-    charcoal,
-    [-0.07, 0, 0],
-  );
-
-  addBox(
-    group,
-    [0.05, 0.04, 0.86],
-    [0, -0.31, -2],
-    accent,
-  );
-
-  addBox(
-    group,
-    [0.07, 0.08, 0.3],
-    [-0.41, -0.53, -1.56],
-    charcoal,
-    [0, 0, -0.16],
-  );
-
-  addBox(
-    group,
-    [0.07, 0.08, 0.3],
-    [0.41, -0.53, -1.56],
-    charcoal,
-    [0, 0, 0.16],
-  );
-
-  return group;
-}
-
-function createStuka() {
-  const group = new THREE.Group();
-  group.name = 'aircraft-stuka';
-
-  // Historically inspired silhouette only:
-  // no weapons, markings, or insignia.
-  const olive = 0x39473b;
-  const dark = 0x11191a;
-  const underside = 0x7a8782;
-
-  const glass = new THREE.MeshStandardMaterial({
-    color: 0x91b5bc,
-    roughness: 0.16,
-    metalness: 0.02,
+  const ivory = standard(0xe2dfd4, 0.58, 0.18);
+  const ivoryDark = standard(0xbfc2bc, 0.7, 0.12);
+  const red = standard(0xb9362f, 0.62, 0.08);
+  const black = standard(0x17191a, 0.42, 0.18);
+  const glass = standard(0x76939c, 0.14, 0.06, {
     transparent: true,
-    opacity: 0.38,
+    opacity: 0.42,
     depthWrite: false,
   });
+  const frame = standard(0x353a39, 0.5, 0.16);
 
-  addCylinder(
-    group,
-    0.22,
-    0.34,
-    1.65,
-    [0, -0.28, -1.83],
-    olive,
-    [Math.PI / 2, 0, 0],
-    12,
-  );
+  // Tapered fuselage and black radial cowling.
+  cylinder(group, [0.16, 0.44], 4.65, [0, 0, 0.05], ivory, [Math.PI / 2, 0, 0], 18);
+  cylinder(group, [0.46, 0.48], 0.74, [0, 0, -2.47], black, [Math.PI / 2, 0, 0], 20);
+  cylinder(group, [0.11, 0.19], 0.34, [0, 0, -3.02], black, [Math.PI / 2, 0, 0], 14);
 
-  addCylinder(
-    group,
-    0.16,
-    0.22,
-    0.34,
-    [0, -0.27, -2.84],
-    dark,
-    [Math.PI / 2, 0, 0],
-    12,
-  );
+  wingShape(group, -1, ivory, red);
+  wingShape(group, 1, ivory, red);
 
-  addBox(
-    group,
-    [0.54, 0.12, 0.72],
-    [0, -0.48, -1.43],
-    underside,
-    [-0.05, 0, 0],
-  );
+  // Tailplanes and rounded vertical fin.
+  box(group, [2.42, 0.09, 0.56], [0, 0.05, 1.82], ivoryDark);
+  box(group, [0.12, 0.98, 0.76], [0, 0.45, 1.78], ivoryDark, [0.10, 0, 0]);
+  box(group, [0.14, 0.42, 0.58], [0, 0.96, 1.74], red, [0.10, 0, 0]);
 
-  // Inverted gull-wing shape, kept peripheral in VR.
-  addBox(
-    group,
-    [0.9, 0.08, 0.35],
-    [-0.58, -0.48, -1.63],
-    olive,
-    [0.02, 0.1, 0.24],
-  );
+  // Canopy bubble and dark structural frames.
+  const canopy = sphere(group, 0.58, [0, 0.42, -0.62], glass, [0.83, 0.76, 1.35], 2);
+  canopy.renderOrder = 3;
+  box(group, [0.045, 0.68, 1.30], [0, 0.46, -0.62], frame);
+  box(group, [0.94, 0.045, 0.045], [0, 0.73, -0.74], frame);
+  box(group, [0.94, 0.045, 0.045], [0, 0.42, -0.21], frame);
+  box(group, [0.94, 0.045, 0.045], [0, 0.36, -1.12], frame);
 
-  addBox(
-    group,
-    [1, 0.07, 0.3],
-    [-1.47, -0.29, -1.67],
-    olive,
-    [0.01, 0.05, -0.12],
-  );
+  // Propeller blades and central spinner.
+  const propeller = new THREE.Group();
+  propeller.name = 'zero-propeller';
+  propeller.position.z = -3.24;
+  for (let blade = 0; blade < 3; blade += 1) {
+    const part = box(propeller, [0.11, 1.56, 0.055], [0, 0.72, 0], black);
+    part.rotation.z = blade / 3 * Math.PI * 2;
+    part.position.applyAxisAngle(FORWARD, blade / 3 * Math.PI * 2);
+  }
+  sphere(propeller, 0.18, [0, 0, 0], ivoryDark, [1, 1, 1.2]);
+  group.add(propeller);
+  group.userData.propeller = propeller;
 
-  addBox(
-    group,
-    [0.9, 0.08, 0.35],
-    [0.58, -0.48, -1.63],
-    olive,
-    [0.02, -0.1, -0.24],
-  );
-
-  addBox(
-    group,
-    [1, 0.07, 0.3],
-    [1.47, -0.29, -1.67],
-    olive,
-    [0.01, -0.05, 0.12],
-  );
-
-  addBox(
-    group,
-    [0.13, 0.44, 0.18],
-    [-0.75, -0.68, -1.55],
-    dark,
-    [0, 0, -0.08],
-  );
-
-  addBox(
-    group,
-    [0.13, 0.44, 0.18],
-    [0.75, -0.68, -1.55],
-    dark,
-    [0, 0, 0.08],
-  );
-
-  addCylinder(
-    group,
-    0.13,
-    0.13,
-    0.07,
-    [-0.75, -0.9, -1.55],
-    dark,
-    [0, 0, Math.PI / 2],
-    12,
-  );
-
-  addCylinder(
-    group,
-    0.13,
-    0.13,
-    0.07,
-    [0.75, -0.9, -1.55],
-    dark,
-    [0, 0, Math.PI / 2],
-    12,
-  );
-
-  const canopy = addBox(
-    group,
-    [0.54, 0.36, 0.92],
-    [0, -0.02, -1.08],
-    0xffffff,
-    [-0.12, 0, 0],
-    { material: glass },
-  );
-
-  canopy.renderOrder = 2;
-
-  addBox(
-    group,
-    [0.035, 0.4, 0.95],
-    [0, -0.02, -1.07],
-    dark,
-    [-0.12, 0, 0],
-  );
-
-  addBox(
-    group,
-    [0.56, 0.035, 0.05],
-    [0, 0.1, -1.42],
-    dark,
-    [-0.12, 0, 0],
-  );
-
-  addBox(
-    group,
-    [0.56, 0.035, 0.05],
-    [0, 0.03, -0.96],
-    dark,
-    [-0.12, 0, 0],
-  );
-
-  return group;
-}
-
-function createScout() {
-  const group = new THREE.Group();
-  group.name = 'aircraft-alpine-scout';
-
-  const cream = 0xd8d1bf;
-  const blue = 0x284b61;
-  const brass = 0xa7814d;
-  const dark = 0x172128;
-
-  addCylinder(
-    group,
-    0.1,
-    0.25,
-    1.54,
-    [0, -0.3, -1.77],
-    cream,
-    [Math.PI / 2, 0, 0],
-    10,
-  );
-
-  addBox(
-    group,
-    [0.62, 0.1, 0.72],
-    [0, -0.43, -1.42],
-    blue,
-    [-0.04, 0, 0],
-  );
-
-  addBox(
-    group,
-    [1.45, 0.055, 0.32],
-    [-0.85, -0.37, -1.56],
-    cream,
-    [0.02, 0.06, 0.08],
-  );
-
-  addBox(
-    group,
-    [1.45, 0.055, 0.32],
-    [0.85, -0.37, -1.56],
-    cream,
-    [0.02, -0.06, -0.08],
-  );
-
-  addBox(
-    group,
-    [0.035, 0.035, 1.02],
-    [0, -0.16, -1.73],
-    brass,
-  );
-
-  addBox(
-    group,
-    [0.03, 0.28, 0.72],
-    [-0.34, 0, -1.04],
-    dark,
-    [0, 0, -0.3],
-  );
-
-  addBox(
-    group,
-    [0.03, 0.28, 0.72],
-    [0.34, 0, -1.04],
-    dark,
-    [0, 0, 0.3],
-  );
-
-  addBox(
-    group,
-    [0.69, 0.03, 0.03],
-    [0, 0.15, -1.1],
-    dark,
-  );
-
-  return group;
-}
-
-function createExternalAirframe(profileId) {
-  const group = new THREE.Group();
-  group.name = `external-airframe-${profileId}`;
-
-  const schemes = {
-    glider: {
-      body: 0x24323a,
-      wing: 0x5f7884,
-      accent: 0xd17c45,
-    },
-    stuka: {
-      body: 0x39473b,
-      wing: 0x4a594c,
-      accent: 0x87918c,
-    },
-    scout: {
-      body: 0xd8d1bf,
-      wing: 0x315c73,
-      accent: 0xa7814d,
-    },
-  };
-
-  const colors = schemes[profileId] || schemes.glider;
-
-  addCylinder(
-    group,
-    0.14,
-    0.28,
-    4.6,
-    [0, 0, -0.18],
-    colors.body,
-    [Math.PI / 2, 0, 0],
-    12,
-  );
-
-  addCylinder(
-    group,
-    0.05,
-    0.15,
-    0.65,
-    [0, 0, -2.7],
-    colors.accent,
-    [Math.PI / 2, 0, 0],
-    10,
-  );
-
-  addBox(
-    group,
-    [0.8, 0.12, 1.15],
-    [0, 0.18, -0.6],
-    colors.body,
-    [-0.03, 0, 0],
-  );
-
-  if (profileId === 'stuka') {
-    addBox(
-      group,
-      [1.65, 0.12, 0.58],
-      [-0.92, -0.13, -0.52],
-      colors.wing,
-      [0.02, 0.03, 0.24],
-    );
-
-    addBox(
-      group,
-      [1.65, 0.1, 0.52],
-      [-2.34, 0.12, -0.55],
-      colors.wing,
-      [0.01, 0.02, -0.12],
-    );
-
-    addBox(
-      group,
-      [1.65, 0.12, 0.58],
-      [0.92, -0.13, -0.52],
-      colors.wing,
-      [0.02, -0.03, -0.24],
-    );
-
-    addBox(
-      group,
-      [1.65, 0.1, 0.52],
-      [2.34, 0.12, -0.55],
-      colors.wing,
-      [0.01, -0.02, 0.12],
-    );
-
-    addBox(
-      group,
-      [0.18, 0.88, 0.24],
-      [-0.92, -0.48, -0.46],
-      0x172022,
-    );
-
-    addBox(
-      group,
-      [0.18, 0.88, 0.24],
-      [0.92, -0.48, -0.46],
-      0x172022,
-    );
-  } else if (profileId === 'scout') {
-    addBox(
-      group,
-      [5.4, 0.1, 0.62],
-      [0, 0.02, -0.4],
-      colors.wing,
-      [0.01, 0, 0],
-    );
-
-    addBox(
-      group,
-      [3.2, 0.06, 0.18],
-      [0, 0.1, -0.38],
-      colors.accent,
-    );
-  } else {
-    addBox(
-      group,
-      [5.8, 0.08, 0.76],
-      [0, -0.02, -0.22],
-      colors.wing,
-      [0.02, 0, 0],
-    );
-
-    addBox(
-      group,
-      [2.4, 0.06, 0.38],
-      [0, 0.02, 1.78],
-      colors.wing,
-    );
+  // Landing gear fairing hints, exhausts, wing panel lines and tail code.
+  cylinder(group, [0.06, 0.06], 0.54, [-1.15, -0.34, -0.28], frame, [0, 0, 0.08], 8);
+  cylinder(group, [0.06, 0.06], 0.54, [1.15, -0.34, -0.28], frame, [0, 0, -0.08], 8);
+  for (const side of [-1, 1]) {
+    for (let index = 0; index < 4; index += 1) {
+      box(group, [0.035, 0.02, 0.72], [side * (0.62 + index * 0.48), 0.086, 0.06], frame);
+    }
+    for (let exhaust = 0; exhaust < 3; exhaust += 1) {
+      cylinder(group, [0.035, 0.04], 0.22, [side * 0.34, -0.23 + exhaust * 0.13, -2.20], black, [0, 0, Math.PI / 2], 7);
+    }
   }
 
-  addBox(
-    group,
-    [2.25, 0.07, 0.46],
-    [0, 0.02, 1.72],
-    colors.wing,
-  );
+  group.userData.engine = 'RADIAL';
+  return group;
+}
 
-  addBox(
-    group,
-    [0.1, 0.88, 0.72],
-    [0, 0.45, 1.7],
-    colors.body,
-    [0.1, 0, 0],
-  );
+function createStukaExternal() {
+  const group = new THREE.Group();
+  group.name = 'external-stuka';
+  const olive = standard(0x3e4b3c, 0.8, 0.08);
+  const underside = standard(0x929b94, 0.78, 0.08);
+  const dark = standard(0x1b2020, 0.55, 0.14);
+  const glass = standard(0x718c94, 0.18, 0.02, { transparent: true, opacity: 0.38, depthWrite: false });
 
-  group.traverse((object) => {
-    if (!object.isMesh) return;
+  cylinder(group, [0.16, 0.36], 4.8, [0, 0, 0], olive, [Math.PI / 2, 0, 0], 14);
+  cylinder(group, [0.30, 0.36], 0.78, [0, 0, -2.65], dark, [Math.PI / 2, 0, 0], 14);
+  box(group, [1.5, 0.12, 0.62], [-0.84, -0.17, -0.42], olive, [0.02, 0.02, 0.24]);
+  box(group, [1.55, 0.10, 0.54], [-2.15, 0.09, -0.48], olive, [0.01, 0.02, -0.13]);
+  box(group, [1.5, 0.12, 0.62], [0.84, -0.17, -0.42], olive, [0.02, -0.02, -0.24]);
+  box(group, [1.55, 0.10, 0.54], [2.15, 0.09, -0.48], olive, [0.01, -0.02, 0.13]);
+  box(group, [2.1, 0.08, 0.52], [0, 0.04, 1.75], underside);
+  box(group, [0.12, 0.92, 0.72], [0, 0.44, 1.72], olive);
+  sphere(group, 0.55, [0, 0.38, -0.60], glass, [0.82, 0.7, 1.52], 1);
+  for (const side of [-1, 1]) {
+    box(group, [0.16, 0.92, 0.22], [side * 0.92, -0.52, -0.38], dark);
+    cylinder(group, [0.16, 0.16], 0.10, [side * 0.92, -0.96, -0.38], dark, [0, 0, Math.PI / 2], 10);
+  }
+  group.userData.engine = 'V12';
+  return group;
+}
 
-    object.castShadow = false;
-    object.receiveShadow = false;
-  });
+function createScoutExternal() {
+  const group = new THREE.Group();
+  const cream = standard(0xd8d0b9, 0.74, 0.06);
+  const blue = standard(0x31566c, 0.68, 0.08);
+  const brass = standard(0xaa8650, 0.45, 0.42);
+  cylinder(group, [0.11, 0.29], 4.2, [0, 0, 0], cream, [Math.PI / 2, 0, 0], 12);
+  box(group, [5.5, 0.10, 0.72], [0, 0, -0.35], blue);
+  box(group, [2.4, 0.07, 0.46], [0, 0.02, 1.56], cream);
+  box(group, [0.10, 0.82, 0.66], [0, 0.40, 1.54], blue);
+  box(group, [3.3, 0.04, 0.13], [0, 0.11, -0.34], brass);
+  group.userData.engine = 'INLINE';
+  return group;
+}
+
+function createGliderExternal() {
+  const group = new THREE.Group();
+  const fabric = standard(0x617985, 0.82, 0.02);
+  const dark = standard(0x202a2f, 0.82, 0.02);
+  const orange = standard(0xd17845, 0.72, 0.03);
+  box(group, [6.5, 0.08, 1.15], [0, 0, -0.15], fabric);
+  box(group, [0.62, 0.22, 3.5], [0, -0.10, 0.05], dark);
+  box(group, [2.4, 0.06, 0.45], [0, 0.02, 1.78], fabric);
+  box(group, [0.08, 0.74, 0.62], [0, 0.36, 1.75], orange);
+  group.userData.engine = 'WIND';
+  return group;
+}
+
+function gauge(parent, position, radius, label, needleAngle = 0) {
+  const group = new THREE.Group();
+  group.position.set(...position);
+  const casing = mesh(group, new THREE.CylinderGeometry(radius, radius, 0.05, 24), standard(0x1d1c17, 0.7, 0.18), null, [Math.PI / 2, 0, 0]);
+  casing.position.z = 0;
+  const face = mesh(group, new THREE.CircleGeometry(radius * 0.83, 24), basic(0xd5caa6), [0, 0, -0.031]);
+  const needle = box(group, [radius * 0.08, radius * 0.78, 0.025], [0, 0, -0.055], basic(0x9c3029));
+  needle.rotation.z = needleAngle;
+  group.userData.needle = needle;
+  group.userData.label = label;
+  parent.add(group);
+  return group;
+}
+
+function createCockpit(profileId) {
+  const group = new THREE.Group();
+  group.name = `cockpit-${profileId}`;
+  group.position.set(0, -0.48, -1.05);
+
+  const frame = standard(profileId === 'zero' ? 0x333b39 : 0x2b302d, 0.66, 0.18);
+  const panel = standard(0x2a2920, 0.9, 0.08);
+  const leather = standard(0x4a3326, 0.94, 0.02);
+  const glass = standard(0x86a6ab, 0.12, 0.03, { transparent: true, opacity: 0.15, depthWrite: false });
+
+  // Canopy frame, side rails and instrument panel. Kept below the horizon so
+  // first-person remains clean and cockpit mode feels enclosed, not blocked.
+  box(group, [2.0, 0.06, 0.06], [0, 0.88, -0.92], frame);
+  box(group, [0.06, 1.55, 0.06], [-0.94, 0.18, -0.92], frame, [0, 0, -0.18]);
+  box(group, [0.06, 1.55, 0.06], [0.94, 0.18, -0.92], frame, [0, 0, 0.18]);
+  box(group, [0.05, 1.45, 0.05], [0, 0.22, -1.08], frame);
+  box(group, [1.78, 0.72, 0.12], [0, -0.22, -1.18], panel, [-0.05, 0, 0]);
+  box(group, [0.32, 0.54, 0.50], [-0.96, -0.54, -0.40], leather, [0.04, 0, -0.05]);
+  box(group, [0.32, 0.54, 0.50], [0.96, -0.54, -0.40], leather, [0.04, 0, 0.05]);
+
+  const instruments = [
+    gauge(group, [-0.52, -0.08, -1.25], 0.18, 'SPD', -0.8),
+    gauge(group, [-0.12, -0.04, -1.25], 0.20, 'ALT', 0.4),
+    gauge(group, [0.33, -0.07, -1.25], 0.18, 'RPM', 1.0),
+    gauge(group, [0.68, -0.14, -1.25], 0.13, 'OIL', -0.25),
+  ];
+  group.userData.instruments = instruments;
+
+  // Revi-style reflector sight and subtle windscreen glass.
+  box(group, [0.08, 0.36, 0.08], [0, 0.28, -1.22], frame);
+  const sight = mesh(group, new THREE.CircleGeometry(0.16, 24), basic(0xc9f2e8, {
+    transparent: true,
+    opacity: 0.22,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  }), [0, 0.48, -1.21]);
+  sight.rotation.x = 0;
+  const windscreen = box(group, [1.75, 0.92, 0.03], [0, 0.44, -0.96], glass, [-0.12, 0, 0]);
+  windscreen.renderOrder = 2;
+
+  if (profileId === 'zero') {
+    const red = standard(0xaf3b34, 0.72, 0.08);
+    box(group, [0.08, 0.55, 0.08], [0.72, -0.10, -0.74], red, [0, 0, 0.24]);
+    box(group, [0.16, 0.12, 0.18], [0.78, 0.16, -0.82], red);
+  }
 
   return group;
 }
 
-const BUILDERS = Object.freeze({
-  glider: createGlider,
-  stuka: createStuka,
-  scout: createScout,
+const EXTERNAL_BUILDERS = Object.freeze({
+  zero: createZeroExternal,
+  stuka: createStukaExternal,
+  scout: createScoutExternal,
+  glider: createGliderExternal,
 });
 
-function resolveStoredIndex() {
+function storedIndex() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-
-    const index = AIRCRAFT_PROFILES.findIndex(
-      (profile) => profile.id === stored,
-    );
-
+    const id = localStorage.getItem(STORAGE_KEY);
+    const index = AIRCRAFT_PROFILES.findIndex(profile => profile.id === id);
     return index >= 0 ? index : 0;
   } catch {
     return 0;
   }
 }
 
-function disposeObject(root) {
-  root.traverse((object) => {
-    if (object.geometry) {
-      object.geometry.dispose();
-    }
-
-    if (!object.material) return;
-
-    const materials = Array.isArray(object.material)
-      ? object.material
-      : [object.material];
-
-    for (const item of materials) {
-      item.dispose();
-    }
+function disposeTree(root) {
+  root?.traverse?.(object => {
+    object.geometry?.dispose?.();
+    const materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+    for (const item of materials) item.dispose?.();
   });
 }
 
 export class AircraftVisualSystem {
   constructor(scene) {
-    this.root = new THREE.Group();
-    this.root.name = 'aircraft-visual-root';
-    this.root.position.set(0, 0, 0);
-    this.root.renderOrder = 4;
-
-    this.scene = scene || null;
+    this.scene = scene;
     this.camera = null;
+    this.profileIndex = storedIndex();
+    this.elapsed = 0;
+    this.cameraMode = 'first';
 
     this.externalRoot = new THREE.Group();
     this.externalRoot.name = 'selected-aircraft-external-root';
-    this.externalRoot.visible = false;
-
     this.scene?.add(this.externalRoot);
 
-    this.externalModel = null;
-    this.profileIndex = resolveStoredIndex();
-    this.model = null;
-    this.elapsed = 0;
+    this.cockpitRoot = new THREE.Group();
+    this.cockpitRoot.name = 'selected-aircraft-cockpit-root';
 
+    this.externalModel = null;
+    this.cockpitModel = null;
     this._rebuild();
 
-    this._onNext = () => {
-      this.next();
+    this._onNext = () => this.next();
+    this._onSet = event => this.setProfile(event?.detail?.id ?? event?.detail?.index);
+    window.addEventListener('skyline:aircraft-next', this._onNext);
+    window.addEventListener('skyline:aircraft-set', this._onSet);
+
+    this._onKeyDown = event => {
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.code === 'KeyV') this.next();
+      else if (/^Digit[1-4]$/.test(event.code)) this.setProfile(Number(event.code.slice(-1)) - 1);
     };
-
-    this._onSet = (event) => {
-      this.setProfile(
-        event?.detail?.id ?? event?.detail?.index,
-      );
-    };
-
-    window.addEventListener(
-      'skyline:aircraft-next',
-      this._onNext,
-    );
-
-    window.addEventListener(
-      'skyline:aircraft-set',
-      this._onSet,
-    );
-
-    this._onKeyDown = (event) => {
-      if (
-        event.repeat ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey
-      ) {
-        return;
-      }
-
-      const target = event.target;
-
-      if (
-        target &&
-        /INPUT|TEXTAREA|SELECT/.test(target.tagName)
-      ) {
-        return;
-      }
-
-      if (event.code === 'KeyV') {
-        this.next();
-      } else if (event.code === 'Digit1') {
-        this.setProfile(0);
-      } else if (event.code === 'Digit2') {
-        this.setProfile(1);
-      } else if (event.code === 'Digit3') {
-        this.setProfile(2);
-      }
-    };
-
-    window.addEventListener(
-      'keydown',
-      this._onKeyDown,
-    );
+    window.addEventListener('keydown', this._onKeyDown);
   }
 
   get profile() {
@@ -680,56 +338,29 @@ export class AircraftVisualSystem {
 
   attach(camera) {
     if (!camera || this.camera === camera) return;
-
-    if (this.root.parent) {
-      this.root.parent.remove(this.root);
-    }
-
+    this.cockpitRoot.parent?.remove(this.cockpitRoot);
     this.camera = camera;
-    camera.add(this.root);
+    camera.add(this.cockpitRoot);
   }
 
   setProfile(value) {
     let index = -1;
+    if (Number.isFinite(Number(value))) index = Math.trunc(Number(value));
+    else if (typeof value === 'string') index = AIRCRAFT_PROFILES.findIndex(profile => profile.id === value);
+    if (index < 0) return this.name;
 
-    if (Number.isFinite(Number(value))) {
-      index = Math.trunc(Number(value));
-    } else if (typeof value === 'string') {
-      index = AIRCRAFT_PROFILES.findIndex(
-        (profile) => profile.id === value,
-      );
-    }
-
-    if (index < 0) {
-      return this.name;
-    }
-
-    this.profileIndex =
-      ((index % AIRCRAFT_PROFILES.length) +
-        AIRCRAFT_PROFILES.length) %
-      AIRCRAFT_PROFILES.length;
-
+    this.profileIndex = ((index % AIRCRAFT_PROFILES.length) + AIRCRAFT_PROFILES.length) % AIRCRAFT_PROFILES.length;
     this._rebuild();
+    try { localStorage.setItem(STORAGE_KEY, this.profile.id); } catch {}
 
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        this.profile.id,
-      );
-    } catch {
-      // Local storage is optional.
-    }
-
-    window.dispatchEvent(
-      new CustomEvent('skyline:aircraft-changed', {
-        detail: {
-          id: this.profile.id,
-          index: this.profileIndex,
-          name: this.profile.name,
-        },
-      }),
-    );
-
+    window.dispatchEvent(new CustomEvent('skyline:aircraft-changed', {
+      detail: {
+        id: this.profile.id,
+        index: this.profileIndex,
+        name: this.profile.name,
+        engine: this.profile.engine,
+      },
+    }));
     return this.name;
   }
 
@@ -738,120 +369,55 @@ export class AircraftVisualSystem {
   }
 
   _rebuild() {
-    if (this.model) {
-      this.root.remove(this.model);
-      disposeObject(this.model);
-    }
-
-    this.model = BUILDERS[this.profile.id]();
-    this.model.scale.setScalar(0.92);
-    this.root.add(this.model);
-
     if (this.externalModel) {
       this.externalRoot.remove(this.externalModel);
-      disposeObject(this.externalModel);
+      disposeTree(this.externalModel);
+    }
+    if (this.cockpitModel) {
+      this.cockpitRoot.remove(this.cockpitModel);
+      disposeTree(this.cockpitModel);
     }
 
-    this.externalModel = createExternalAirframe(
-      this.profile.id,
-    );
-
+    this.externalModel = EXTERNAL_BUILDERS[this.profile.id]();
+    this.cockpitModel = createCockpit(this.profile.id);
     this.externalRoot.add(this.externalModel);
+    this.cockpitRoot.add(this.cockpitModel);
   }
 
-  update(dt, flight) {
-    this.elapsed += Math.max(0, dt || 0);
+  update(dt, flight, cameraMode = 'first') {
+    const safeDt = Math.max(0, Math.min(0.1, dt || 0));
+    this.elapsed += safeDt;
+    this.cameraMode = cameraMode;
 
-    const speed = Number.isFinite(flight?.speed)
-      ? flight.speed
-      : flight?.velocity?.length?.() || 0;
-
-    const flutter = Math.min(
-      1,
-      Math.max(0, (speed - 70) / 110),
-    );
-
-    const load = Number.isFinite(flight?.loadFactor)
-      ? flight.loadFactor
-      : 1;
-
-    // Determine first-person versus chase view only from
-    // distance. CameraRig itself remains untouched.
-    const cameraDistance =
-      this.camera?.position?.distanceTo?.(
-        flight?.position,
-      ) ?? 0;
-
-    this.root.visible = cameraDistance < 3.5;
-
-    this.externalRoot.visible =
-      cameraDistance >= 3.5 &&
-      Boolean(flight?.position);
+    this.cockpitRoot.visible = cameraMode === 'cockpit';
+    this.externalRoot.visible = cameraMode === 'third' && Boolean(flight?.position);
 
     if (this.externalRoot.visible) {
-      this.externalRoot.position.copy(
-        flight.position,
-      );
-
-      if (flight?.attitude?.isQuaternion) {
-        this.externalRoot.quaternion.copy(
-          flight.attitude,
-        );
-      } else if (
-        flight?.velocity?.isVector3 &&
-        flight.velocity.lengthSq() > 0.001
-      ) {
-        const forward = flight.velocity
-          .clone()
-          .normalize();
-
-        this.externalRoot.quaternion.setFromUnitVectors(
-          new THREE.Vector3(0, 0, -1),
-          forward,
-        );
-      }
+      this.externalRoot.position.copy(flight.position);
+      if (flight.attitude?.isQuaternion) this.externalRoot.quaternion.copy(flight.attitude);
     }
 
-    // Tiny visual movement only.
-    this.root.position.y =
-      -0.01 -
-      Math.max(0, load - 1) * 0.003;
+    const speed = Math.max(0, Number(flight?.speed) || 0);
+    const propeller = this.externalModel?.userData?.propeller;
+    if (propeller) propeller.rotation.z += safeDt * (20 + Math.min(90, speed * 0.45));
 
-    this.root.position.x =
-      Math.sin(this.elapsed * 7.3) *
-      0.0015 *
-      flutter;
+    const instruments = this.cockpitModel?.userData?.instruments || [];
+    if (instruments[0]) instruments[0].userData.needle.rotation.z = -1.8 + Math.min(3.6, speed / 160 * 3.6);
+    if (instruments[1]) instruments[1].userData.needle.rotation.z = -1.4 + Math.min(2.8, Math.max(0, flight?.position?.y || 0) / 1800 * 2.8);
+    if (instruments[2]) instruments[2].userData.needle.rotation.z = -1.4 + Math.min(2.8, speed / 120 * 2.8);
 
-    this.root.rotation.z =
-      Math.sin(this.elapsed * 9.1) *
-      0.0012 *
-      flutter;
+    const flutter = Math.max(0, Math.min(1, (speed - 150) / 450));
+    this.cockpitRoot.position.x = Math.sin(this.elapsed * 17) * flutter * 0.0018;
+    this.cockpitRoot.position.y = Math.sin(this.elapsed * 13) * flutter * 0.0012;
   }
 
   dispose() {
-    window.removeEventListener(
-      'skyline:aircraft-next',
-      this._onNext,
-    );
-
-    window.removeEventListener(
-      'skyline:aircraft-set',
-      this._onSet,
-    );
-
-    window.removeEventListener(
-      'keydown',
-      this._onKeyDown,
-    );
-
+    window.removeEventListener('skyline:aircraft-next', this._onNext);
+    window.removeEventListener('skyline:aircraft-set', this._onSet);
+    window.removeEventListener('keydown', this._onKeyDown);
     this.scene?.remove(this.externalRoot);
-
-    if (this.model) {
-      disposeObject(this.model);
-    }
-
-    if (this.externalModel) {
-      disposeObject(this.externalModel);
-    }
+    this.cockpitRoot.parent?.remove(this.cockpitRoot);
+    disposeTree(this.externalRoot);
+    disposeTree(this.cockpitRoot);
   }
 }

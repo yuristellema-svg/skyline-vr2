@@ -145,6 +145,11 @@ export class InputController {
       viewYaw: 0,
     };
 
+    const phoneControlScale =
+      this.mode === 'phone'
+        ? 0.84
+        : 1;
+
     this._targetPitchRate = 0;
     this._targetRollRate = 0;
     this._targetViewYaw = 0;
@@ -229,7 +234,6 @@ export class InputController {
     this._cameraToggle = false;
     this._respawnRequested = false;
     this._escapeRequested = false;
-    this._telemetryRequested = false;
     this._lastPhoneTap = -Infinity;
 
     this._onOrientation =
@@ -639,11 +643,13 @@ export class InputController {
 
     this._targetPitchRate =
       pitchRate *
-      sensitivity;
+      sensitivity *
+      phoneControlScale;
 
     this._targetRollRate =
       rollRate *
-      sensitivity;
+      sensitivity *
+      phoneControlScale;
 
     const controlTau =
       Math.max(
@@ -869,16 +875,6 @@ export class InputController {
       this._respawnRequested;
 
     this._respawnRequested =
-      false;
-
-    return value;
-  }
-
-  consumeTelemetryRequest() {
-    const value =
-      this._telemetryRequested;
-
-    this._telemetryRequested =
       false;
 
     return value;
@@ -1173,14 +1169,6 @@ export class InputController {
         true;
     }
 
-    if (
-      !event.repeat &&
-      event.code ===
-        'KeyT'
-    ) {
-      this._telemetryRequested =
-        true;
-    }
   }
 
   _onKeyUp(event) {

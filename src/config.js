@@ -1,7 +1,7 @@
 export const DEG = Math.PI / 180;
 
 export const CONFIG = Object.freeze({
-  version: 'fable-iteration-3-energy-turning-headlook-1.4.6',
+  version: 'skyline-combat-sandbox-v4',
 
   physics: Object.freeze({
     fixedStep: 1 / 120,
@@ -15,19 +15,21 @@ export const CONFIG = Object.freeze({
     softMaximumSpeed: 5000,
     maximumSpeed: 5000,
 
-    maximumAcceleration: 22,
-    maximumDeceleration: 32,
+    maximumAcceleration: 30,
+    maximumDeceleration: 22,
 
-    angularResponse: 12,
-    angularRelease: 16,
+    // The aircraft now builds and releases rotation with visible inertia.
+    angularResponse: 7.2,
+    angularRelease: 9.5,
 
     energy: Object.freeze({
       gravityBlendAngle: 30 * DEG,
 
-      // A dive is slightly more rewarding than an equal climb is costly.
-      // This preserves the deliberate high/low energy exploit.
-      diveGravityMultiplier: 1.28,
-      climbGravityMultiplier: 1.08,
+      // Height and speed deliberately trade into one another. A long dive can
+      // build extreme speed, while a fast pull-up retains enough momentum to
+      // support repeated dive-climb cycles.
+      diveGravityMultiplier: 1.42,
+      climbGravityMultiplier: 0.72,
 
       // No engine or invisible cruise control.
       levelAssistFullAngle: 0,
@@ -76,10 +78,6 @@ export const CONFIG = Object.freeze({
       deltaSpeed: 0,
     }),
 
-    telemetry: Object.freeze({
-      frames: 600,
-      glitchPathDelta: 45 * DEG,
-    }),
   }),
 
   controls: Object.freeze({

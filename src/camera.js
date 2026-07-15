@@ -409,22 +409,23 @@ export class CameraRig {
 
   toggle() {
     this.mode =
-      this.mode ===
-        'first'
-        ? 'third'
-        : 'first';
+      this.mode === 'first'
+        ? 'cockpit'
+        : this.mode === 'cockpit'
+          ? 'third'
+          : 'first';
 
     this._syncVisibility();
-
     return this.mode;
   }
 
   setMode(mode) {
     this.mode =
-      mode ===
-        'third'
+      mode === 'third'
         ? 'third'
-        : 'first';
+        : mode === 'cockpit'
+          ? 'cockpit'
+          : 'first';
 
     this._syncVisibility();
   }

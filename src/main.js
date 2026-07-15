@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, clamp } from './config.js';
 import { InputController, requestOrientationPermissionFromGesture } from './input.js';
-import { FlightModel, TELEMETRY_EVENT_COLLISION } from './flightModel.js';
+import { FlightModel } from './flightModel.js';
 import { CollisionSystem } from './collision.js';
 import { CameraRig } from './camera.js';
 import { EffectsSystem } from './effects.js';
@@ -9,6 +9,8 @@ import { StereoRenderer } from './stereo.js';
 import { GazeMenu } from './menu.js';
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
+import { WorldPolishSystem } from './worldPolish.js';
+import { AircraftVisualSystem } from './aircraftVisuals.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -43,6 +45,22 @@ const cameraRig = new CameraRig(
 const effects = new EffectsSystem(scene);
 const hud = new MonoHud(hudRoot);
 
+const aircraftVisuals = new AircraftVisualSystem(scene);
+aircraftVisuals.attach(stereo.camera);
+
+const worldPolish = new WorldPolishSystem(
+  scene,
+  {
+    sampleHeight:
+      world.sampleHeight,
+    atmosphere: true,
+    audio: true,
+    routes: true,
+    wildlife: true,
+    contrails: true,
+  },
+);
+
 let phase = 'boot';
 let phoneMode = false;
 let phaseStarted = performance.now() / 1000;
@@ -58,7 +76,6 @@ let lastEyeText = null;
 let transientMessage = '';
 let transientUntil = 0;
 let menuNeedsReanchor = false;
-let glitchNotified = false;
 let worldFlightReady = false;
 let worldResetPromise = null;
 let renderOriginX = 0;
@@ -119,18 +136,12 @@ function setStartStatus(
 }
 
 function setEyeMessage(message) {
-  if (message === lastEyeText) {
-    return;
-  }
-
+  const mono = !stereo.stereoEnabled;
   lastEyeText = message;
+  eyeMessage.classList.toggle('mono', mono);
   eyeLeft.textContent = message;
-  eyeRight.textContent = message;
-
-  eyeMessage.classList.toggle(
-    'hidden',
-    !message
-  );
+  eyeRight.textContent = mono ? '' : message;
+  eyeMessage.classList.toggle('hidden', !message);
 }
 
 function showTransient(
@@ -437,53 +448,6 @@ function startSession(phone) {
   }
 }
 
-function downloadTelemetry() {
-  const useGlitchCapture =
-    flight.telemetryGlitchDetected;
-
-  const json =
-    flight.exportTelemetrySnapshot(
-      useGlitchCapture,
-      2
-    );
-
-  const blob = new Blob(
-    [json],
-    {
-      type: 'application/json',
-    }
-  );
-
-  const url =
-    URL.createObjectURL(blob);
-
-  const anchor =
-    document.createElement('a');
-
-  anchor.href = url;
-
-  anchor.download =
-    `skyline-vr-telemetry-${
-      useGlitchCapture
-        ? 'glitch'
-        : 'manual'
-    }.json`;
-
-  anchor.click();
-
-  setTimeout(
-    () => {
-      URL.revokeObjectURL(url);
-    },
-    1000
-  );
-
-  showTransient(
-    'TELEMETRY SAVED',
-    1.5
-  );
-}
-
 async function waitForLandscape() {
   if (isLandscape()) {
     return;
@@ -659,6 +623,11 @@ function openMenu(
   }
 
   accumulator = 0;
+
+  // Never leave the desktop control hint over the pause menu.
+  transientMessage = '';
+  transientUntil = 0;
+  setEyeMessage('');
 
   if (!crashMode) {
     phase = 'paused';
@@ -963,12 +932,6 @@ function updateInputAndState(
     );
   }
 
-  if (
-    input.consumeTelemetryRequest() &&
-    phase !== 'boot'
-  ) {
-    downloadTelemetry();
-  }
 
   if (
     input.consumeMenuRequest()
@@ -1076,10 +1039,6 @@ function frame(milliseconds) {
           flight.position
         )
       ) {
-        flight.flagTelemetryEvent(
-          TELEMETRY_EVENT_COLLISION
-        );
-
         beginRespawn(
           collision.lastReason
         );
@@ -1146,6 +1105,19 @@ function frame(milliseconds) {
     menuNeedsReanchor = false;
   }
 
+  aircraftVisuals.update(
+    frameDt,
+    flight,
+    cameraRig.mode,
+  );
+
+  worldPolish.update(
+    frameDt,
+    flight,
+    stereo.camera,
+    phase,
+  );
+
   const worldFocus =
     phase === 'crashed'
       ? CONFIG.world.spawn
@@ -1185,20 +1157,6 @@ function frame(milliseconds) {
   );
 
   updateMessages(now);
-
-  if (
-    flight.telemetryGlitchDetected &&
-    !glitchNotified
-  ) {
-    glitchNotified = true;
-
-    downloadTelemetry();
-
-    showTransient(
-      'FLIGHT GLITCH CAPTURED / TELEMETRY SAVED',
-      4
-    );
-  }
 
   hud.update(
     frameDt,
@@ -1298,3 +1256,9 @@ if (
       }
     );
 }
+
+
+// SKYLINE_V4_AI_COLLISION
+window.addEventListener('skyline:ai-collision', () => {
+  if (phase === 'flying') beginRespawn('MID-AIR COLLISION');
+});

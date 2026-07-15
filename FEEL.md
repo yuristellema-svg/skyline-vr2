@@ -26,7 +26,6 @@ Status: **automated physics gates pass; final desktop integration and real-iPhon
 
 - Does a low-speed stall feel understandable and recoverable, not arbitrary?
 - Is high-speed ground skimming precise enough while still dangerous?
-- Is +25 m/s boost satisfying without creating another speed/flip glitch?
 - Are first and third person both comfortable on the target phone?
 - Is the menu deliberate without feeling slow?
 

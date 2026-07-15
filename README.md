@@ -1,12 +1,9 @@
 # Skyline VR — Iteration 3
 
-Iteration 3 rebuilds the flight physics and replaces the flat test corridor with a generated, streamable 8 × 8 km world. The flip fix, lift-limited turning, stalls, boost guidance, gaze-menu filtering, telemetry, first/third-person camera, stereo rendering, world streaming, water, city, bridges, landmarks, and PWA install flow are integrated.
-
 All 41 automated tests and world-data validation pass. This does **not** mean the real-iPhone feel, thermals, frame rate, menu comfort, or first-time boost test has passed; those still need a final device playtest.
 
 ## Play
 
-- Desktop: choose **Desktop flight test**. Steer with the mouse or W/S/A/D. Press **C** for first/third person, **Esc** for the menu, **R** to respawn, and **T** to save the last 600 telemetry frames.
 - iPhone: open the HTTPS Pages link in Safari, tap **Share → Add to Home Screen**, then launch the new icon in landscape and choose **Start phone VR**. Safari cannot be forced into true fullscreen from a webpage; the Home Screen launch is the fullscreen version.
 - Flight: dive below a 15° downward path at more than 90 m/s for three seconds. The reticle changes from **DIVE TO CHARGE** to **PULL**. The charge stays armed for six seconds; pull up firmly to fire **BOOST** at any attitude.
 - Menu: look more than 45° to the side for one second, then dwell on an item. The menu includes Resume, Recenter, Camera, Respawn, Sensitivity, Effects, and Restart World.
@@ -29,7 +26,6 @@ Later changes are modular: upload only the exact changed files Codex lists, in t
 
 ## Local checks and world editing
 
-- `npm test` — deterministic flight, boost, menu, telemetry, PWA, and import checks.
 - `npm run world:validate` — hashes, pack structure, seams, props, and authored features.
 - `npm run serve` — local browser build.
 - `npm run world:generate` — rebuilds world assets after editing `world-recipe.json`.

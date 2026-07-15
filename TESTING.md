@@ -6,7 +6,6 @@
 
 - the 179.9° flip case, monotonic shortest-arc convergence, normalized attitude, and no discontinuous speed jump;
 - a deterministic ten-minute simulation with the 45° path-jump trap armed;
-- 600-frame telemetry, collision/respawn flags, automatic glitch capture, and manual export support;
 - full quaternion loops/rolls, inverted flight, dive speed, honest climb energy, induced drag, stalls and recovery;
 - a 90 m/s loop succeeding, a 55 m/s loop stalling, 60 ms input smoothing, and the 15% high-speed rate reduction;
 - three-second boost charge, six-second armed window, two-second expiry drain, and any-attitude pull trigger;
@@ -27,7 +26,6 @@ These are code/data checks, not proof of comfort or phone performance.
 5. Make ten deliberate gaze selections; then fly/open/close the menu aggressively for five minutes with zero accidental activation.
 6. Cross streamed chunk and LOD boundaries. Look for holes, seams, popping, repeated props, water gaps, or collision disagreement.
 7. Visit the river, lake, city, canyon, five bridges, and several landmarks.
-8. Press **T** and confirm a JSON telemetry file downloads.
 9. Check visible draw calls stay at or below 300 and visible triangles at or below 400,000.
 
 ## Real iPhone acceptance — not yet passed

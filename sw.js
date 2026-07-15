@@ -1,5 +1,4 @@
-const SHELL_CACHE =
-  'skyline-shell-v4';
+const SHELL_CACHE = 'skyline-shell-v8';
 
 const SHELL_FILES = [
   './',
@@ -17,11 +16,21 @@ const SHELL_FILES = [
   './src/effects.js',
   './src/aircraftVisuals.js',
   './src/skyDecor.js',
+  './src/atmosphere.js',
+  './src/windAudio.js',
+  './src/routeSystem.js',
+  './src/wildlife.js',
+  './src/contrails.js',
+  './src/worldPolish.js',
   './src/stereo.js',
   './src/menu.js',
   './src/hud.js',
   './src/world/world.js',
 
+  './src/sandboxDynamics.js',
+  './src/aiTraffic.js',
+  './src/cloudField.js',
+  './src/citySilhouette.js',
   './vendor/three.module.min.js',
 ];
 
@@ -89,14 +98,6 @@ self.addEventListener(
       return;
     }
 
-    /*
-     * World packs are already controlled by
-     * the game's streaming system.
-     *
-     * Do not also store them in Cache Storage:
-     * that would duplicate tens of megabytes
-     * and could retain obsolete terrain packs.
-     */
     if (
       url.pathname.includes(
         '/assets/world/',

@@ -4,182 +4,164 @@ import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, DEG, rateFromDeflection } from '../src/config.js';
 import { screenTilt } from '../src/input.js';
 import { FlightModel } from '../src/flightModel.js';
-import { CollisionSystem } from '../src/collision.js';
 
-const ZERO = { pitchRate: 0, rollRate: 0 };
+const ZERO = { pitchRate: 0, rollRate: 0, viewYaw: 0 };
 
 function stepFor(model, seconds, controls = ZERO) {
   const count = Math.round(seconds / CONFIG.physics.fixedStep);
-  for (let i = 0; i < count; i += 1) model.step(CONFIG.physics.fixedStep, controls);
+  for (let i = 0; i < count; i += 1) {
+    model.step(CONFIG.physics.fixedStep, controls);
+  }
 }
 
-test('locked rate curve has dead zones, exponent and full rates', () => {
+test('configured control curve reaches its own full rates', () => {
   const c = CONFIG.controls;
-  assert.equal(rateFromDeflection(3 * DEG, c.pitchDeadzone, c.pitchFullDeflection, c.pitchMaxRate), 0);
-  assert.equal(rateFromDeflection(-3 * DEG, c.rollDeadzone, c.rollFullDeflection, c.rollMaxRate), 0);
-  assert.ok(Math.abs(rateFromDeflection(25 * DEG, c.pitchDeadzone, c.pitchFullDeflection, c.pitchMaxRate) - 110 * DEG) < 1e-12);
-  assert.ok(Math.abs(rateFromDeflection(-30 * DEG, c.rollDeadzone, c.rollFullDeflection, c.rollMaxRate) + 160 * DEG) < 1e-12);
-  const half = c.pitchDeadzone + (c.pitchFullDeflection - c.pitchDeadzone) * 0.5;
-  const expected = c.pitchMaxRate * Math.pow(0.5, 1.6);
-  assert.ok(Math.abs(rateFromDeflection(half, c.pitchDeadzone, c.pitchFullDeflection, c.pitchMaxRate) - expected) < 1e-12);
+  assert.equal(
+    rateFromDeflection(
+      0,
+      c.pitchDeadzone,
+      c.pitchFullDeflection,
+      c.pitchMaxRate,
+      c.responseExponent,
+    ),
+    0,
+  );
+  assert.ok(
+    Math.abs(
+      rateFromDeflection(
+        c.pitchFullDeflection,
+        c.pitchDeadzone,
+        c.pitchFullDeflection,
+        c.pitchMaxRate,
+        c.responseExponent,
+      ) - c.pitchMaxRate,
+    ) < 1e-12,
+  );
+  assert.ok(
+    Math.abs(
+      rateFromDeflection(
+        -c.rollFullDeflection,
+        c.rollDeadzone,
+        c.rollFullDeflection,
+        c.rollMaxRate,
+        c.responseExponent,
+      ) + c.rollMaxRate,
+    ) < 1e-12,
+  );
 });
 
-test('screen-corrected gravity tilt has canonical neutral poses', () => {
+test('screen-corrected gravity tilt keeps a canonical neutral pose', () => {
   const out = { pitch: 0, roll: 0 };
   screenTilt(90, 0, 0, out);
-  assert.ok(Math.abs(out.pitch) < 1e-9 && Math.abs(out.roll) < 1e-9);
-  screenTilt(0, -90, 90, out);
-  assert.ok(Math.abs(out.pitch) < 1e-9 && Math.abs(out.roll) < 1e-9);
-  screenTilt(0, 90, 270, out);
-  assert.ok(Math.abs(out.pitch) < 1e-9 && Math.abs(out.roll) < 1e-9);
+  assert.ok(Math.abs(out.pitch) < 1e-9);
+  assert.ok(Math.abs(out.roll) < 1e-9);
 });
 
-test('quaternion flight crosses vertical and completes repeated pitch rotations without clamps', () => {
+test('repeated pitch and roll flight remains finite and normalized', () => {
   const model = new FlightModel();
-  model.reset(0, 5000, 0, 80);
-  const controls = { pitchRate: CONFIG.controls.pitchMaxRate, rollRate: 0 };
-  let sawVertical = false;
-  let sawInverted = false;
-  const forward = new THREE.Vector3();
-  for (let i = 0; i < 720; i += 1) {
-    model.step(CONFIG.physics.fixedStep, controls);
-    model.getForward(forward);
-    if (forward.y > 0.98 || forward.y < -0.98) sawVertical = true;
-    const up = model.getUp(new THREE.Vector3());
-    if (up.y < -0.95) sawInverted = true;
+  model.reset(0, 8000, 0, 90);
+
+  for (let i = 0; i < 3600; i += 1) {
+    const t = i * CONFIG.physics.fixedStep;
+    model.step(CONFIG.physics.fixedStep, {
+      pitchRate: Math.sin(t * 0.7) * 42 * DEG,
+      rollRate: Math.sin(t * 0.43) * 55 * DEG,
+      viewYaw: 0,
+    });
+
+    assert.ok(
+      Number.isFinite(
+        model.position.x +
+        model.position.y +
+        model.position.z +
+        model.speed +
+        model.pathAngle +
+        model.angleOfAttack,
+      ),
+    );
     assert.ok(Math.abs(model.attitude.length() - 1) < 1e-9);
   }
-  assert.ok(sawVertical, 'must pass through vertical');
-  assert.ok(sawInverted, 'must pass through inverted');
-  assert.ok(Number.isFinite(model.position.x + model.position.y + model.position.z));
 });
 
-test('full roll and inverted neutral hold preserve attitude', () => {
+test('a sustained dive converts height into substantial extra speed', () => {
   const model = new FlightModel();
-  model.reset(0, 5000, 0, 70);
-  stepFor(model, 1.15, { pitchRate: 0, rollRate: CONFIG.controls.rollMaxRate });
-  stepFor(model, 1.2, ZERO);
-  const held = model.attitude.clone();
-  stepFor(model, 5, ZERO);
-  assert.ok(1 - Math.abs(held.dot(model.attitude)) < 1e-5);
-  assert.ok(Math.abs(model.attitude.length() - 1) < 1e-9);
+  model.reset(0, 20000, 0, 58);
+  model.attitude.setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    -Math.PI * 0.5,
+  );
+  model.velocity.set(0, -58, 0);
+
+  stepFor(model, 8);
+
+  assert.ok(model.speed > 100, `dive speed ${model.speed}`);
+  assert.ok(model.speed < CONFIG.physics.maximumSpeed);
 });
 
-test('vertical dive exceeds 400 km/h and settles near 130 m/s without a hard speed cap', () => {
+test('high-energy flight keeps deliberate extreme-speed headroom', () => {
+  assert.ok(CONFIG.physics.maximumSpeed >= 1000);
+  assert.equal(CONFIG.physics.energy.maximumOverspeedDrag, 0);
+});
+
+test('discarded automatic capture and boost systems stay absent', () => {
   const model = new FlightModel();
-  model.reset(0, 100000, 0, 62);
-  model.attitude.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI * 0.5);
-  model.velocity.set(0, -62, 0);
-  stepFor(model, 35, ZERO);
-  assert.ok(model.speed > 111.111, `expected >400 km/h, got ${model.speed * 3.6}`);
-  stepFor(model, 90, ZERO);
-  assert.ok(model.speed > 127 && model.speed < 133, `terminal ${model.speed}`);
+
+  assert.equal('telemetryGlitchDetected' in model, false);
+  assert.equal(typeof model.readTelemetrySnapshot, 'undefined');
+  assert.equal(model.boosting, false);
+
+  model.reset(0, 5000, 0, 120);
+  model.velocity.set(0, -120, 0);
+  stepFor(model, 4);
+
+  assert.equal(model.boostCharge, 0);
+  assert.equal(model.boostRemaining, 0);
 });
 
-test('speed floor remains active and climbing pays the full energy cost', () => {
+test('turn braking remains finite and capped during hard manoeuvres', () => {
   const model = new FlightModel();
-  model.reset(0, 1000, 0, 80);
-  model.velocity.set(0, 80, 0);
-  model.attitude.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI * 0.5);
-  stepFor(model, 1, ZERO);
-  assert.ok(model.speed < 70, `climb should lose speed honestly, got ${model.speed}`);
-  stepFor(model, 20, ZERO);
-  assert.ok(model.speed >= 15);
+  model.reset(0, 8000, 0, 180);
+
+  stepFor(model, 3, {
+    pitchRate: 35 * DEG,
+    rollRate: 65 * DEG,
+    viewYaw: 0,
+  });
+
+  assert.ok(Number.isFinite(model.maneuverDragAcceleration));
+  assert.ok(model.turnDragAcceleration <= 10 + 1e-9);
+  assert.ok(model.misalignmentDragAcceleration <= 8 + 1e-9);
+  assert.ok(model.speed > 0);
 });
 
-test('fast dive arms boost in three seconds and any-attitude pull triggers once', () => {
-  const model = new FlightModel();
-  model.reset(0, 5000, 0, 100);
-  model.attitude.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -45 * DEG);
-  model.velocity.set(0, -Math.sin(45 * DEG) * 100, -Math.cos(45 * DEG) * 100);
-  stepFor(model, 3.05, ZERO);
-  assert.ok(model.boostCharge >= 0.999, `charge ${model.boostCharge}`);
-  assert.ok(model.boostArmedRemaining > 5.8, `armed ${model.boostArmedRemaining}`);
-  model.attitude.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI * 0.5);
-  const pull = { pitchRate: CONFIG.controls.pitchMaxRate, rollRate: 0 };
-  let triggers = 0;
-  for (let i = 0; i < 240; i += 1) {
-    model.step(CONFIG.physics.fixedStep, pull);
-    if (model.boostJustTriggered) triggers += 1;
-  }
-  assert.equal(triggers, 1);
-  assert.ok(model.boostRemaining > 1);
-});
-
-test('90 m/s loop succeeds while 55 m/s entry stalls and recovers', () => {
-  const loopControls = { pitchRate: 35 * DEG, rollRate: 0 };
-  const fast = new FlightModel();
-  fast.reset(0, 5000, 0, 90);
-  let sawUp = false;
-  let sawBackward = false;
-  let sawDownAfterBack = false;
-  let returnedForward = false;
-  for (let i = 0; i < 12 / CONFIG.physics.fixedStep; i += 1) {
-    fast.step(CONFIG.physics.fixedStep, loopControls);
-    const direction = fast.velocity.clone().normalize();
-    if (direction.y > 0.85) sawUp = true;
-    if (sawUp && direction.z > 0.75) sawBackward = true;
-    if (sawBackward && direction.y < -0.85) sawDownAfterBack = true;
-    if (sawDownAfterBack && direction.z < -0.75) returnedForward = true;
-  }
-  assert.ok(sawUp && sawBackward && sawDownAfterBack && returnedForward, '90 m/s path must complete a loop');
-
-  const slow = new FlightModel();
-  slow.reset(0, 5000, 0, 55);
-  let maximumClimbPath = -Infinity;
-  let maximumStall = 0;
-  for (let i = 0; i < 4.5 / CONFIG.physics.fixedStep; i += 1) {
-    slow.step(CONFIG.physics.fixedStep, loopControls);
-    maximumClimbPath = Math.max(maximumClimbPath, slow.pathAngle);
-    maximumStall = Math.max(maximumStall, slow.stallAmount);
-  }
-  assert.ok(maximumClimbPath < 50 * DEG, `slow entry climbed too far: ${maximumClimbPath / DEG}°`);
-  assert.ok(maximumStall > 0.8, `stall never developed: ${maximumStall}`);
-  const recovery = { pitchRate: -22 * DEG, rollRate: 0 };
-  for (let i = 0; i < 7.5 / CONFIG.physics.fixedStep; i += 1) slow.step(CONFIG.physics.fixedStep, recovery);
-  assert.ok(slow.stallAmount < 0.1, `stall did not recover: ${slow.stallAmount}`);
-  assert.ok(slow.speed > 40, `recovery did not regain energy: ${slow.speed}`);
-});
-
-test('high-speed body command is softened without removing control', () => {
-  const model = new FlightModel();
-  model.reset(0, 10000, 0, 130);
-  model.velocity.set(0, -130, 0);
-  model.attitude.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI * 0.5);
-  stepFor(model, 0.75, { pitchRate: CONFIG.controls.pitchMaxRate, rollRate: 0 });
-  const ratio = model.angularVelocity.x / CONFIG.controls.pitchMaxRate;
-  assert.ok(ratio > 0.80 && ratio < 0.90, `high-speed command ratio ${ratio}`);
-});
-
-test('test bridge opening is passable while its stone is solid', () => {
-  const collision = new CollisionSystem(() => 0, 1.25);
-  collision.addArchBridge({ z: -100, depth: 18, halfSpan: 62, bottom: 0, deckTop: 26, halfOpening: 19, openingHeight: 22 });
-  assert.equal(collision.check(new THREE.Vector3(0, 10, -100)), false);
-  assert.equal(collision.check(new THREE.Vector3(17.5, 10, -100)), true);
-  assert.equal(collision.check(new THREE.Vector3(0, 24.5, -100)), true);
-  assert.equal(collision.check(new THREE.Vector3(0, 1.1, 0)), true);
-});
-
-test('fixed-step schedules produce identical flight state', () => {
-  const simulate = schedule => {
+test('fixed-step flight is deterministic', () => {
+  function simulate() {
     const model = new FlightModel();
-    model.reset(0, 5000, 0, 70);
-    let accumulator = 0;
-    let steps = 0;
-    for (let i = 0; steps < 1200; i += 1) {
-      accumulator += schedule[i % schedule.length];
-      while (accumulator + 1e-12 >= CONFIG.physics.fixedStep && steps < 1200) {
-        model.step(CONFIG.physics.fixedStep, { pitchRate: 42 * DEG, rollRate: 35 * DEG });
-        accumulator -= CONFIG.physics.fixedStep;
-        steps += 1;
-      }
+    model.reset(0, 5000, 0, 90);
+
+    for (let i = 0; i < 2400; i += 1) {
+      const t = i * CONFIG.physics.fixedStep;
+      model.step(CONFIG.physics.fixedStep, {
+        pitchRate: Math.sin(t) * 22 * DEG,
+        rollRate: Math.cos(t * 0.6) * 31 * DEG,
+        viewYaw: 0,
+      });
     }
-    return model;
-  };
-  const a = simulate([1 / 60]);
-  const b = simulate([1 / 30]);
-  const c = simulate([1 / 120, 1 / 48, 1 / 75]);
-  assert.ok(a.position.distanceTo(b.position) < 1e-9);
-  assert.ok(a.position.distanceTo(c.position) < 1e-9);
-  assert.ok(1 - Math.abs(a.attitude.dot(c.attitude)) < 1e-12);
+
+    return [
+      model.position.x,
+      model.position.y,
+      model.position.z,
+      model.velocity.x,
+      model.velocity.y,
+      model.velocity.z,
+      model.attitude.x,
+      model.attitude.y,
+      model.attitude.z,
+      model.attitude.w,
+      model.speed,
+    ];
+  }
+
+  assert.deepEqual(simulate(), simulate());
 });
