@@ -1,58 +1,188 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#9bb7bd" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Skyline VR" />
-  <title>Skyline VR - Iteration 3 Open World</title>
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=iteration-3-open-world-1" />
-</head>
-<body>
-  <canvas id="game" aria-label="Skyline VR Iteration 3 open-world flight game"></canvas>
+  <meta charset="utf-8">
 
-  <main id="start-panel" class="start-panel">
-    <div class="iteration">FABLE / ITERATION 3 / OPEN WORLD</div>
-    <h1>Skyline<br />VR</h1>
-    <p class="lead">Fast free flight across mountains, forests, water, bridges, canyon, and Skyline City.</p>
-    <div class="start-actions">
-      <button id="phone-start" class="primary">Start phone VR</button>
-      <button id="desktop-start">Desktop flight test</button>
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+  >
+
+  <meta
+    name="theme-color"
+    content="#07131c"
+  >
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+  >
+
+  <meta
+    name="description"
+    content="Skyline VR: an open-world arcade flight prototype for desktop and mobile stereo VR."
+  >
+
+  <title>Skyline VR</title>
+
+  <link
+    rel="manifest"
+    href="./manifest.webmanifest"
+  >
+
+  <link
+    rel="icon"
+    href="./icon.svg"
+    type="image/svg+xml"
+  >
+
+  <link
+    rel="stylesheet"
+    href="./styles.css"
+  >
+</head>
+
+<body>
+  <main
+    id="app"
+    aria-label="Skyline VR"
+  >
+    <canvas
+      id="game"
+      aria-label="Skyline VR flight view"
+    ></canvas>
+
+    <section
+      id="start-panel"
+      class="start-panel"
+      aria-labelledby="game-title"
+    >
+      <div class="start-panel__card">
+        <p class="eyebrow">
+          OPEN-WORLD FLIGHT PROTOTYPE
+        </p>
+
+        <h1 id="game-title">
+          SKYLINE <span>VR</span>
+        </h1>
+
+        <p class="start-panel__lead">
+          Dive through valleys, skim the city,
+          and climb back into open sky.
+        </p>
+
+        <div class="start-panel__actions">
+          <button
+            id="phone-start"
+            class="button button--primary"
+            type="button"
+          >
+            <span>START PHONE VR</span>
+            <small>
+              Landscape · motion permission
+            </small>
+          </button>
+
+          <button
+            id="desktop-start"
+            class="button button--secondary"
+            type="button"
+          >
+            <span>START DESKTOP</span>
+            <small>
+              Mouse or W/S/A/D
+            </small>
+          </button>
+        </div>
+
+        <p
+          id="start-status"
+          class="start-panel__status"
+          role="status"
+          aria-live="polite"
+        >
+          World data loads before flight begins.
+        </p>
+
+        <div class="start-panel__details">
+          <span>V cycles aircraft</span>
+          <span>1 / 2 / 3 select directly</span>
+          <span>Esc or M opens menu</span>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id="orientation-warning"
+      class="system-card hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rotate phone"
+    >
+      <strong>
+        ROTATE TO LANDSCAPE
+      </strong>
+
+      <span>
+        Keep the phone level and look straight ahead.
+      </span>
+    </section>
+
+    <aside
+      id="install-hint"
+      class="install-hint hidden"
+      aria-label="Install suggestion"
+    >
+      <div>
+        <strong>
+          For true fullscreen on iPhone
+        </strong>
+
+        <span>
+          Use Share → Add to Home Screen.
+        </span>
+      </div>
+
+      <button
+        id="install-dismiss"
+        type="button"
+        aria-label="Dismiss install suggestion"
+      >
+        ×
+      </button>
+    </aside>
+
+    <div
+      id="eye-message"
+      class="eye-message hidden"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div class="eye-left"></div>
+      <div class="eye-right"></div>
     </div>
-    <p id="start-status" class="status" role="status">
-      Phone: use the Home Screen icon for true fullscreen. Desktop: move the pointer to screen centre after launch.
-    </p>
-    <p class="comfort">Fast aerobatic VR can cause motion sickness. Begin with a short session and stop immediately if you feel unwell.</p>
+
+    <div
+      id="mono-hud"
+      class="mono-hud hidden"
+      aria-hidden="true"
+    ></div>
+
+    <noscript>
+      <div class="system-card">
+        Skyline VR requires JavaScript.
+      </div>
+    </noscript>
   </main>
 
-  <aside id="install-hint" class="install-hint hidden" role="status">
-    <strong>Fullscreen phone VR</strong>
-    <span>In Safari tap Share → Add to Home Screen, then open Skyline VR from its icon.</span>
-    <button id="install-dismiss" type="button">Got it</button>
-  </aside>
-
-  <div id="orientation-warning" class="orientation-warning hidden" role="status">
-    <strong>Rotate to landscape</strong>
-    <span>Hold your head level. The game will recalibrate automatically.</span>
-  </div>
-
-  <div id="eye-message" class="eye-message hidden" aria-live="polite">
-    <span class="eye eye-left"></span>
-    <span class="eye eye-right"></span>
-  </div>
-
-  <section id="mono-hud" class="mono-hud hidden" aria-label="Desktop flight telemetry">
-    <div><strong data-speed>0 km/h</strong><span data-g>1.0 g</span></div>
-    <div><span>BOOST</span><strong data-boost>0%</strong></div>
-    <div><span data-camera>FIRST PERSON</span><small>C camera / Esc menu / R respawn / T telemetry</small></div>
-    <small data-performance>0 calls / 0k tris / 0 dropped</small>
-  </section>
-
-  <script type="module" src="./bundle.js?v=iteration-3-open-world-1"></script>
+  <script
+    type="module"
+    src="./src/main.js"
+  ></script>
 </body>
 </html>
