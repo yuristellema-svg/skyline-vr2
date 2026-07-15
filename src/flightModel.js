@@ -24,78 +24,67 @@ const WORLD_RIGHT =
 const WORLD_DOWN =
   new THREE.Vector3(0, -1, 0);
 
+const EPSILON = 1e-8;
 const ALIGNMENT_EPSILON = 1e-4;
-const ALIGNMENT_AXIS_EPSILON_SQ = 1e-12;
 
 const TUNING = Object.freeze({
-  minimumSpeed: 0,
-  maximumSpeed: 1000,
+  maximumSpeed: 5000,
+  maximumAcceleration: 22,
+  maximumDeceleration: 32,
   controlSpeedFloor: 6,
 
-  maximumAcceleration: 10,
-  maximumDeceleration: 16,
+  diveGravityMultiplier: 1.28,
+  climbGravityMultiplier: 1.08,
 
   gravityBlendAngle:
+    30 * Math.PI / 180,
+
+  /*
+   * Straight flight barely loses speed.
+   * Drag is capped so a long dive can continue
+   * building extraordinary speed.
+   */
+  parasiticDrag: 0.000002,
+  inducedDrag: 0.000012,
+  maximumStraightDrag: 4,
+  gravityPathBend: 0.04,
+
+  /*
+   * Actual curvature of the travelled path creates
+   * the main braking force.
+   *
+   * Rolling around the forward axis does not count.
+   */
+  turnDragCoefficient: 0.11,
+  turnDragExponent: 2,
+
+  misalignmentStart:
+    2 * Math.PI / 180,
+
+  misalignmentFull:
     28 * Math.PI / 180,
 
-  diveGravityMultiplier: 0.78,
-  climbGravityMultiplier: 1.12,
-
-  preferredCruiseSpeed: 55,
-
-  levelAssistFullAngle:
-    3 * Math.PI / 180,
-
-  levelAssistZeroAngle:
-    17 * Math.PI / 180,
-
-  levelAssistSpeedBand: 22,
-  levelFlightAssistance: 0.48,
-  levelAssistDragFraction: 2.2,
-
-  parasiticDrag: 0.00013,
-  inducedDrag: 0.00004,
-  gravityPathBend: 0.06,
+  misalignmentDragCoefficient: 0.0008,
+  misalignmentDragExponent: 1.45,
 
   /*
-   * Braking now comes from pointing somewhere different
-   * from where the player is actually travelling.
-   *
-   * A barrel roll around the flight direction creates
-   * no special braking.
+   * 50 km/h remains flyable.
+   * The soft stall becomes substantial below that.
    */
-  misalignmentStartAngle:
-    2.5 * Math.PI / 180,
-
-  misalignmentFullAngle:
-    24 * Math.PI / 180,
-
-  misalignmentBaseDrag: 2,
-  misalignmentSpeedDrag: 0.001,
-  misalignmentExponent: 1.3,
-
-  /*
-   * Low speed creates a soft stall.
-   * Input never becomes locked.
-   */
-  lowSpeedStallStart: 22,
-  lowSpeedStallFull: 5,
+  lowSpeedStallStart: 12,
+  lowSpeedStallFull: 2,
   lowSpeedStallAmount: 0.72,
-  stalledLiftFraction: 0.55,
-  stalledSteeringFraction: 0.3,
+  stalledLiftFraction: 0.5,
+  stalledSteeringFraction: 0.34,
 
-  /*
-   * Speed can visibly reach zero.
-   * The player then tips downward and starts moving again.
-   */
-  zeroSnapSpeed: 0.8,
-  recoveryTriggerSpeed: 0.8,
-  recoveryReleaseSpeed: 25,
+  zeroSnapSpeed: 0.65,
+  recoveryTriggerSpeed: 0.65,
+  recoveryReleaseSpeed: 16,
 
   recoveryNoseDownRate:
-    36 * Math.PI / 180,
+    44 * Math.PI / 180,
 
-  recoveryFallResponse: 6.5,
+  recoveryFallResponse: 7,
 
   telemetryInterval: 0.05,
 });
@@ -127,6 +116,7 @@ export class FlightModel {
     this.liftCoefficient = 0;
     this.stallAmount = 0;
     this.gLoad = 1;
+    this.viewYaw = 0;
 
     this.boostCharge = 0;
     this.boostRemaining = 0;
@@ -138,23 +128,25 @@ export class FlightModel {
     this.gravityAcceleration = 0;
     this.dragAcceleration = 0;
     this.assistanceAcceleration = 0;
+    this.turnDragAcceleration = 0;
     this.misalignmentDragAcceleration = 0;
     this.maneuverDragAcceleration = 0;
     this.overspeedDragAcceleration = 0;
     this.boostAcceleration = 0;
 
-    this.lowSpeedRecoveryActive = false;
+    this.pathTurnRate = 0;
+
+    this.lowSpeedRecoveryActive =
+      false;
 
     this.totalDistance = 0;
     this.elapsed = 0;
 
-    this._misalignmentAngle = 0;
+    this._velocityDirection =
+      new THREE.Vector3(0, 0, -1);
 
     this._previousVelocity =
       new THREE.Vector3();
-
-    this._velocityDirection =
-      new THREE.Vector3(0, 0, -1);
 
     this._nose =
       new THREE.Vector3(0, 0, -1);
@@ -192,6 +184,8 @@ export class FlightModel {
     this._alignmentQuaternion =
       new THREE.Quaternion();
 
+    this._misalignmentAngle = 0;
+
     this._telemetryFrames = [];
     this._glitchTelemetryFrames = [];
     this._telemetryAccumulator = 0;
@@ -211,12 +205,12 @@ export class FlightModel {
     x = 0,
     y = 760,
     z = 420,
-    speed = this.config.physics.spawnSpeed
+    speed = this.config.physics.spawnSpeed,
   ) {
     this.position.set(
       x,
       y,
-      z
+      z,
     );
 
     this.attitude.identity();
@@ -224,25 +218,25 @@ export class FlightModel {
     this.angularVelocity.set(
       0,
       0,
-      0
+      0,
     );
 
     this.speed =
       Math.max(
         0,
-        speed
+        speed,
       );
 
     this.velocity.set(
       0,
       0,
-      -this.speed
+      -this.speed,
     );
 
     this._velocityDirection.set(
       0,
       0,
-      -1
+      -1,
     );
 
     this.pathAngle = 0;
@@ -250,18 +244,22 @@ export class FlightModel {
     this.liftCoefficient = 0;
     this.stallAmount = 0;
     this.gLoad = 1;
+    this.viewYaw = 0;
+    this.pathTurnRate = 0;
 
     this._disableBoost();
 
     this.gravityAcceleration = 0;
     this.dragAcceleration = 0;
     this.assistanceAcceleration = 0;
+    this.turnDragAcceleration = 0;
     this.misalignmentDragAcceleration = 0;
     this.maneuverDragAcceleration = 0;
     this.overspeedDragAcceleration = 0;
     this.boostAcceleration = 0;
 
-    this.lowSpeedRecoveryActive = false;
+    this.lowSpeedRecoveryActive =
+      false;
 
     this.totalDistance = 0;
     this.elapsed = 0;
@@ -275,10 +273,7 @@ export class FlightModel {
       false;
   }
 
-  step(
-    dt,
-    controls
-  ) {
+  step(dt, controls) {
     const physics =
       this.config.physics;
 
@@ -287,24 +282,31 @@ export class FlightModel {
 
     this.elapsed += dt;
 
+    this.viewYaw =
+      Number.isFinite(
+        controls.viewYaw,
+      )
+        ? controls.viewYaw
+        : 0;
+
     this._disableBoost();
 
     this._previousVelocity.copy(
-      this.velocity
+      this.velocity,
     );
 
     this._updateAxes();
 
     this._velocityDirection.copy(
-      this.velocity
+      this.velocity,
     );
 
     if (
       this._velocityDirection.lengthSq() <
-      1e-8
+      EPSILON
     ) {
       this._velocityDirection.copy(
-        this._nose
+        this._nose,
       );
     } else {
       this._velocityDirection.normalize();
@@ -312,7 +314,7 @@ export class FlightModel {
 
     this._updateAerodynamicState(
       aero,
-      dt * 0.5
+      dt * 0.5,
     );
 
     this._updateRecoveryState();
@@ -320,29 +322,29 @@ export class FlightModel {
     this._updateAttitude(
       dt,
       controls,
-      physics
+      physics,
     );
 
     this._updateAxes();
 
-    this._applyNearZeroRecovery(dt);
+    this._applyNearZeroRecovery(
+      dt,
+    );
 
     this._applyGravityPathBend(
       dt,
-      physics
+      physics,
     );
-
-    this._captureMisalignment();
 
     this._updateAerodynamicState(
       aero,
-      dt * 0.5
+      dt * 0.5,
     );
 
     this._alignFlightPath(
       dt,
       physics,
-      aero
+      aero,
     );
 
     this.pathAngle =
@@ -350,20 +352,20 @@ export class FlightModel {
         clamp(
           this._velocityDirection.y,
           -1,
-          1
-        )
+          1,
+        ),
       );
 
     const acceleration =
       this._calculateAcceleration(
-        physics
+        physics,
       );
 
     const totalAcceleration =
       clamp(
         acceleration.total,
         -TUNING.maximumDeceleration,
-        TUNING.maximumAcceleration
+        TUNING.maximumAcceleration,
       );
 
     const previousSpeed =
@@ -374,8 +376,8 @@ export class FlightModel {
         this.speed +
           totalAcceleration *
             dt,
-        TUNING.minimumSpeed,
-        TUNING.maximumSpeed
+        0,
+        TUNING.maximumSpeed,
       );
 
     if (
@@ -395,15 +397,18 @@ export class FlightModel {
       acceleration.gravity;
 
     this.dragAcceleration =
-      acceleration.drag;
+      acceleration.straightDrag;
 
-    this.assistanceAcceleration =
-      acceleration.assistance;
+    this.assistanceAcceleration = 0;
+
+    this.turnDragAcceleration =
+      acceleration.turnDrag;
 
     this.misalignmentDragAcceleration =
       acceleration.misalignmentDrag;
 
     this.maneuverDragAcceleration =
+      acceleration.turnDrag +
       acceleration.misalignmentDrag;
 
     this.overspeedDragAcceleration = 0;
@@ -411,15 +416,15 @@ export class FlightModel {
 
     this.velocity
       .copy(
-        this._velocityDirection
+        this._velocityDirection,
       )
       .multiplyScalar(
-        this.speed
+        this.speed,
       );
 
     this.position.addScaledVector(
       this.velocity,
-      dt
+      dt,
     );
 
     this.totalDistance +=
@@ -428,12 +433,12 @@ export class FlightModel {
 
     this._updateGLoad(
       dt,
-      physics
+      physics,
     );
 
     this._recordTelemetry(
       dt,
-      controls
+      controls,
     );
   }
 
@@ -449,28 +454,28 @@ export class FlightModel {
   _updateAxes() {
     this._nose
       .copy(
-        LOCAL_FORWARD
+        LOCAL_FORWARD,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
 
     this._craftUp
       .copy(
-        LOCAL_UP
+        LOCAL_UP,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
 
     this._craftRight
       .copy(
-        LOCAL_RIGHT
+        LOCAL_RIGHT,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
   }
@@ -504,44 +509,19 @@ export class FlightModel {
 
     return THREE.MathUtils.lerp(
       1,
-      0.25,
+      0.2,
       smoothstep(
         0,
         TUNING.recoveryReleaseSpeed,
-        this.speed
-      )
+        this.speed,
+      ),
     );
-  }
-
-  _captureMisalignment() {
-    this._misalignmentAngle =
-      Math.acos(
-        clamp(
-          this._velocityDirection.dot(
-            this._nose
-          ),
-          -1,
-          1
-        )
-      );
-  }
-
-  _lowSpeedStallAmount() {
-    return (
-      1 -
-      smoothstep(
-        TUNING.lowSpeedStallFull,
-        TUNING.lowSpeedStallStart,
-        this.speed
-      )
-    ) *
-      TUNING.lowSpeedStallAmount;
   }
 
   _updateAttitude(
     dt,
     controls,
-    physics
+    physics,
   ) {
     const highSpeedBlend =
       smoothstep(
@@ -551,7 +531,7 @@ export class FlightModel {
         this.config.controls
           .highSpeedControlFull,
 
-        this.speed
+        this.speed,
       );
 
     const rateScale =
@@ -561,7 +541,7 @@ export class FlightModel {
         this.config.controls
           .highSpeedControlScale,
 
-        highSpeedBlend
+        highSpeedBlend,
       );
 
     this._targetAngularVelocity.set(
@@ -571,7 +551,7 @@ export class FlightModel {
       0,
 
       -controls.rollRate *
-        rateScale
+        rateScale,
     );
 
     this._addRecoveryAngularVelocity();
@@ -579,6 +559,7 @@ export class FlightModel {
     this.angularVelocity.x =
       damp(
         this.angularVelocity.x,
+
         this._targetAngularVelocity.x,
 
         this._targetAngularVelocity.x ===
@@ -586,12 +567,13 @@ export class FlightModel {
           ? physics.angularRelease
           : physics.angularResponse,
 
-        dt
+        dt,
       );
 
     this.angularVelocity.y =
       damp(
         this.angularVelocity.y,
+
         this._targetAngularVelocity.y,
 
         this._targetAngularVelocity.y ===
@@ -599,12 +581,13 @@ export class FlightModel {
           ? physics.angularRelease
           : physics.angularResponse,
 
-        dt
+        dt,
       );
 
     this.angularVelocity.z =
       damp(
         this.angularVelocity.z,
+
         this._targetAngularVelocity.z,
 
         this._targetAngularVelocity.z ===
@@ -612,7 +595,7 @@ export class FlightModel {
           ? physics.angularRelease
           : physics.angularResponse,
 
-        dt
+        dt,
       );
 
     const rotationMagnitude =
@@ -620,18 +603,18 @@ export class FlightModel {
 
     if (
       rotationMagnitude <=
-      1e-8
+      EPSILON
     ) {
       return;
     }
 
     this._rotationAxis
       .copy(
-        this.angularVelocity
+        this.angularVelocity,
       )
       .multiplyScalar(
         1 /
-          rotationMagnitude
+          rotationMagnitude,
       );
 
     this._deltaQuaternion
@@ -639,12 +622,12 @@ export class FlightModel {
         this._rotationAxis,
 
         rotationMagnitude *
-          dt
+          dt,
       );
 
     this.attitude
       .multiply(
-        this._deltaQuaternion
+        this._deltaQuaternion,
       )
       .normalize();
   }
@@ -661,29 +644,32 @@ export class FlightModel {
       Math.acos(
         clamp(
           this._nose.dot(
-            WORLD_DOWN
+            WORLD_DOWN,
           ),
           -1,
-          1
-        )
+          1,
+        ),
       );
 
-    if (angle <= 1e-4) {
+    if (
+      angle <=
+      ALIGNMENT_EPSILON
+    ) {
       return;
     }
 
     this._recoveryAxisWorld
       .crossVectors(
         this._nose,
-        WORLD_DOWN
+        WORLD_DOWN,
       );
 
     if (
       this._recoveryAxisWorld.lengthSq() <
-      1e-10
+      EPSILON
     ) {
       this._recoveryAxisWorld.copy(
-        this._craftRight
+        this._craftRight,
       );
     } else {
       this._recoveryAxisWorld.normalize();
@@ -694,23 +680,23 @@ export class FlightModel {
         TUNING.recoveryNoseDownRate,
 
         angle *
-          2.2
+          2.4,
       ) *
       recovery;
 
     /*
-     * This is only a bias.
-     * Normal player pitch remains substantially stronger.
+     * Player pitch remains stronger,
+     * so holding up can resist this bias.
      */
     this._targetAngularVelocity.x +=
       this._recoveryAxisWorld.dot(
-        this._craftRight
+        this._craftRight,
       ) *
       recoveryRate;
 
     this._targetAngularVelocity.y +=
       this._recoveryAxisWorld.dot(
-        this._craftUp
+        this._craftUp,
       ) *
       recoveryRate;
   }
@@ -728,31 +714,31 @@ export class FlightModel {
       Math.exp(
         -TUNING.recoveryFallResponse *
           recovery *
-          dt
+          dt,
       );
 
     this._velocityDirection
       .lerp(
         WORLD_DOWN,
-        blend
+        blend,
       )
       .normalize();
   }
 
   _applyGravityPathBend(
     dt,
-    physics
+    physics,
   ) {
     this._gravityPerpendicular
       .copy(
-        WORLD_DOWN
+        WORLD_DOWN,
       )
       .addScaledVector(
         this._velocityDirection,
 
         -WORLD_DOWN.dot(
-          this._velocityDirection
-        )
+          this._velocityDirection,
+        ),
       );
 
     this._velocityDirection
@@ -766,8 +752,8 @@ export class FlightModel {
         ) /
           Math.max(
             this.speed,
-            TUNING.controlSpeedFloor
-          )
+            TUNING.controlSpeedFloor,
+          ),
       )
       .normalize();
   }
@@ -775,27 +761,26 @@ export class FlightModel {
   _alignFlightPath(
     dt,
     physics,
-    aero
+    aero,
   ) {
     const dot =
       clamp(
         this._velocityDirection.dot(
-          this._nose
+          this._nose,
         ),
         -1,
-        1
+        1,
       );
 
     const angle =
       Math.acos(
-        dot
+        dot,
       );
 
-    this._alignmentAxis.set(
-      0,
-      0,
-      0
-    );
+    this._misalignmentAngle =
+      angle;
+
+    this.pathTurnRate = 0;
 
     if (
       angle <
@@ -804,28 +789,31 @@ export class FlightModel {
       return;
     }
 
-    this._alignmentAxis.crossVectors(
-      this._velocityDirection,
-      this._nose
-    );
+    this._alignmentAxis
+      .crossVectors(
+        this._velocityDirection,
+        this._nose,
+      );
 
     if (
       this._alignmentAxis.lengthSq() <
-      ALIGNMENT_AXIS_EPSILON_SQ
+      EPSILON
     ) {
-      this._alignmentAxis.crossVectors(
-        this._nose,
-        WORLD_UP
-      );
+      this._alignmentAxis
+        .crossVectors(
+          this._nose,
+          WORLD_UP,
+        );
 
       if (
         this._alignmentAxis.lengthSq() <
-        1e-6
+        EPSILON
       ) {
-        this._alignmentAxis.crossVectors(
-          this._nose,
-          WORLD_RIGHT
-        );
+        this._alignmentAxis
+          .crossVectors(
+            this._nose,
+            WORLD_RIGHT,
+          );
       }
     }
 
@@ -834,7 +822,7 @@ export class FlightModel {
     const liftRate =
       aero.liftRateCoefficient *
       Math.abs(
-        this.liftCoefficient
+        this.liftCoefficient,
       ) *
       this.speed;
 
@@ -845,70 +833,78 @@ export class FlightModel {
       ) /
       Math.max(
         this.speed,
-        TUNING.controlSpeedFloor
+        TUNING.controlSpeedFloor,
       );
 
     const stallSteeringScale =
       THREE.MathUtils.lerp(
         1,
+
         TUNING.stalledSteeringFraction,
+
         clamp(
           this.stallAmount,
           0,
-          1
-        )
+          1,
+        ),
       );
 
     const alignmentRate =
       Math.min(
         liftRate,
-        gLimitedRate
+        gLimitedRate,
       ) *
       stallSteeringScale;
 
     const alignmentStep =
       Math.min(
         angle,
+
         alignmentRate *
-          dt
+          dt,
       );
 
     this._alignmentQuaternion
       .setFromAxisAngle(
         this._alignmentAxis,
-        alignmentStep
+        alignmentStep,
       );
 
     this._velocityDirection
       .applyQuaternion(
-        this._alignmentQuaternion
+        this._alignmentQuaternion,
       )
       .normalize();
+
+    this.pathTurnRate =
+      dt > 0
+        ? alignmentStep / dt
+        : 0;
   }
 
-  _calculateAcceleration(
-    physics
-  ) {
+  _calculateAcceleration(physics) {
     const diveFactor =
       smoothstep(
         0,
+
         TUNING.gravityBlendAngle,
 
         Math.max(
           0,
-          -this.pathAngle
-        )
+          -this.pathAngle,
+        ),
       );
 
     const climbFactor =
       smoothstep(
         0,
+
         TUNING.gravityBlendAngle,
 
         Math.max(
           0,
-          this.pathAngle
-        )
+          this.pathAngle,
+        ),
       );
 
     const gravityMultiplier =
@@ -919,7 +915,7 @@ export class FlightModel {
             TUNING
               .diveGravityMultiplier,
 
-            diveFactor
+            diveFactor,
           )
         : THREE.MathUtils.lerp(
             1,
@@ -927,13 +923,13 @@ export class FlightModel {
             TUNING
               .climbGravityMultiplier,
 
-            climbFactor
+            climbFactor,
           );
 
     const gravity =
       -physics.gravity *
       Math.sin(
-        this.pathAngle
+        this.pathAngle,
       ) *
       gravityMultiplier;
 
@@ -941,148 +937,98 @@ export class FlightModel {
       this.liftCoefficient *
       this.liftCoefficient;
 
-    const drag =
-      (
-        TUNING.parasiticDrag +
-        TUNING.inducedDrag *
-          clSquared
-      ) *
-      this.speed *
-      this.speed;
-
-    const levelFactor =
-      1 -
-      smoothstep(
-        TUNING
-          .levelAssistFullAngle,
-
-        TUNING
-          .levelAssistZeroAngle,
-
-        Math.abs(
-          this.pathAngle
-        )
-      );
-
-    const cruiseNeed =
-      1 -
-      smoothstep(
-        TUNING
-          .preferredCruiseSpeed,
-
-        TUNING
-          .preferredCruiseSpeed +
-          TUNING
-            .levelAssistSpeedBand,
-
-        this.speed
-      );
-
-    const stallSuppression =
-      Math.pow(
-        1 -
-          clamp(
-            this.stallAmount,
-            0,
-            1
-          ),
-        2
-      );
-
-    const requestedAssistance =
-      TUNING
-        .levelFlightAssistance *
-      levelFactor *
-      cruiseNeed *
-      stallSuppression;
-
-    const assistance =
+    const straightDrag =
       Math.min(
-        requestedAssistance,
+        TUNING.maximumStraightDrag,
 
-        drag *
-          TUNING
-            .levelAssistDragFraction
+        (
+          TUNING.parasiticDrag +
+          TUNING.inducedDrag *
+            clSquared
+        ) *
+          this.speed *
+          this.speed,
+      );
+
+    const turnDrag =
+      TUNING.turnDragCoefficient *
+      this.speed *
+      Math.pow(
+        Math.max(
+          0,
+          this.pathTurnRate,
+        ),
+
+        TUNING.turnDragExponent,
+      );
+
+    const misalignmentAmount =
+      smoothstep(
+        TUNING.misalignmentStart,
+        TUNING.misalignmentFull,
+        this._misalignmentAngle,
       );
 
     const misalignmentDrag =
-      this._calculateMisalignmentDrag();
+      TUNING.misalignmentDragCoefficient *
+      this.speed *
+      this.speed *
+      Math.pow(
+        misalignmentAmount,
+
+        TUNING
+          .misalignmentDragExponent,
+      ) *
+      (
+        1 -
+        this._recoveryAmount()
+      );
 
     return {
       gravity,
-      drag,
-      assistance,
+      straightDrag,
+      turnDrag,
       misalignmentDrag,
 
       total:
         gravity -
-        drag +
-        assistance -
+        straightDrag -
+        turnDrag -
         misalignmentDrag,
     };
   }
 
-  _calculateMisalignmentDrag() {
-    const misalignment =
-      smoothstep(
-        TUNING
-          .misalignmentStartAngle,
-
-        TUNING
-          .misalignmentFullAngle,
-
-        this._misalignmentAngle
-      );
-
-    if (misalignment <= 0) {
-      return 0;
-    }
-
-    const recoveryRelease =
-      1 -
-      this._recoveryAmount();
-
+  _lowSpeedStallAmount() {
     return (
-      (
-        TUNING
-          .misalignmentBaseDrag +
-
-        TUNING
-          .misalignmentSpeedDrag *
-          this.speed *
-          this.speed
-      ) *
-
-      Math.pow(
-        misalignment,
-
-        TUNING
-          .misalignmentExponent
-      ) *
-
-      recoveryRelease
-    );
+      1 -
+      smoothstep(
+        TUNING.lowSpeedStallFull,
+        TUNING.lowSpeedStallStart,
+        this.speed,
+      )
+    ) *
+      TUNING.lowSpeedStallAmount;
   }
 
   _updateAerodynamicState(
     aero,
-    dt
+    dt,
   ) {
     this._pitchPlaneVelocity
       .copy(
-        this._velocityDirection
+        this._velocityDirection,
       )
       .addScaledVector(
         this._craftRight,
 
         -this._velocityDirection.dot(
-          this._craftRight
-        )
+          this._craftRight,
+        ),
       );
 
     if (
       this._pitchPlaneVelocity.lengthSq() <
-      1e-10
+      EPSILON
     ) {
       this.angleOfAttack = 0;
       this.liftCoefficient = 0;
@@ -1090,7 +1036,7 @@ export class FlightModel {
       this._approachStallAmount(
         this._lowSpeedStallAmount(),
         aero.stallReleaseTime,
-        dt
+        dt,
       );
 
       return;
@@ -1098,47 +1044,48 @@ export class FlightModel {
 
     this._pitchPlaneVelocity.normalize();
 
-    this._alignmentAxis.crossVectors(
-      this._pitchPlaneVelocity,
-      this._nose
-    );
+    this._alignmentAxis
+      .crossVectors(
+        this._pitchPlaneVelocity,
+        this._nose,
+      );
 
     const sine =
       this._alignmentAxis.dot(
-        this._craftRight
+        this._craftRight,
       );
 
     const cosine =
       clamp(
         this._pitchPlaneVelocity.dot(
-          this._nose
+          this._nose,
         ),
         -1,
-        1
+        1,
       );
 
     this.angleOfAttack =
       Math.atan2(
         sine,
-        cosine
+        cosine,
       );
 
     const magnitude =
       Math.abs(
-        this.angleOfAttack
+        this.angleOfAttack,
       );
 
     const angleStall =
       smoothstep(
         aero.stallWarningAngle,
         aero.postStallAngle,
-        magnitude
+        magnitude,
       );
 
     const targetStall =
       Math.max(
         angleStall,
-        this._lowSpeedStallAmount()
+        this._lowSpeedStallAmount(),
       );
 
     const timeConstant =
@@ -1150,7 +1097,7 @@ export class FlightModel {
     this._approachStallAmount(
       targetStall,
       timeConstant,
-      dt
+      dt,
     );
 
     const maximumLift =
@@ -1171,35 +1118,37 @@ export class FlightModel {
         smoothstep(
           aero.stallAngle,
           aero.postStallAngle,
-          magnitude
-        );
-
-      const retainedLift =
-        THREE.MathUtils.lerp(
-          1,
-          aero.postStallLiftFraction,
-          postStallBlend
+          magnitude,
         );
 
       liftMagnitude =
         maximumLift *
-        retainedLift;
+        THREE.MathUtils.lerp(
+          1,
+
+          aero
+            .postStallLiftFraction,
+
+          postStallBlend,
+        );
     }
 
     const stallLiftScale =
       THREE.MathUtils.lerp(
         1,
+
         TUNING.stalledLiftFraction,
+
         clamp(
           this.stallAmount,
           0,
-          1
-        )
+          1,
+        ),
       );
 
     this.liftCoefficient =
       Math.sign(
-        this.angleOfAttack
+        this.angleOfAttack,
       ) *
       liftMagnitude *
       stallLiftScale;
@@ -1208,7 +1157,7 @@ export class FlightModel {
   _approachStallAmount(
     target,
     timeConstant,
-    dt
+    dt,
   ) {
     const response =
       1 -
@@ -1216,8 +1165,8 @@ export class FlightModel {
         -dt /
           Math.max(
             1e-4,
-            timeConstant
-          )
+            timeConstant,
+          ),
       );
 
     this.stallAmount =
@@ -1230,24 +1179,24 @@ export class FlightModel {
             response,
 
         0,
-        1
+        1,
       );
   }
 
   _updateGLoad(
     dt,
-    physics
+    physics,
   ) {
     this._specificForce
       .copy(
-        this.velocity
+        this.velocity,
       )
       .sub(
-        this._previousVelocity
+        this._previousVelocity,
       )
       .multiplyScalar(
         1 /
-          dt
+          dt,
       );
 
     this._specificForce.y +=
@@ -1255,7 +1204,7 @@ export class FlightModel {
 
     const rawG =
       this._specificForce.dot(
-        this._craftUp
+        this._craftUp,
       ) /
       physics.gravity;
 
@@ -1264,13 +1213,13 @@ export class FlightModel {
         this.gLoad,
         rawG,
         6.7,
-        dt
+        dt,
       );
   }
 
   _recordTelemetry(
     dt,
-    controls
+    controls,
   ) {
     let pathAngleDelta = 0;
 
@@ -1279,8 +1228,7 @@ export class FlightModel {
     ) {
       pathAngleDelta =
         this.pathAngle -
-        this
-          ._telemetryPreviousPathAngle;
+        this._telemetryPreviousPathAngle;
     }
 
     this._telemetryPreviousPathAngle =
@@ -1292,7 +1240,7 @@ export class FlightModel {
     if (
       !this.telemetryGlitchDetected &&
       Math.abs(
-        pathAngleDelta
+        pathAngleDelta,
       ) >
         this.config.physics
           .telemetry
@@ -1311,7 +1259,8 @@ export class FlightModel {
         this._telemetryFrames.slice();
     }
 
-    this._telemetryAccumulator += dt;
+    this._telemetryAccumulator +=
+      dt;
 
     if (
       this._telemetryAccumulator <
@@ -1349,6 +1298,15 @@ export class FlightModel {
       gLoad:
         this.gLoad,
 
+      viewYaw:
+        this.viewYaw,
+
+      pathTurnRate:
+        this.pathTurnRate,
+
+      turnDrag:
+        this.turnDragAcceleration,
+
       misalignmentDrag:
         this
           .misalignmentDragAcceleration,
@@ -1362,7 +1320,7 @@ export class FlightModel {
 
         yawRate:
           Number.isFinite(
-            controls.yawRate
+            controls.yawRate,
           )
             ? controls.yawRate
             : 0,
@@ -1374,7 +1332,7 @@ export class FlightModel {
         (
           Number.isFinite(
             controls
-              .collisionRespawnFlag
+              .collisionRespawnFlag,
           )
             ? controls
                 .collisionRespawnFlag
@@ -1384,8 +1342,7 @@ export class FlightModel {
       pathAngleDelta,
     });
 
-    this._telemetryPendingEventFlags =
-      0;
+    this._telemetryPendingEventFlags = 0;
 
     const capacity =
       this.config.physics
@@ -1419,7 +1376,7 @@ export class FlightModel {
   }
 
   readTelemetrySnapshot(
-    glitchCapture = false
+    glitchCapture = false,
   ) {
     const frames =
       glitchCapture
@@ -1427,7 +1384,7 @@ export class FlightModel {
         : this._telemetryFrames;
 
     return {
-      version: 4,
+      version: 5,
 
       capacity:
         this.config.physics
@@ -1456,24 +1413,24 @@ export class FlightModel {
 
   exportTelemetrySnapshot(
     glitchCapture = false,
-    space = 0
+    space = 0,
   ) {
     return JSON.stringify(
       this.readTelemetrySnapshot(
-        glitchCapture
+        glitchCapture,
       ),
       null,
-      space
+      space,
     );
   }
 
   getForward(target) {
     return target
       .copy(
-        LOCAL_FORWARD
+        LOCAL_FORWARD,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
   }
@@ -1481,10 +1438,10 @@ export class FlightModel {
   getUp(target) {
     return target
       .copy(
-        LOCAL_UP
+        LOCAL_UP,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
   }
@@ -1492,10 +1449,10 @@ export class FlightModel {
   getRight(target) {
     return target
       .copy(
-        LOCAL_RIGHT
+        LOCAL_RIGHT,
       )
       .applyQuaternion(
-        this.attitude
+        this.attitude,
       )
       .normalize();
   }
