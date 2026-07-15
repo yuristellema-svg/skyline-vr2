@@ -1,4 +1,10 @@
 import * as THREE from '../vendor/three.module.min.js';
+import {
+  createA6MZeroExternal,
+} from './aircraft/a6mZeroExternal.js';
+import {
+  createA6MZeroCockpit,
+} from './aircraft/a6mZeroCockpit.js';
 
 const STORAGE_KEY = 'skyline-aircraft-profile-v4';
 const FORWARD = new THREE.Vector3(0, 0, -1);
@@ -292,7 +298,7 @@ function createCockpit(profileId) {
 }
 
 const EXTERNAL_BUILDERS = Object.freeze({
-  zero: createZeroExternal,
+  zero: createA6MZeroExternal,
   stuka: createStukaExternal,
   scout: createScoutExternal,
   glider: createGliderExternal,
@@ -399,7 +405,10 @@ export class AircraftVisualSystem {
     }
 
     this.externalModel = EXTERNAL_BUILDERS[this.profile.id]();
-    this.cockpitModel = createCockpit(this.profile.id);
+    this.cockpitModel =
+      this.profile.id === 'zero'
+        ? createA6MZeroCockpit()
+        : createCockpit(this.profile.id);
     this.externalRoot.add(this.externalModel);
     this.cockpitRoot.add(this.cockpitModel);
   }
@@ -420,15 +429,13 @@ export class AircraftVisualSystem {
     const speed = Math.max(0, Number(flight?.speed) || 0);
     const propeller = this.externalModel?.userData?.propeller;
     if (propeller) {
-      propeller.rotation.z += safeDt * (18 + Math.min(115, speed * 0.52));
-      const blur = Math.max(0, Math.min(1, (speed - 18) / 55));
-      if (propeller.userData.blades) {
-        propeller.userData.blades.visible = blur < 0.82;
-      }
-      const disk = propeller.userData.blurDisk;
-      if (disk?.material) {
-        disk.material.opacity = 0.025 + blur * 0.11;
-      }
+      propeller.rotation.z += safeDt * (18 + Math.min(112, speed * 0.50));
+    }
+
+    const propellerBlur = this.externalModel?.userData?.propellerBlur;
+    if (propellerBlur?.material) {
+      const blurAmount = Math.max(0, Math.min(1, (speed - 18) / 95));
+      propellerBlur.material.opacity = blurAmount * 0.18;
     }
 
     const instruments = this.cockpitModel?.userData?.instruments || [];

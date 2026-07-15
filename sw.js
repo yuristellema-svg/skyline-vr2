@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-shell-v41-20260715';
+const SHELL_CACHE = 'skyline-shell-v5-1-20260715';
 
 const SHELL_FILES = [
   './',
@@ -24,6 +24,18 @@ const SHELL_FILES = [
   './src/cloudField.js',
   './src/contrails.js',
   './src/worldPolish.js',
+  './src/aircraft/a6mZeroShared.js',
+  './src/aircraft/a6mZeroExternal.js',
+  './src/aircraft/a6mZeroCockpit.js',
+  './src/optionalWorld/safeSystem.js',
+  './src/optionalWorld/math.js',
+  './src/optionalWorld/boostHoops.js',
+  './src/optionalWorld/cloudField.js',
+  './src/optionalWorld/distantCity.js',
+  './src/optionalWorld/aiAircraft.js',
+  './src/optionalWorld/audio.js',
+  './src/optionalWorld/index.js',
+  './src/performanceRuntime.js',
   './src/stereo.js',
   './src/menu.js',
   './src/hud.js',

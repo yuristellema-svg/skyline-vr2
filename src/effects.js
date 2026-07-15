@@ -1,6 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, clamp, damp, smoothstep } from './config.js';
-import { AircraftVisualSystem } from './aircraftVisuals.js';
 import { SkyDecorSystem } from './skyDecor.js';
 
 const INTENSITY_LEVELS = Object.freeze([
@@ -67,6 +66,7 @@ function makeStreakGeometry(count, depth, radius) {
   return geometry;
 }
 
+// SKYLINE_V5_INTEGRATION
 export class EffectsSystem {
   constructor(scene) {
     this.scene = scene;
@@ -102,7 +102,6 @@ export class EffectsSystem {
     this.streaks.frustumCulled = false;
     this.streaks.renderOrder = 3;
 
-    this.aircraft = new AircraftVisualSystem(scene);
     this.skyDecor = new SkyDecorSystem(scene);
   }
 
@@ -128,7 +127,6 @@ export class EffectsSystem {
     this.camera = camera;
     camera.add(this.streaks);
     this.streaks.position.set(0, 0, 0);
-    this.aircraft.attach(camera);
   }
 
   _updateStreaks(dt, speed, amount) {
@@ -196,7 +194,13 @@ export class EffectsSystem {
       7,
       safeDt,
     );
-    this.redTint = damp(this.redTint, negativeG * 0.13 * level.multiplier, 6, safeDt);
+    const stallWarningTint = stall * stall * 0.11;
+    this.redTint = damp(
+      this.redTint,
+      (negativeG * 0.13 + stallWarningTint) * level.multiplier,
+      6,
+      safeDt,
+    );
     this.viewSqueeze = damp(
       this.viewSqueeze,
       positiveG * (CONFIG.effects?.maxViewSqueeze ?? 0.02) * level.multiplier,
@@ -211,12 +215,10 @@ export class EffectsSystem {
     this.shakeYaw = Math.sin(this.elapsed * 31.7 + 1.9) * shakeAmount * 0.62;
     this.shakeRoll = Math.sin(this.elapsed * 35.3 + 0.7) * shakeAmount * 0.45;
 
-    this.aircraft.update(safeDt, flight);
     this.skyDecor.update(safeDt, camera);
   }
 
   dispose() {
-    this.aircraft.dispose();
     this.skyDecor.dispose();
     if (this.streaks.parent) this.streaks.parent.remove(this.streaks);
     this.streakGeometry.dispose();

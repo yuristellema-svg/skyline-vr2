@@ -1038,6 +1038,10 @@ function updateMessages(now) {
 function frame(milliseconds) {
   requestAnimationFrame(frame);
 
+  // SKYLINE_V5_1_PHYSICS_PERFORMANCE
+  let physicsStepsThisFrame = 0;
+  let droppedPhysicsThisFrame = 0;
+
   const now =
     milliseconds / 1000;
 
@@ -1090,6 +1094,12 @@ function frame(milliseconds) {
 
       steps += 1;
 
+      worldPolish.fixedStepUpdate?.(
+        CONFIG.physics.fixedStep,
+        flight,
+        phase,
+      );
+
       if (
         collision.check(
           flight.position
@@ -1102,6 +1112,8 @@ function frame(milliseconds) {
         break;
       }
     }
+    physicsStepsThisFrame = steps;
+
 
     if (
       steps ===
@@ -1109,8 +1121,13 @@ function frame(milliseconds) {
       accumulator >=
         CONFIG.physics.fixedStep
     ) {
-      accumulator = 0;
+      accumulator = Math.min(
+        accumulator,
+        CONFIG.physics.fixedStep * 2,
+      );
+
       droppedSteps += 1;
+      droppedPhysicsThisFrame = 1;
     }
   }
 
@@ -1166,6 +1183,23 @@ function frame(milliseconds) {
     flight,
     cameraRig.mode,
   );
+  worldPolish.beginPerformanceFrame?.(
+    frameDt,
+    {
+      physicsSteps:
+        physicsStepsThisFrame,
+
+      maxSubSteps:
+        CONFIG.physics.maxSubSteps,
+
+      dropped:
+        droppedPhysicsThisFrame,
+
+      render:
+        stereo.metrics,
+    },
+  );
+
 
   worldPolish.update(
     frameDt,
@@ -1226,6 +1260,10 @@ function frame(milliseconds) {
   );
 
   stereo.render(scene);
+
+  worldPolish.endPerformanceFrame?.(
+    stereo.metrics,
+  );
 }
 
 window.addEventListener(

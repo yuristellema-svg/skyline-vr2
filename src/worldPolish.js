@@ -1,148 +1,96 @@
-import { AtmosphereSystem } from './atmosphere.js';
-import { WindAudioSystem } from './windAudio.js';
-import { RouteSystem } from './routeSystem.js';
-import { ContrailSystem } from './contrails.js';
-import { SandboxDynamicsSystem } from './sandboxDynamics.js';
-import { AiTrafficSystem } from './aiTraffic.js';
-import { CloudFieldSystem } from './cloudField.js';
+// SKYLINE_V5_1_PHYSICS_PERFORMANCE
+import {
+  OptionalWorldSystem,
+} from './optionalWorld/index.js';
+
+import {
+  PerformanceRuntime,
+} from './performanceRuntime.js';
 
 export class WorldPolishSystem {
-  constructor(scene, options = {}) {
-    const sampleHeight = options.sampleHeight || null;
-
-    this.disabled = new Set();
-    this.reported = new Set();
-
-    this.dynamics = this._create(
-      'flight dynamics',
-      () => new SandboxDynamicsSystem(),
-    );
-
-    this.atmosphere = this._create(
-      'atmosphere',
-      () => new AtmosphereSystem(scene, sampleHeight),
-    );
-
-    this.audio = this._create(
-      'audio',
-      () => new WindAudioSystem(),
-    );
-
-    this.routes = this._create(
-      'boost gates',
-      () => new RouteSystem(scene),
-    );
-
-    this.contrails = this._create(
-      'contrails',
-      () => new ContrailSystem(scene, sampleHeight),
-    );
-
-    this.clouds = this._create(
-      'clouds',
-      () => new CloudFieldSystem(scene),
-    );
-
-    this.aiTraffic = this._create(
-      'AI aircraft',
-      () => new AiTrafficSystem(scene),
-    );
-  }
-
-  _fail(name, error) {
-    this.disabled.add(name);
-
-    if (!this.reported.has(name)) {
-      this.reported.add(name);
-      console.error(
-        `[Skyline] Disabled optional system: ${name}`,
-        error,
+  constructor(
+    scene,
+    options = {},
+  ) {
+    this.optionalWorld =
+      new OptionalWorldSystem(
+        scene,
+        options,
       );
-    }
+
+    this.performance =
+      new PerformanceRuntime(
+        this.optionalWorld,
+        {
+          targetFps: 60,
+          maxDrawCalls: 420,
+          maxTriangles: 1200000,
+        },
+      );
   }
 
-  _create(name, factory) {
-    try {
-      return factory();
-    } catch (error) {
-      this._fail(name, error);
-      return null;
-    }
+  fixedStepUpdate(
+    dt,
+    flight,
+    phase = 'flying',
+  ) {
+    this.optionalWorld
+      .fixedStepUpdate?.(
+        dt,
+        flight,
+        phase,
+      );
   }
 
-  _run(name, callback) {
-    if (this.disabled.has(name)) return;
-
-    try {
-      callback();
-    } catch (error) {
-      this._fail(name, error);
-    }
+  beginPerformanceFrame(
+    dt,
+    details = {},
+  ) {
+    this.performance
+      .beginFrame(
+        dt,
+        details,
+      );
   }
 
-  update(dt, flight, camera, phase = 'flying') {
-    this._run(
-      'flight dynamics',
-      () => this.dynamics?.update(dt, flight, phase),
-    );
-
-    this._run(
-      'boost gates',
-      () => this.routes?.update(
+  update(
+    dt,
+    flight,
+    camera,
+    phase = 'flying',
+  ) {
+    this.optionalWorld
+      .update(
         dt,
         flight,
         camera,
-        phase !== 'boot',
-      ),
-    );
+        phase,
+      );
+  }
 
-    this._run(
-      'AI aircraft',
-      () => this.aiTraffic?.update(dt, flight, phase),
-    );
+  endPerformanceFrame(
+    renderMetrics = {},
+  ) {
+    this.performance
+      .endFrame(
+        renderMetrics,
+      );
+  }
 
-    this._run(
-      'audio',
-      () => {
-        this.audio?.setTrafficDistance?.(
-          this.aiTraffic?.nearestDistance ?? Infinity,
-        );
+  getStatus() {
+    return {
+      systems:
+        this.optionalWorld
+          .getStatus(),
 
-        this.audio?.update(dt, flight, phase);
-      },
-    );
-
-    this._run(
-      'atmosphere',
-      () => this.atmosphere?.update(dt, flight, camera),
-    );
-
-    this._run(
-      'clouds',
-      () => this.clouds?.update(dt, flight, camera),
-    );
-
-    this._run(
-      'contrails',
-      () => this.contrails?.update(dt, flight, phase),
-    );
+      performance:
+        this.performance
+          .getState(),
+    };
   }
 
   dispose() {
-    for (const system of [
-      this.dynamics,
-      this.atmosphere,
-      this.audio,
-      this.routes,
-      this.contrails,
-      this.clouds,
-      this.aiTraffic,
-    ]) {
-      try {
-        system?.dispose?.();
-      } catch {
-        // Optional visual/audio cleanup must never break the game.
-      }
-    }
+    this.performance.dispose();
+    this.optionalWorld.dispose();
   }
 }

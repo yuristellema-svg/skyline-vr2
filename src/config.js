@@ -1,11 +1,13 @@
 export const DEG = Math.PI / 180;
 
+// SKYLINE_V5_INTEGRATION
+// SKYLINE_V5_1_PHYSICS_PERFORMANCE
 export const CONFIG = Object.freeze({
-  version: 'skyline-combat-sandbox-v4',
+  version: 'skyline-integrated-v5',
 
   physics: Object.freeze({
-    fixedStep: 1 / 120,
-    maxSubSteps: 8,
+    fixedStep: 1 / 90,
+    maxSubSteps: 10,
     gravity: 9.81,
 
     // Starts fast, but there is no automatic cruise target anymore.
@@ -16,11 +18,11 @@ export const CONFIG = Object.freeze({
     maximumSpeed: 5000,
 
     maximumAcceleration: 30,
-    maximumDeceleration: 22,
+    maximumDeceleration: 34,
 
     // The aircraft now builds and releases rotation with visible inertia.
-    angularResponse: 7.2,
-    angularRelease: 9.5,
+    angularResponse: 6.4,
+    angularRelease: 14,
 
     energy: Object.freeze({
       gravityBlendAngle: 30 * DEG,
@@ -45,10 +47,10 @@ export const CONFIG = Object.freeze({
     aero: Object.freeze({
       liftSlope: 3.0,
 
-      stallWarningAngle: 30 * DEG,
-      stallAngle: 50 * DEG,
-      postStallAngle: 85 * DEG,
-      postStallLiftFraction: 0.72,
+      stallWarningAngle: 20 * DEG,
+      stallAngle: 35 * DEG,
+      postStallAngle: 68 * DEG,
+      postStallLiftFraction: 0.50,
 
       stallAttackTime: 0.42,
       stallReleaseTime: 0.2,
@@ -58,7 +60,7 @@ export const CONFIG = Object.freeze({
       stallRecoveryStrength: 0,
 
       liftRateCoefficient: 0.034,
-      maximumG: 13,
+      maximumG: 15,
 
       // Very light straight-line drag.
       // Hard turns provide the real braking.
@@ -88,8 +90,8 @@ export const CONFIG = Object.freeze({
     pitchFullDeflection: 12 * DEG,
     rollFullDeflection: 14 * DEG,
 
-    pitchMaxRate: 90 * DEG,
-    rollMaxRate: 120 * DEG,
+    pitchMaxRate: 82 * DEG,
+    rollMaxRate: 108 * DEG,
 
     responseExponent: 1.05,
 
@@ -104,9 +106,9 @@ export const CONFIG = Object.freeze({
     sensorStaleAfter: 0.8,
     inputSlewSeconds: 0.05,
 
-    highSpeedControlStart: 140,
-    highSpeedControlFull: 650,
-    highSpeedControlScale: 0.68,
+    highSpeedControlStart: 70,
+    highSpeedControlFull: 260,
+    highSpeedControlScale: 0.42,
   }),
 
   sensitivity: Object.freeze({
@@ -159,7 +161,7 @@ export const CONFIG = Object.freeze({
   }),
 
   effects: Object.freeze({
-    streakCount: 280,
+    streakCount: 160,
     streakStartSpeed: 35,
     streakFullSpeed: 260,
     streakDepth: 110,
@@ -167,12 +169,12 @@ export const CONFIG = Object.freeze({
 
     boostIntensity: 1,
 
-    gVignetteStart: 9,
-    gVignetteFull: 15,
+    gVignetteStart: 4.5,
+    gVignetteFull: 8.5,
 
     maxViewSqueeze: 0,
-    maxVrShake: 0,
-    stallBuffetAngle: 0,
+    maxVrShake: 0.12 * DEG,
+    stallBuffetAngle: 18 * DEG,
 
     negativeGTintStart: -1,
     promptDepth: 5000,
@@ -227,11 +229,11 @@ export const CONFIG = Object.freeze({
     chunkSize: 256,
 
     // Nearly the entire authored world stays around the player.
-    loadRadius: 4096,
-    unloadRadius: 4608,
+    loadRadius: 3072,
+    unloadRadius: 3584,
 
-    fullLodRadius: 768,
-    halfLodRadius: 2048,
+    fullLodRadius: 640,
+    halfLodRadius: 1536,
 
     renderSpacingFull: 4,
     renderSpacingHalf: 8,

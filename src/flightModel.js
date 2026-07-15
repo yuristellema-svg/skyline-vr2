@@ -27,10 +27,11 @@ const WORLD_DOWN =
 const EPSILON = 1e-8;
 const ALIGNMENT_EPSILON = 1e-4;
 
+// SKYLINE_V5_INTEGRATION
 const TUNING = Object.freeze({
   maximumSpeed: 50000,
   maximumAcceleration: 30,
-  maximumDeceleration: 16,
+  maximumDeceleration: 34,
   controlSpeedFloor: 6,
 
   diveGravityMultiplier: 1.42,
@@ -59,31 +60,31 @@ const TUNING = Object.freeze({
    */
   // Ordinary course corrections retain momentum. Only a genuinely hard,
   // sustained turn becomes an effective airbrake.
-  turnDragCoefficient: 0.018,
-  turnDragExponent: 1.7,
-  maximumTurnDrag: 5.5,
+  turnDragCoefficient: 0.052,
+  turnDragExponent: 1.48,
+  maximumTurnDrag: 18,
 
   misalignmentStart:
-    6 * Math.PI / 180,
+    5 * Math.PI / 180,
 
   misalignmentFull:
-    42 * Math.PI / 180,
+    32 * Math.PI / 180,
 
-  misalignmentDragCoefficient: 0.000045,
-  misalignmentDragExponent: 1.25,
-  maximumMisalignmentDrag: 4,
+  misalignmentDragCoefficient: 0.00016,
+  misalignmentDragExponent: 1.38,
+  maximumMisalignmentDrag: 14,
 
   // Bank angle now produces a coordinated, speed-dependent heading change.
   // Faster flight therefore creates a naturally wider, heavier turn.
-  coordinatedTurnStrength: 1,
+  coordinatedTurnStrength: 0.88,
   coordinatedTurnMinimumSpeed: 18,
   coordinatedTurnMinimumBank: 3 * Math.PI / 180,
   coordinatedTurnMaximumBank: 65 * Math.PI / 180,
-  coordinatedTurnMaximumRate: 42 * Math.PI / 180,
+  coordinatedTurnMaximumRate: 30 * Math.PI / 180,
 
   // Angular input remains responsive, but no longer snaps instantly at speed.
-  highSpeedAngularResponseScale: 0.55,
-  highSpeedAngularReleaseScale: 0.75,
+  highSpeedAngularResponseScale: 0.38,
+  highSpeedAngularReleaseScale: 2.1,
 
   /*
    * 50 km/h remains flyable.
@@ -93,7 +94,7 @@ const TUNING = Object.freeze({
   lowSpeedStallFull: 2,
   lowSpeedStallAmount: 0.72,
   stalledLiftFraction: 0.5,
-  stalledSteeringFraction: 0.34,
+  stalledSteeringFraction: 0.26,
 
   zeroSnapSpeed: 0.65,
   recoveryTriggerSpeed: 5,
@@ -538,7 +539,7 @@ export class FlightModel {
         this.speed,
       );
 
-    const rateScale =
+    let rateScale =
       THREE.MathUtils.lerp(
         1,
 
@@ -546,6 +547,24 @@ export class FlightModel {
           .highSpeedControlScale,
 
         highSpeedBlend,
+      );
+
+    // SKYLINE_V5_1_PATH_LAG_GUARD
+    // Stop the nose rotating far ahead of the
+    // actual flight path during fast reversals.
+    const pathLagGuard =
+      smoothstep(
+        12 * Math.PI / 180,
+        52 * Math.PI / 180,
+        this._misalignmentAngle,
+      );
+
+    rateScale *=
+      THREE.MathUtils.lerp(
+        1,
+        0.30,
+        highSpeedBlend *
+          pathLagGuard,
       );
 
     const angularResponse =
