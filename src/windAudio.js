@@ -134,8 +134,8 @@ export class WindAudioSystem {
     const rpm = base + Math.min(95, speed * 0.22);
     const engineEnabled = this.profile === 'glider' ? 0 : 1;
 
-    this.master.gain.setTargetAtTime(active * 0.22 + 0.0001, now, 0.1);
-    this.windGain.gain.setTargetAtTime(active * (0.01 + speedAmount * 0.12 + extreme * 0.08), now, 0.07);
+    this.master.gain.setTargetAtTime(active * 0.36 + 0.0001, now, 0.1);
+    this.windGain.gain.setTargetAtTime(active * (0.018 + speedAmount * 0.17 + extreme * 0.11), now, 0.07);
     this.windFilter.frequency.setTargetAtTime(320 + speedAmount * 1450 + extreme * 900, now, 0.08);
     this.buffetGain.gain.setTargetAtTime(active * stall * stall * 0.105, now, 0.045);
     this.buffetFilter.frequency.setTargetAtTime(72 + stall * 74, now, 0.08);
@@ -143,10 +143,10 @@ export class WindAudioSystem {
     this.engineFundamental.frequency.setTargetAtTime(rpm, now, 0.08);
     this.engineHarmonic.frequency.setTargetAtTime(rpm * (this.profile === 'zero' ? 2.5 : 2), now, 0.08);
     this.engineFilter.frequency.setTargetAtTime(420 + speedAmount * 760, now, 0.12);
-    this.engineGain.gain.setTargetAtTime(active * engineEnabled * (0.035 + speedAmount * 0.035), now, 0.1);
+    this.engineGain.gain.setTargetAtTime(active * engineEnabled * (0.055 + speedAmount * 0.055), now, 0.1);
 
     const traffic = clamp(1 - (this.trafficDistance - 20) / 420, 0, 1);
-    this.trafficGain.gain.setTargetAtTime(active * traffic * traffic * 0.065, now, 0.12);
+    this.trafficGain.gain.setTargetAtTime(active * traffic * traffic * 0.09, now, 0.12);
   }
 
   playBoost(chain = 1) {
@@ -158,7 +158,7 @@ export class WindAudioSystem {
     oscillator.frequency.setValueAtTime(92 + chain * 7, now);
     oscillator.frequency.exponentialRampToValueAtTime(340 + chain * 18, now + 0.38);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.11, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
     oscillator.connect(gain);
     gain.connect(this.master);

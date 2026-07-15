@@ -145,10 +145,6 @@ export class InputController {
       viewYaw: 0,
     };
 
-    const phoneControlScale =
-      this.mode === 'phone'
-        ? 0.84
-        : 1;
 
     this._targetPitchRate = 0;
     this._targetRollRate = 0;
@@ -534,6 +530,14 @@ export class InputController {
           this.sensitivityIndex
         ]
         .multiplier;
+
+    // SKYLINE_PHONE_CONTROL_SCALE_RUNTIME
+    // This must be calculated here because the input mode can change
+    // after construction and this function runs every flight frame.
+    const phoneControlScale =
+      this.mode === 'phone'
+        ? 0.84
+        : 1;
 
     let pitchDeflection;
     let rollDeflection;

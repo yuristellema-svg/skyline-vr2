@@ -708,8 +708,3 @@ body.running .start-panel {
 #start-panel .button--primary { background: #75352f !important; border-color: #d28b72 !important; }
 #start-panel .button:hover { filter: brightness(1.12); }
 
-
-/* SKYLINE V4.2 MENU CURSOR */
-body.menu-open #game {
-  cursor: crosshair !important;
-}

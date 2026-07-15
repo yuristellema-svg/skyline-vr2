@@ -396,49 +396,6 @@ function resetFlight() {
   accumulator = 0;
 }
 
-// SKYLINE_RUNTIME_UNFREEZE
-function ensureLiveFlight(forceReset = false) {
-  const fallbackSpeed =
-    Math.max(
-      40,
-      Number(CONFIG.physics.spawnSpeed) || 58,
-    );
-
-  const invalidState =
-    !Number.isFinite(flight.speed) ||
-    flight.speed < 2 ||
-    !flight.position?.isVector3 ||
-    !Number.isFinite(flight.position.y) ||
-    flight.position.y < 10 ||
-    !flight.velocity?.isVector3 ||
-    flight.velocity.lengthSq() < 4;
-
-  if (forceReset || invalidState) {
-    resetFlight();
-  }
-
-  if (
-    !Number.isFinite(flight.speed) ||
-    flight.speed < 2 ||
-    flight.velocity.lengthSq() < 4
-  ) {
-    const angle =
-      Number(CONFIG.world.spawnPathAngle) || 0;
-
-    flight.speed = fallbackSpeed;
-
-    flight.velocity.set(
-      0,
-      Math.sin(angle) * fallbackSpeed,
-      -Math.cos(angle) * fallbackSpeed,
-    );
-  }
-
-  accumulator = 0;
-  lastFrame = performance.now() / 1000;
-  cameraRig.reset(flight);
-}
-
 function startSession(phone) {
   phoneMode = phone;
 
@@ -467,16 +424,16 @@ function startSession(phone) {
 
   stereo.setStereo(phone);
 
+  // SKYLINE_V41_DEFAULT_VIEW
+  // Desktop opens in the cockpit; phone VR stays in the clean first-person view.
+  cameraRig.setMode(phone ? 'first' : 'cockpit');
+  cameraRig.reset(flight);
 
   hud.setVisible(!phone);
 
   effects.beginSession();
 
   resetFlight();
-
-  // SKYLINE_V42_CLEAN_START_VIEW
-  cameraRig.setMode('first');
-  cameraRig.reset(flight);
 
   phaseStarted =
     performance.now() / 1000;
@@ -485,11 +442,6 @@ function startSession(phone) {
     phone
       ? 'calibrating'
       : 'flying';
-
-  // SKYLINE_DESKTOP_FORCE_LIVE
-  if (!phone) {
-    ensureLiveFlight(true);
-  }
 
   if (phone) {
     void acquireWakeLock();
@@ -730,9 +682,6 @@ function resumeFromMenu() {
   menu.close();
 
   phase = 'flying';
-
-  // SKYLINE_RESUME_FORCE_LIVE
-  ensureLiveFlight(false);
   accumulator = 0;
 
   lastFrame =
@@ -1202,11 +1151,8 @@ function frame(milliseconds) {
 
   stereo.setReticle(
     flight.boostCharge,
-    phoneMode && menu.isOpen
-      ? menu.dwellProgress
-      : 0,
-    phase !== 'boot' &&
-      (!menu.isOpen || phoneMode)
+    menu.dwellProgress,
+    phase !== 'boot'
   );
 
   stereo.setOverlay(

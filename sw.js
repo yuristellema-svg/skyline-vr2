@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-shell-v8';
+const SHELL_CACHE = 'skyline-shell-v41-20260715';
 
 const SHELL_FILES = [
   './',
@@ -6,7 +6,7 @@ const SHELL_FILES = [
   './styles.css',
   './manifest.webmanifest',
   './icon.svg',
-
+  './apple-touch-icon.png',
   './src/main.js',
   './src/config.js',
   './src/input.js',
@@ -19,160 +19,70 @@ const SHELL_FILES = [
   './src/atmosphere.js',
   './src/windAudio.js',
   './src/routeSystem.js',
-  './src/wildlife.js',
+  './src/sandboxDynamics.js',
+  './src/aiTraffic.js',
+  './src/cloudField.js',
   './src/contrails.js',
   './src/worldPolish.js',
   './src/stereo.js',
   './src/menu.js',
   './src/hud.js',
   './src/world/world.js',
-
-  './src/sandboxDynamics.js',
-  './src/aiTraffic.js',
-  './src/cloudField.js',
-  './src/citySilhouette.js',
   './vendor/three.module.min.js',
 ];
 
-self.addEventListener(
-  'install',
-  (event) => {
-    event.waitUntil(
-      caches
-        .open(SHELL_CACHE)
-        .then((cache) =>
-          cache.addAll(
-            SHELL_FILES,
-          ),
-        )
-        .then(() =>
-          self.skipWaiting(),
-        ),
-    );
-  },
-);
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(SHELL_CACHE)
+      .then(cache => cache.addAll(SHELL_FILES))
+      .then(() => self.skipWaiting()),
+  );
+});
 
-self.addEventListener(
-  'activate',
-  (event) => {
-    event.waitUntil(
-      caches
-        .keys()
-        .then((keys) =>
-          Promise.all(
-            keys
-              .filter(
-                (key) =>
-                  key !==
-                  SHELL_CACHE,
-              )
-              .map((key) =>
-                caches.delete(key),
-              ),
-          ),
-        )
-        .then(() =>
-          self.clients.claim(),
-        ),
-    );
-  },
-);
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== SHELL_CACHE).map(key => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
+});
 
-self.addEventListener(
-  'fetch',
-  (event) => {
-    const request = event.request;
+async function networkFirst(request, fallback = null) {
+  const cache = await caches.open(SHELL_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (await caches.match(request)) || (fallback ? await caches.match(fallback) : Response.error());
+  }
+}
 
-    if (request.method !== 'GET') {
-      return;
-    }
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
 
-    const url = new URL(
-      request.url,
-    );
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-    if (
-      url.origin !==
-      self.location.origin
-    ) {
-      return;
-    }
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, './index.html'));
+    return;
+  }
 
-    if (
-      url.pathname.includes(
-        '/assets/world/',
-      ) ||
-      url.pathname.endsWith('.wpk')
-    ) {
-      event.respondWith(
-        fetch(request),
-      );
+  if (
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.json') ||
+    url.pathname.endsWith('.webmanifest') ||
+    url.pathname.includes('/assets/world/') ||
+    url.pathname.endsWith('.wpk')
+  ) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
 
-      return;
-    }
-
-    if (
-      request.mode === 'navigate'
-    ) {
-      event.respondWith(
-        fetch(request)
-          .then((response) => {
-            const copy =
-              response.clone();
-
-            caches
-              .open(SHELL_CACHE)
-              .then((cache) =>
-                cache.put(
-                  './index.html',
-                  copy,
-                ),
-              );
-
-            return response;
-          })
-          .catch(() =>
-            caches.match(
-              './index.html',
-            ),
-          ),
-      );
-
-      return;
-    }
-
-    event.respondWith(
-      caches
-        .match(request)
-        .then((cached) => {
-          const network =
-            fetch(request)
-              .then(
-                (response) => {
-                  if (response.ok) {
-                    const copy =
-                      response.clone();
-
-                    caches
-                      .open(
-                        SHELL_CACHE,
-                      )
-                      .then(
-                        (cache) =>
-                          cache.put(
-                            request,
-                            copy,
-                          ),
-                      );
-                  }
-
-                  return response;
-                },
-              )
-              .catch(() => cached);
-
-          return cached || network;
-        }),
-    );
-  },
-);
+  event.respondWith(
+    caches.match(request).then(cached => cached || networkFirst(request)),
+  );
+});

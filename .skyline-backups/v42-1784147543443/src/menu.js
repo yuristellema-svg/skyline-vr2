@@ -19,6 +19,7 @@ function panelTexture(title, subtitle, selected = false, danger = false, progres
   context.fillStyle = face;
   context.fillRect(15, 15, 610, 270);
 
+  // Analog panel scratches and double frame.
   context.strokeStyle = edge;
   context.lineWidth = selected ? 8 : 4;
   context.strokeRect(18, 18, 604, 264);
@@ -63,9 +64,7 @@ function panelTexture(title, subtitle, selected = false, danger = false, progres
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
-  if ('colorSpace' in texture && THREE.SRGBColorSpace) {
-    texture.colorSpace = THREE.SRGBColorSpace;
-  }
+  if ('colorSpace' in texture && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
@@ -77,10 +76,7 @@ function makePanel(definition, depth) {
     depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT),
-    material,
-  );
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT), material);
   panel.renderOrder = 110;
   panel.userData.definition = definition;
   panel.userData.depth = depth;
@@ -123,35 +119,26 @@ export class GazeMenu {
     this._hasSmoothedLook = false;
     this._pointerYaw = 0;
     this._pointerPitch = 0;
-    this._pointerMovedSinceOpen = false;
-    this._hoverStartedAt = 0;
-    this._requirePhoneExit = false;
+    this._pointerFreshUntil = 0;
 
     this._onPointerMove = event => {
       if (!this.isOpen || this.input?.mode === 'phone') return;
-      this._setPointerFromEvent(event);
-      this._pointerMovedSinceOpen = true;
+      const width = Math.max(1, window.innerWidth);
+      const height = Math.max(1, window.innerHeight);
+      this._pointerYaw = ((event.clientX / width) - 0.5) * 54 * DEG;
+      this._pointerPitch = (0.5 - (event.clientY / height)) * 34 * DEG;
+      this._pointerFreshUntil = performance.now() + 500;
     };
 
-    this._onPointerDown = event => {
-      if (!this.isOpen || this.input?.mode === 'phone' || event.button !== 0) return;
-      this._setPointerFromEvent(event);
-      this._pointerMovedSinceOpen = true;
-      this._updateDesktopCandidate();
-      const hoveredLongEnough = performance.now() - this._hoverStartedAt >= 120;
-      if (this.hoveredPanel && hoveredLongEnough && this.activationLockout <= 0) {
-        event.preventDefault();
-        this._activate(this.hoveredPanel);
-      }
+    this._onPointerDown = () => {
+      if (!this.isOpen || this.input?.mode === 'phone') return;
+      if (this.hoveredPanel && this.activationLockout <= 0) this._activate(this.hoveredPanel);
     };
 
     this._onKeyDown = event => {
-      if (!this.isOpen || this.input?.mode === 'phone') return;
+      if (!this.isOpen) return;
       if (event.code === 'Enter' || event.code === 'Space') {
-        if (this.hoveredPanel && this.activationLockout <= 0) {
-          event.preventDefault();
-          this._activate(this.hoveredPanel);
-        }
+        if (this.hoveredPanel && this.activationLockout <= 0) this._activate(this.hoveredPanel);
       }
     };
 
@@ -169,13 +156,6 @@ export class GazeMenu {
       if (event?.detail?.name) this.aircraftName = event.detail.name;
     };
     window.addEventListener('skyline:aircraft-changed', this._aircraftListener);
-  }
-
-  _setPointerFromEvent(event) {
-    const width = Math.max(1, window.innerWidth);
-    const height = Math.max(1, window.innerHeight);
-    this._pointerYaw = ((event.clientX / width) - 0.5) * 54 * DEG;
-    this._pointerPitch = (0.5 - (event.clientY / height)) * 34 * DEG;
   }
 
   _definitions() {
@@ -236,10 +216,34 @@ export class GazeMenu {
     this.dwellProgress = 0;
     this.activationLockout = 0.28;
     this._hasSmoothedLook = false;
-    this._pointerMovedSinceOpen = false;
-    this._hoverStartedAt = 0;
-    this._requirePhoneExit = false;
-    document.body.classList.add('menu-open');
+    this._pointerYaw = 0;
+    this._pointerPitch = 0;
+    this._pointerFreshUntil = 0;
+
+    this._onPointerMove = event => {
+      if (!this.isOpen || this.input?.mode === 'phone') return;
+      const width = Math.max(1, window.innerWidth);
+      const height = Math.max(1, window.innerHeight);
+      this._pointerYaw = ((event.clientX / width) - 0.5) * 54 * DEG;
+      this._pointerPitch = (0.5 - (event.clientY / height)) * 34 * DEG;
+      this._pointerFreshUntil = performance.now() + 500;
+    };
+
+    this._onPointerDown = () => {
+      if (!this.isOpen || this.input?.mode === 'phone') return;
+      if (this.hoveredPanel && this.activationLockout <= 0) this._activate(this.hoveredPanel);
+    };
+
+    this._onKeyDown = event => {
+      if (!this.isOpen) return;
+      if (event.code === 'Enter' || event.code === 'Space') {
+        if (this.hoveredPanel && this.activationLockout <= 0) this._activate(this.hoveredPanel);
+      }
+    };
+
+    window.addEventListener('pointermove', this._onPointerMove, { passive: true });
+    window.addEventListener('pointerdown', this._onPointerDown);
+    window.addEventListener('keydown', this._onKeyDown);
     this.input?.beginMenuLook?.();
     this._buildPanels();
     this.reanchor(position, quaternion);
@@ -251,7 +255,6 @@ export class GazeMenu {
     this.hoveredPanel = null;
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
-    document.body.classList.remove('menu-open');
   }
 
   reanchor(position, quaternion) {
@@ -273,10 +276,8 @@ export class GazeMenu {
     const id = panel.userData.definition.id;
     let result;
     if (id === 'resume') result = this.actions.resume?.();
-    else if (id === 'recenter') {
-      this.input?.recenter?.();
-      result = this.actions.recenter?.();
-    } else if (id === 'camera') {
+    else if (id === 'recenter') { this.input?.recenter?.(); result = this.actions.recenter?.(); }
+    else if (id === 'camera') {
       result = this.actions.camera?.();
       if (result) this.cameraName = String(result).toUpperCase();
     } else if (id === 'aircraft') {
@@ -284,108 +285,79 @@ export class GazeMenu {
     } else if (id === 'effects') {
       result = this.actions.effects?.();
       if (result) this.effectsName = String(result).toUpperCase();
-    } else if (id === 'respawn') {
-      this.close();
-      result = this.actions.respawn?.();
-    } else if (id === 'restart') {
-      this.close();
-      result = this.actions.restart?.();
-    }
+    } else if (id === 'respawn') { this.close(); result = this.actions.respawn?.(); }
+    else if (id === 'restart') { this.close(); result = this.actions.restart?.(); }
 
-    this.activationLockout = 0.65;
+    this.activationLockout = 0.48;
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
-    if (this.input?.mode === 'phone') this._requirePhoneExit = true;
     return result;
-  }
-
-  _candidateAt(yaw, pitch, phoneMode) {
-    let candidate = null;
-    let bestScore = Infinity;
-    for (const panel of this.panels) {
-      const definition = panel.userData.definition;
-      const continuing = panel === this.hoveredPanel;
-      const yawLimit = (phoneMode
-        ? (continuing ? 6.5 : 5.2)
-        : (continuing ? 7.0 : 5.8)) * DEG;
-      const pitchLimit = (phoneMode
-        ? (continuing ? 5.8 : 4.5)
-        : (continuing ? 6.2 : 5.0)) * DEG;
-      const yawDelta = Math.abs(yaw - definition.yaw * DEG);
-      const pitchDelta = Math.abs(pitch - definition.pitch * DEG);
-      if (yawDelta <= yawLimit && pitchDelta <= pitchLimit) {
-        const score = yawDelta / yawLimit + pitchDelta / pitchLimit;
-        if (score < bestScore) {
-          bestScore = score;
-          candidate = panel;
-        }
-      }
-    }
-    return candidate;
-  }
-
-  _setCandidate(candidate) {
-    if (candidate === this.hoveredPanel) return;
-    this.hoveredPanel = candidate;
-    this.dwellElapsed = 0;
-    this.dwellProgress = 0;
-    this._hoverStartedAt = performance.now();
-    if (!candidate) this._requirePhoneExit = false;
-  }
-
-  _updateDesktopCandidate() {
-    if (!this._pointerMovedSinceOpen) {
-      this._setCandidate(null);
-      return;
-    }
-    this._setCandidate(this._candidateAt(this._pointerYaw, this._pointerPitch, false));
   }
 
   update(dt) {
     if (!this.isOpen) return;
     const safeDt = clamp(dt || 0, 0, 0.1);
+    this.input?.sampleMenuLook?.();
     this.activationLockout = Math.max(0, this.activationLockout - safeDt);
 
-    const phoneMode = this.input?.mode === 'phone';
-    if (!phoneMode) {
-      this._updateDesktopCandidate();
-      this.dwellElapsed = 0;
-      this.dwellProgress = 0;
+    const pointerActive =
+      this.input?.mode !== 'phone' &&
+      performance.now() <= this._pointerFreshUntil;
+
+    const rawYaw = pointerActive
+      ? this._pointerYaw
+      : Number.isFinite(this.input?.menuLook?.yaw)
+        ? this.input.menuLook.yaw
+        : 0;
+
+    const rawPitch = pointerActive
+      ? this._pointerPitch
+      : Number.isFinite(this.input?.menuLook?.pitch)
+        ? this.input.menuLook.pitch
+        : 0;
+    const blend = 1 - Math.exp(-safeDt / 0.09);
+    if (!this._hasSmoothedLook) {
+      this._smoothedYaw = rawYaw;
+      this._smoothedPitch = rawPitch;
+      this._hasSmoothedLook = true;
     } else {
-      this.input?.sampleMenuLook?.();
-      const rawYaw = Number.isFinite(this.input?.menuLook?.yaw) ? this.input.menuLook.yaw : 0;
-      const rawPitch = Number.isFinite(this.input?.menuLook?.pitch) ? this.input.menuLook.pitch : 0;
-      const blend = 1 - Math.exp(-safeDt / 0.12);
-      if (!this._hasSmoothedLook) {
-        this._smoothedYaw = rawYaw;
-        this._smoothedPitch = rawPitch;
-        this._hasSmoothedLook = true;
-      } else {
-        this._smoothedYaw += (rawYaw - this._smoothedYaw) * blend;
-        this._smoothedPitch += (rawPitch - this._smoothedPitch) * blend;
-      }
+      this._smoothedYaw += (rawYaw - this._smoothedYaw) * blend;
+      this._smoothedPitch += (rawPitch - this._smoothedPitch) * blend;
+    }
 
-      const candidate = this._candidateAt(this._smoothedYaw, this._smoothedPitch, true);
-      this._setCandidate(candidate);
-
-      const dwellSeconds = this.hoveredPanel?.userData.definition.danger ? 1.8 : 1.35;
-      if (this.hoveredPanel && !this._requirePhoneExit && this.activationLockout <= 0) {
-        this.dwellElapsed += safeDt;
-        this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
-        if (this.dwellElapsed >= dwellSeconds) this._activate(this.hoveredPanel);
-      } else {
-        this.dwellElapsed = Math.max(0, this.dwellElapsed - safeDt * 2.0);
-        this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
+    let candidate = null;
+    let bestScore = Infinity;
+    for (const panel of this.panels) {
+      const definition = panel.userData.definition;
+      const continuing = panel === this.hoveredPanel;
+      const yawLimit = (continuing ? 9.5 : 8.0) * DEG;
+      const pitchLimit = (continuing ? 8.2 : 6.8) * DEG;
+      const yawDelta = Math.abs(this._smoothedYaw - definition.yaw * DEG);
+      const pitchDelta = Math.abs(this._smoothedPitch - definition.pitch * DEG);
+      if (yawDelta <= yawLimit && pitchDelta <= pitchLimit) {
+        const score = yawDelta / yawLimit + pitchDelta / pitchLimit;
+        if (score < bestScore) { bestScore = score; candidate = panel; }
       }
     }
 
+    if (candidate !== this.hoveredPanel) {
+      this.hoveredPanel = candidate;
+      this.dwellElapsed = 0;
+      this.dwellProgress = 0;
+    }
+
+    const dwellSeconds = this.hoveredPanel?.userData.definition.danger ? 1.15 : 0.68;
+    if (this.hoveredPanel && this.activationLockout <= 0) {
+      this.dwellElapsed += safeDt;
+      this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
+      if (this.dwellElapsed >= dwellSeconds) this._activate(this.hoveredPanel);
+    } else {
+      this.dwellElapsed = Math.max(0, this.dwellElapsed - safeDt * 2.5);
+      this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
+    }
+
     for (const panel of this.panels) {
-      refreshPanel(
-        panel,
-        panel === this.hoveredPanel,
-        this._subtitle(panel),
-        phoneMode && panel === this.hoveredPanel ? this.dwellProgress : 0,
-      );
+      refreshPanel(panel, panel === this.hoveredPanel, this._subtitle(panel), panel === this.hoveredPanel ? this.dwellProgress : 0);
     }
   }
 
@@ -394,7 +366,6 @@ export class GazeMenu {
     window.removeEventListener('pointermove', this._onPointerMove);
     window.removeEventListener('pointerdown', this._onPointerDown);
     window.removeEventListener('keydown', this._onKeyDown);
-    document.body.classList.remove('menu-open');
     this._clearPanels();
     this.uiScene?.remove(this.root);
   }

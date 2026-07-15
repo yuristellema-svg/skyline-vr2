@@ -95,9 +95,9 @@ function createZeroExternal() {
   const group = new THREE.Group();
   group.name = 'external-a6m-zero-white-872';
 
-  const ivory = standard(0xf1eee3, 0.62, 0.10, { emissive: 0x17150f, emissiveIntensity: 0.12 });
-  const ivoryDark = standard(0xd2d1c8, 0.72, 0.10, { emissive: 0x10100d, emissiveIntensity: 0.08 });
-  const red = standard(0xd14a3f, 0.62, 0.08, { emissive: 0x250706, emissiveIntensity: 0.12 });
+  const ivory = standard(0xe2dfd4, 0.58, 0.18);
+  const ivoryDark = standard(0xbfc2bc, 0.7, 0.12);
+  const red = standard(0xb9362f, 0.62, 0.08);
   const black = standard(0x17191a, 0.42, 0.18);
   const glass = standard(0x76939c, 0.14, 0.06, {
     transparent: true,
@@ -127,36 +127,16 @@ function createZeroExternal() {
   box(group, [0.94, 0.045, 0.045], [0, 0.42, -0.21], frame);
   box(group, [0.94, 0.045, 0.045], [0, 0.36, -1.12], frame);
 
-  // Tapered propeller with a restrained high-RPM blur disk.
+  // Propeller blades and central spinner.
   const propeller = new THREE.Group();
   propeller.name = 'zero-propeller';
   propeller.position.z = -3.24;
-
-  const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(-0.045, 0.10);
-  bladeShape.quadraticCurveTo(-0.11, 0.62, -0.075, 1.18);
-  bladeShape.quadraticCurveTo(0.01, 1.32, 0.085, 1.15);
-  bladeShape.quadraticCurveTo(0.11, 0.60, 0.045, 0.10);
-  bladeShape.closePath();
-  const bladeGeometry = new THREE.ShapeGeometry(bladeShape, 8);
-  const bladeMaterial = standard(0x252829, 0.42, 0.16);
-  const blades = new THREE.Group();
   for (let blade = 0; blade < 3; blade += 1) {
-    const part = new THREE.Mesh(bladeGeometry, bladeMaterial);
+    const part = box(propeller, [0.11, 1.56, 0.055], [0, 0.72, 0], black);
     part.rotation.z = blade / 3 * Math.PI * 2;
-    blades.add(part);
+    part.position.applyAxisAngle(FORWARD, blade / 3 * Math.PI * 2);
   }
-  propeller.add(blades);
-
-  const blurDisk = mesh(
-    propeller,
-    new THREE.CircleGeometry(1.17, 48),
-    basic(0x202426, { transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
-    [0, 0, 0.025],
-  );
-  sphere(propeller, 0.18, [0, 0, 0.055], ivoryDark, [1, 1, 1.2]);
-  propeller.userData.blades = blades;
-  propeller.userData.blurDisk = blurDisk;
+  sphere(propeller, 0.18, [0, 0, 0], ivoryDark, [1, 1, 1.2]);
   group.add(propeller);
   group.userData.propeller = propeller;
 
@@ -419,17 +399,7 @@ export class AircraftVisualSystem {
 
     const speed = Math.max(0, Number(flight?.speed) || 0);
     const propeller = this.externalModel?.userData?.propeller;
-    if (propeller) {
-      propeller.rotation.z += safeDt * (18 + Math.min(115, speed * 0.52));
-      const blur = Math.max(0, Math.min(1, (speed - 18) / 55));
-      if (propeller.userData.blades) {
-        propeller.userData.blades.visible = blur < 0.82;
-      }
-      const disk = propeller.userData.blurDisk;
-      if (disk?.material) {
-        disk.material.opacity = 0.025 + blur * 0.11;
-      }
-    }
+    if (propeller) propeller.rotation.z += safeDt * (20 + Math.min(90, speed * 0.45));
 
     const instruments = this.cockpitModel?.userData?.instruments || [];
     if (instruments[0]) instruments[0].userData.needle.rotation.z = -1.8 + Math.min(3.6, speed / 160 * 3.6);

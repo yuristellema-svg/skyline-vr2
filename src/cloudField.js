@@ -11,25 +11,25 @@ function seeded(seed) {
 function createCloud(random, scale) {
   const group = new THREE.Group();
   const material = new THREE.MeshLambertMaterial({
-    color: 0xf1f0e8,
+    color: 0xf2f0e8,
     transparent: true,
-    opacity: 0.32,
+    opacity: 0.26,
     depthWrite: false,
     fog: true,
   });
 
-  const puffCount = 4 + Math.floor(random() * 4);
+  const puffCount = 5 + Math.floor(random() * 4);
   for (let index = 0; index < puffCount; index += 1) {
     const puff = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(scale * (0.34 + random() * 0.24), 1),
+      new THREE.SphereGeometry(scale * (0.28 + random() * 0.22), 12, 8),
       material,
     );
     puff.position.set(
-      (random() - 0.5) * scale * 1.5,
-      (random() - 0.5) * scale * 0.26,
-      (random() - 0.5) * scale * 0.68,
+      (random() - 0.5) * scale * 1.55,
+      (random() - 0.5) * scale * 0.20,
+      (random() - 0.5) * scale * 0.72,
     );
-    puff.scale.y = 0.52;
+    puff.scale.y = 0.48;
     group.add(puff);
   }
 
@@ -39,21 +39,20 @@ function createCloud(random, scale) {
 export class CloudFieldSystem {
   constructor(scene) {
     this.scene = scene;
-    this.elapsed = 0;
     this.root = new THREE.Group();
-    this.root.name = 'world-space-cloud-field';
+    this.root.name = 'world-space-cloud-field-v41';
     scene.add(this.root);
 
     const random = seeded(872102);
     this.clouds = [];
-    for (let index = 0; index < 18; index += 1) {
-      const cloud = createCloud(random, 85 + random() * 120);
+    for (let index = 0; index < 14; index += 1) {
+      const cloud = createCloud(random, 80 + random() * 115);
       cloud.position.set(
         -3900 + random() * 7800,
-        330 + random() * 720,
+        380 + random() * 650,
         -3900 + random() * 7800,
       );
-      cloud.userData.drift = 1.8 + random() * 3.4;
+      cloud.userData.drift = 1.4 + random() * 2.6;
       this.root.add(cloud);
       this.clouds.push(cloud);
     }
@@ -61,13 +60,11 @@ export class CloudFieldSystem {
 
   update(dt, flight) {
     const safeDt = Math.max(0, Math.min(0.1, dt || 0));
-    this.elapsed += safeDt;
     const focusX = flight?.position?.x || 0;
-
     for (const cloud of this.clouds) {
       cloud.position.x += cloud.userData.drift * safeDt;
-      if (cloud.position.x - focusX > 4600) cloud.position.x -= 9000;
-      if (focusX - cloud.position.x > 4600) cloud.position.x += 9000;
+      if (cloud.position.x - focusX > 4700) cloud.position.x -= 9200;
+      if (focusX - cloud.position.x > 4700) cloud.position.x += 9200;
     }
   }
 
