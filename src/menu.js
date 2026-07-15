@@ -1,342 +1,862 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { CONFIG, DEG, wrapPi } from './config.js';
 
-const PANEL_LAYOUT = [
-  ['RESUME', 'resume', -20, 10],
-  ['RECENTER', 'recenter', 0, 10],
-  ['CAMERA', 'camera', 20, 10],
-  ['RESPAWN', 'respawn', -27, -9],
-  ['SENSITIVITY', 'sensitivity', -9, -9],
-  ['EFFECTS', 'effects', 9, -9],
-  ['RESTART WORLD', 'restart', 27, -9],
-];
+import {
+  CONFIG,
+  clamp,
+} from './config.js';
+
+const DEG = Math.PI / 180;
+
+const PANEL_WIDTH = 0.62;
+const PANEL_HEIGHT = 0.29;
+
+function canvasTexture(
+  title,
+  subtitle = '',
+  selected = false,
+  danger = false,
+) {
+  const canvas =
+    document.createElement('canvas');
+
+  canvas.width = 512;
+  canvas.height = 256;
+
+  const context =
+    canvas.getContext('2d');
+
+  context.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+
+  context.fillStyle = danger
+    ? 'rgba(67, 18, 18, 0.94)'
+    : selected
+      ? 'rgba(28, 65, 79, 0.96)'
+      : 'rgba(10, 18, 24, 0.92)';
+
+  context.fillRect(
+    10,
+    10,
+    492,
+    236,
+  );
+
+  context.strokeStyle = danger
+    ? '#ef8e78'
+    : selected
+      ? '#8de2ff'
+      : '#6b8390';
+
+  context.lineWidth =
+    selected ? 10 : 5;
+
+  context.strokeRect(
+    12,
+    12,
+    488,
+    232,
+  );
+
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillStyle = '#f7fbfd';
+
+  context.font =
+    '700 43px system-ui, -apple-system, sans-serif';
+
+  context.fillText(
+    title,
+    256,
+    subtitle ? 104 : 128,
+  );
+
+  if (subtitle) {
+    context.fillStyle = selected
+      ? '#bdefff'
+      : '#aabac2';
+
+    context.font =
+      '600 24px system-ui, -apple-system, sans-serif';
+
+    context.fillText(
+      subtitle,
+      256,
+      163,
+    );
+  }
+
+  const texture =
+    new THREE.CanvasTexture(canvas);
+
+  if (
+    'colorSpace' in texture &&
+    THREE.SRGBColorSpace
+  ) {
+    texture.colorSpace =
+      THREE.SRGBColorSpace;
+  } else if (
+    'encoding' in texture &&
+    THREE.sRGBEncoding
+  ) {
+    texture.encoding =
+      THREE.sRGBEncoding;
+  }
+
+  texture.minFilter =
+    THREE.LinearFilter;
+
+  texture.magFilter =
+    THREE.LinearFilter;
+
+  texture.generateMipmaps = false;
+
+  return texture;
+}
+
+function makePanel(
+  definition,
+  depth,
+) {
+  const geometry =
+    new THREE.PlaneGeometry(
+      PANEL_WIDTH,
+      PANEL_HEIGHT,
+    );
+
+  const panelMaterial =
+    new THREE.MeshBasicMaterial({
+      map: canvasTexture(
+        definition.title,
+        definition.subtitle,
+        false,
+        definition.danger,
+      ),
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+
+  const mesh = new THREE.Mesh(
+    geometry,
+    panelMaterial,
+  );
+
+  mesh.renderOrder = 100;
+
+  mesh.userData.definition =
+    definition;
+
+  mesh.userData.depth = depth;
+  mesh.userData.selected = false;
+
+  return mesh;
+}
+
+function refreshPanel(
+  panel,
+  selected,
+  subtitle,
+) {
+  if (
+    panel.userData.selected ===
+      selected &&
+    panel.userData.lastSubtitle ===
+      subtitle
+  ) {
+    return;
+  }
+
+  panel.userData.selected =
+    selected;
+
+  panel.userData.lastSubtitle =
+    subtitle;
+
+  const definition =
+    panel.userData.definition;
+
+  const oldTexture =
+    panel.material.map;
+
+  panel.material.map =
+    canvasTexture(
+      definition.title,
+      subtitle,
+      selected,
+      definition.danger,
+    );
+
+  panel.material.needsUpdate = true;
+  oldTexture?.dispose();
+}
+
+function localDirectionFromQuaternion(
+  quaternion,
+) {
+  return new THREE.Vector3(
+    0,
+    0,
+    -1,
+  )
+    .applyQuaternion(quaternion)
+    .normalize();
+}
+
+function finiteAngle(value) {
+  return Number.isFinite(value)
+    ? value
+    : 0;
+}
 
 export class GazeMenu {
-  constructor(uiScene, input, callbacks, config = CONFIG) {
-    this.config = config;
+  constructor(
+    uiScene,
+    input,
+    actions = {},
+  ) {
+    this.uiScene = uiScene;
     this.input = input;
-    this.callbacks = callbacks;
-    this.root = new THREE.Group();
-    this.root.name = 'Stereo gaze menu at 2.5 metres';
-    this.root.visible = false;
-    uiScene.add(this.root);
-    this.panels = [];
+    this.actions = actions;
+
     this.isOpen = false;
     this.crashMode = false;
-    this.targetIndex = -1;
-    this.latchedIndex = -1;
-    this.dwellIndex = -1;
-    this.dwellTime = 0;
-    this.exitTime = 0;
-    this.entryGrace = 0;
-    this.activationLockout = 0;
     this.dwellProgress = 0;
-    this._smoothedGazeX = 0;
-    this._smoothedGazeY = 0;
-    this._smoothedGazeZ = -1;
+
+    this.cameraName = 'FIRST';
+    this.effectsName = 'STANDARD';
+    this.aircraftName =
+      'SKYLINE GLIDER';
+
+    this.root = new THREE.Group();
+    this.root.name = 'gaze-menu-root';
+    this.root.visible = false;
+
+    this.uiScene.add(this.root);
+
+    this.panels = [];
+    this.hoveredPanel = null;
+    this.dwellElapsed = 0;
+    this.activationLockout = 0;
+
     this._smoothedYaw = 0;
     this._smoothedPitch = 0;
-    this._gazeInitialized = false;
-    this._panelArmed = new Uint8Array(PANEL_LAYOUT.length);
-    this._panelArmed.fill(1);
-    this.cameraName = 'FIRST';
-    this.effectsName = 'FULL';
-    this._buildPanels();
+    this._hasSmoothedLook = false;
+
+    this._aircraftListener = (
+      event,
+    ) => {
+      if (event?.detail?.name) {
+        this.aircraftName =
+          event.detail.name;
+      }
+    };
+
+    window.addEventListener(
+      'skyline:aircraft-changed',
+      this._aircraftListener,
+    );
+  }
+
+  _definitions() {
+    if (this.crashMode) {
+      return [
+        {
+          id: 'respawn',
+          title: 'RESPAWN',
+          subtitle:
+            'RETURN TO FLIGHT',
+          yaw: -13,
+          pitch: 4,
+        },
+        {
+          id: 'aircraft',
+          title: 'AIRCRAFT',
+          subtitle:
+            this.aircraftName,
+          yaw: 0,
+          pitch: 4,
+        },
+        {
+          id: 'restart',
+          title: 'REBUILD WORLD',
+          subtitle:
+            'RELOAD STREAM',
+          yaw: 13,
+          pitch: 4,
+          danger: true,
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'resume',
+        title: 'RESUME',
+        subtitle: 'BACK TO FLIGHT',
+        yaw: -20,
+        pitch: 7,
+      },
+      {
+        id: 'recenter',
+        title: 'RECENTER',
+        subtitle: 'RESET NEUTRAL',
+        yaw: -7,
+        pitch: 7,
+      },
+      {
+        id: 'camera',
+        title: 'CAMERA',
+        subtitle: this.cameraName,
+        yaw: 7,
+        pitch: 7,
+      },
+      {
+        id: 'aircraft',
+        title: 'AIRCRAFT',
+        subtitle:
+          this.aircraftName,
+        yaw: 20,
+        pitch: 7,
+      },
+      {
+        id: 'effects',
+        title: 'EFFECTS',
+        subtitle:
+          this.effectsName,
+        yaw: -13,
+        pitch: -8,
+      },
+      {
+        id: 'respawn',
+        title: 'RESPAWN',
+        subtitle:
+          'RETURN TO START',
+        yaw: 0,
+        pitch: -8,
+      },
+      {
+        id: 'restart',
+        title: 'REBUILD WORLD',
+        subtitle:
+          'RELOAD STREAM',
+        yaw: 13,
+        pitch: -8,
+        danger: true,
+      },
+    ];
+  }
+
+  _clearPanels() {
+    for (const panel of this.panels) {
+      this.root.remove(panel);
+
+      panel.geometry.dispose();
+      panel.material.map?.dispose();
+      panel.material.dispose();
+    }
+
+    this.panels.length = 0;
   }
 
   _buildPanels() {
-    const depth = this.config.menu.depth;
-    for (let i = 0; i < PANEL_LAYOUT.length; i += 1) {
-      const spec = PANEL_LAYOUT[i];
-      const yaw = spec[2] * DEG;
-      const pitch = spec[3] * DEG;
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 256;
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.minFilter = THREE.LinearFilter;
-      const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-        toneMapped: false,
-      });
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.34), material);
-      const cosPitch = Math.cos(pitch);
-      mesh.position.set(
-        Math.sin(yaw) * cosPitch * depth,
-        Math.sin(pitch) * depth,
-        -Math.cos(yaw) * cosPitch * depth
+    this._clearPanels();
+
+    const depth =
+      CONFIG.menu?.depth || 2.5;
+
+    for (
+      const definition of
+      this._definitions()
+    ) {
+      const panel = makePanel(
+        definition,
+        depth,
       );
-      mesh.lookAt(0, 0, 0);
-      mesh.renderOrder = 9000;
-      mesh.frustumCulled = false;
-      this.root.add(mesh);
-      this.panels.push({
-        label: spec[0],
-        action: spec[1],
-        yaw,
-        pitch,
-        canvas,
-        texture,
-        material,
-        mesh,
-      });
-      this._drawPanel(i, false);
+
+      const yaw =
+        definition.yaw * DEG;
+
+      const pitch =
+        definition.pitch * DEG;
+
+      const horizontal =
+        Math.cos(pitch) * depth;
+
+      panel.position.set(
+        Math.sin(yaw) *
+          horizontal,
+        Math.sin(pitch) *
+          depth,
+        -Math.cos(yaw) *
+          horizontal,
+      );
+
+      panel.lookAt(0, 0, 0);
+
+      this.root.add(panel);
+      this.panels.push(panel);
     }
   }
 
-  open(position, quaternion, crashMode = false) {
-    this.root.position.copy(position);
-    this.root.quaternion.copy(quaternion);
-    this.root.visible = true;
+  open(
+    position,
+    quaternion,
+    crashMode = false,
+  ) {
+    this.crashMode =
+      Boolean(crashMode);
+
     this.isOpen = true;
-    this.crashMode = crashMode;
-    this.targetIndex = -1;
-    this.latchedIndex = -1;
-    this.dwellIndex = -1;
-    this.dwellTime = 0;
-    this.exitTime = 0;
-    this.entryGrace = 0.4;
-    this.activationLockout = 0;
+    this.root.visible = true;
+
     this.dwellProgress = 0;
-    this._gazeInitialized = false;
-    this._smoothedYaw = 0;
-    this._smoothedPitch = 0;
-    this._panelArmed.fill(1);
-    this.input.beginMenuLook();
-    for (let i = 0; i < this.panels.length; i += 1) this._drawPanel(i, false);
+    this.dwellElapsed = 0;
+
+    this.activationLockout =
+      CONFIG.menu
+        ?.activationLockoutSeconds ||
+      0.5;
+
+    this.hoveredPanel = null;
+    this._hasSmoothedLook = false;
+
+    this._buildPanels();
+
+    this.reanchor(
+      position,
+      quaternion,
+    );
   }
 
   close() {
-    this.root.visible = false;
     this.isOpen = false;
-    this.crashMode = false;
-    this.targetIndex = -1;
-    this.latchedIndex = -1;
-    this.dwellIndex = -1;
-    this.dwellTime = 0;
-    this.activationLockout = 0;
+    this.root.visible = false;
+
     this.dwellProgress = 0;
-    this._gazeInitialized = false;
+    this.dwellElapsed = 0;
+    this.hoveredPanel = null;
   }
 
-  reanchor(position, quaternion) {
-    this.root.position.copy(position);
-    this.root.quaternion.copy(quaternion);
+  reanchor(
+    position,
+    quaternion,
+  ) {
+    if (position?.isVector3) {
+      this.root.position.copy(
+        position,
+      );
+    } else if (
+      Array.isArray(position)
+    ) {
+      this.root.position.fromArray(
+        position,
+      );
+    }
+
+    if (quaternion?.isQuaternion) {
+      this.root.quaternion.copy(
+        quaternion,
+      );
+    }
+
+    this.root.updateMatrixWorld(true);
+  }
+
+  _readLookAngles() {
+    const look =
+      this.input?.menuLook;
+
+    if (!look) {
+      return {
+        yaw: 0,
+        pitch: 0,
+      };
+    }
+
+    if (
+      Number.isFinite(look.yaw) ||
+      Number.isFinite(look.pitch)
+    ) {
+      return {
+        yaw: finiteAngle(look.yaw),
+        pitch: finiteAngle(
+          look.pitch,
+        ),
+      };
+    }
+
+    if (
+      Number.isFinite(look.x) &&
+      Number.isFinite(look.y) &&
+      !look.isVector3
+    ) {
+      return {
+        yaw: finiteAngle(look.x),
+        pitch: finiteAngle(look.y),
+      };
+    }
+
+    let direction = null;
+
+    if (look.isVector3) {
+      direction = look
+        .clone()
+        .normalize();
+    } else if (
+      look.direction?.isVector3
+    ) {
+      direction =
+        look.direction
+          .clone()
+          .normalize();
+    } else if (look.isQuaternion) {
+      direction =
+        localDirectionFromQuaternion(
+          look,
+        );
+    } else if (
+      look.quaternion?.isQuaternion
+    ) {
+      direction =
+        localDirectionFromQuaternion(
+          look.quaternion,
+        );
+    }
+
+    if (direction) {
+      return {
+        yaw: Math.atan2(
+          -direction.x,
+          -direction.z,
+        ),
+        pitch: Math.asin(
+          clamp(
+            direction.y,
+            -1,
+            1,
+          ),
+        ),
+      };
+    }
+
+    return {
+      yaw: 0,
+      pitch: 0,
+    };
+  }
+
+  _subtitle(panel) {
+    const id =
+      panel.userData.definition.id;
+
+    if (id === 'camera') {
+      return this.cameraName;
+    }
+
+    if (id === 'effects') {
+      return this.effectsName;
+    }
+
+    if (id === 'aircraft') {
+      return this.aircraftName;
+    }
+
+    return (
+      panel.userData.definition
+        .subtitle || ''
+    );
+  }
+
+  _activate(panel) {
+    const id =
+      panel.userData.definition.id;
+
+    let result;
+
+    if (id === 'resume') {
+      result =
+        this.actions.resume?.();
+    } else if (
+      id === 'recenter'
+    ) {
+      this.input?.recenter?.();
+
+      result =
+        this.actions.recenter?.();
+    } else if (
+      id === 'camera'
+    ) {
+      result =
+        this.actions.camera?.();
+
+      if (result) {
+        this.cameraName =
+          String(result).toUpperCase();
+      }
+    } else if (
+      id === 'aircraft'
+    ) {
+      window.dispatchEvent(
+        new CustomEvent(
+          'skyline:aircraft-next',
+        ),
+      );
+    } else if (
+      id === 'effects'
+    ) {
+      result =
+        this.actions.effects?.();
+
+      if (result) {
+        this.effectsName =
+          String(result).toUpperCase();
+      }
+    } else if (
+      id === 'respawn'
+    ) {
+      this.close();
+
+      result =
+        this.actions.respawn?.();
+    } else if (
+      id === 'restart'
+    ) {
+      this.close();
+
+      result =
+        this.actions.restart?.();
+    }
+
+    this.activationLockout =
+      CONFIG.menu
+        ?.activationLockoutSeconds ||
+      0.5;
+
+    this.dwellElapsed = 0;
+    this.dwellProgress = 0;
+
+    return result;
   }
 
   update(dt) {
-    if (!this.isOpen) {
-      this.dwellProgress = 0;
-      return;
-    }
-    this.input.sampleMenuLook();
-    this._smoothGaze(dt);
-    this._rearmExitedPanels();
+    if (!this.isOpen) return;
 
-    if (this.entryGrace > 0) {
-      this.entryGrace = Math.max(0, this.entryGrace - dt);
-      this._setTarget(-1);
-      return;
-    }
+    const safeDt = clamp(
+      dt || 0,
+      0,
+      0.1,
+    );
 
-    if (this.activationLockout > 0) {
-      this.activationLockout = Math.max(0, this.activationLockout - dt);
-      this._setTarget(-1);
-      this.dwellIndex = -1;
-      this.dwellTime = 0;
-      this.dwellProgress = 0;
-      return;
-    }
-
-    const target = this._findTarget();
-    if (target >= 0) {
-      if (this.dwellIndex !== target) {
-        this.dwellIndex = target;
-        this.dwellTime = 0;
-      }
-      this._setTarget(target);
-      this.dwellTime += dt;
-      const requiredDwell = this._requiredDwell(target);
-      this.dwellProgress = Math.min(1, this.dwellTime / requiredDwell);
-      if (this.dwellTime >= requiredDwell) {
-        this._panelArmed[target] = 0;
-        this.latchedIndex = target;
-        this.dwellIndex = -1;
-        this.dwellTime = 0;
-        this.dwellProgress = 0;
-        this.activationLockout = this.config.menu.activationLockoutSeconds ?? 0.5;
-        this._setTarget(-1);
-        this._activate(target);
-      }
-      return;
-    }
-
-    this._setTarget(-1);
-    if (this.dwellIndex >= 0 && this.dwellTime > 0) {
-      const requiredDwell = this._requiredDwell(this.dwellIndex);
-      const decaySeconds = this.config.menu.dwellDecaySeconds ?? 0.4;
-      this.dwellTime = Math.max(0, this.dwellTime - dt * requiredDwell / decaySeconds);
-      this.dwellProgress = this.dwellTime / requiredDwell;
-      if (this.dwellTime === 0) this.dwellIndex = -1;
-    } else {
-      this.dwellIndex = -1;
-      this.dwellTime = 0;
-      this.dwellProgress = 0;
-    }
-  }
-
-  _smoothGaze(dt) {
-    const yaw = this.input.menuLook.yaw;
-    const pitch = this.input.menuLook.pitch;
-    const cosPitch = Math.cos(pitch);
-    const rawX = Math.sin(yaw) * cosPitch;
-    const rawY = Math.sin(pitch);
-    const rawZ = -Math.cos(yaw) * cosPitch;
-
-    if (!this._gazeInitialized) {
-      this._smoothedGazeX = rawX;
-      this._smoothedGazeY = rawY;
-      this._smoothedGazeZ = rawZ;
-      this._gazeInitialized = true;
-    } else {
-      const tau = this.config.menu.gazeSmoothingTau ?? 0.12;
-      const weight = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;
-      this._smoothedGazeX += (rawX - this._smoothedGazeX) * weight;
-      this._smoothedGazeY += (rawY - this._smoothedGazeY) * weight;
-      this._smoothedGazeZ += (rawZ - this._smoothedGazeZ) * weight;
-      const length = Math.hypot(
-        this._smoothedGazeX,
-        this._smoothedGazeY,
-        this._smoothedGazeZ
+    this.activationLockout =
+      Math.max(
+        0,
+        this.activationLockout -
+          safeDt,
       );
-      if (length > 1e-8) {
-        const inverseLength = 1 / length;
-        this._smoothedGazeX *= inverseLength;
-        this._smoothedGazeY *= inverseLength;
-        this._smoothedGazeZ *= inverseLength;
-      } else {
-        this._smoothedGazeX = rawX;
-        this._smoothedGazeY = rawY;
-        this._smoothedGazeZ = rawZ;
-      }
+
+    const raw =
+      this._readLookAngles();
+
+    const smoothingTau =
+      Math.max(
+        0.001,
+        CONFIG.menu
+          ?.gazeSmoothingTau ||
+          0.12,
+      );
+
+    const blend =
+      1 -
+      Math.exp(
+        -safeDt / smoothingTau,
+      );
+
+    if (!this._hasSmoothedLook) {
+      this._smoothedYaw = raw.yaw;
+      this._smoothedPitch =
+        raw.pitch;
+
+      this._hasSmoothedLook = true;
+    } else {
+      this._smoothedYaw +=
+        (
+          raw.yaw -
+          this._smoothedYaw
+        ) *
+        blend;
+
+      this._smoothedPitch +=
+        (
+          raw.pitch -
+          this._smoothedPitch
+        ) *
+        blend;
     }
 
-    this._smoothedYaw = Math.atan2(this._smoothedGazeX, -this._smoothedGazeZ);
-    this._smoothedPitch = Math.atan2(
-      this._smoothedGazeY,
-      Math.hypot(this._smoothedGazeX, this._smoothedGazeZ)
-    );
-  }
+    const hitYaw =
+      CONFIG.menu
+        ?.panelHitHalfAngle ||
+      5.5 * DEG;
 
-  _isInsidePanel(index, yawHalfAngle, pitchHalfAngle) {
-    const panel = this.panels[index];
-    return (
-      Math.abs(wrapPi(this._smoothedYaw - panel.yaw)) <= yawHalfAngle &&
-      Math.abs(this._smoothedPitch - panel.pitch) <= pitchHalfAngle
-    );
-  }
+    const hitPitch =
+      CONFIG.menu
+        ?.panelPitchHalfAngle ||
+      4.8 * DEG;
 
-  _rearmExitedPanels() {
-    const yawExit = this.config.menu.panelExitHalfAngle ?? 7.5 * DEG;
-    const pitchExit = this.config.menu.panelExitPitchHalfAngle ?? 6.8 * DEG;
-    for (let i = 0; i < this.panels.length; i += 1) {
-      if (this._panelArmed[i] === 0 && !this._isInsidePanel(i, yawExit, pitchExit)) {
-        this._panelArmed[i] = 1;
-        if (this.latchedIndex === i) this.latchedIndex = -1;
+    const exitYaw =
+      CONFIG.menu
+        ?.panelExitHalfAngle ||
+      7.5 * DEG;
+
+    const exitPitch =
+      CONFIG.menu
+        ?.panelExitPitchHalfAngle ||
+      6.8 * DEG;
+
+    let candidate = null;
+    let bestScore = Infinity;
+
+    for (
+      const panel of
+      this.panels
+    ) {
+      const definition =
+        panel.userData.definition;
+
+      const yawDelta = Math.abs(
+        this._smoothedYaw -
+          definition.yaw * DEG,
+      );
+
+      const pitchDelta = Math.abs(
+        this._smoothedPitch -
+          definition.pitch * DEG,
+      );
+
+      const continuing =
+        panel === this.hoveredPanel;
+
+      const yawLimit = continuing
+        ? exitYaw
+        : hitYaw;
+
+      const pitchLimit = continuing
+        ? exitPitch
+        : hitPitch;
+
+      if (
+        yawDelta <= yawLimit &&
+        pitchDelta <= pitchLimit
+      ) {
+        const score =
+          yawDelta / yawLimit +
+          pitchDelta / pitchLimit;
+
+        if (score < bestScore) {
+          bestScore = score;
+          candidate = panel;
+        }
       }
     }
-  }
-
-  _findTarget() {
-    const yawEnter = this.config.menu.panelHitHalfAngle;
-    const pitchEnter = this.config.menu.panelPitchHalfAngle;
-    const yawExit = this.config.menu.panelExitHalfAngle ?? 7.5 * DEG;
-    const pitchExit = this.config.menu.panelExitPitchHalfAngle ?? 6.8 * DEG;
-    const held = this.targetIndex;
 
     if (
-      held >= 0 &&
-      this._panelArmed[held] !== 0 &&
-      !(this.crashMode && this.panels[held].action === 'resume') &&
-      this._isInsidePanel(held, yawExit, pitchExit)
+      candidate !==
+      this.hoveredPanel
     ) {
-      return held;
+      this.hoveredPanel =
+        candidate;
+
+      this.dwellElapsed = 0;
+      this.dwellProgress = 0;
     }
 
-    for (let i = 0; i < this.panels.length; i += 1) {
-      if (this._panelArmed[i] === 0) continue;
-      if (this.crashMode && this.panels[i].action === 'resume') continue;
-      if (this._isInsidePanel(i, yawEnter, pitchEnter)) return i;
+    const dwellSeconds =
+      this.hoveredPanel?.userData
+        .definition.danger
+        ? (
+            CONFIG.menu
+              ?.destructiveDwellSeconds ||
+            1.5
+          )
+        : (
+            CONFIG.menu
+              ?.dwellSeconds || 1
+          );
+
+    if (
+      this.hoveredPanel &&
+      this.activationLockout <= 0
+    ) {
+      this.dwellElapsed += safeDt;
+
+      this.dwellProgress = clamp(
+        this.dwellElapsed /
+          dwellSeconds,
+        0,
+        1,
+      );
+
+      if (
+        this.dwellElapsed >=
+        dwellSeconds
+      ) {
+        this._activate(
+          this.hoveredPanel,
+        );
+      }
+    } else {
+      const decaySeconds =
+        Math.max(
+          0.05,
+          CONFIG.menu
+            ?.dwellDecaySeconds ||
+            0.4,
+        );
+
+      this.dwellElapsed =
+        Math.max(
+          0,
+          this.dwellElapsed -
+            (
+              safeDt /
+              decaySeconds
+            ) *
+              dwellSeconds,
+        );
+
+      this.dwellProgress = clamp(
+        this.dwellElapsed /
+          dwellSeconds,
+        0,
+        1,
+      );
     }
-    return -1;
-  }
 
-  _requiredDwell(index) {
-    return this.panels[index].action === 'restart'
-      ? this.config.menu.destructiveDwellSeconds ?? 1.5
-      : this.config.menu.dwellSeconds;
-  }
-
-  _setTarget(index) {
-    if (index === this.targetIndex) return;
-    const previous = this.targetIndex;
-    this.targetIndex = index;
-    if (previous >= 0) this._drawPanel(previous, false);
-    if (index >= 0) this._drawPanel(index, true);
-  }
-
-  _activate(index) {
-    const action = this.panels[index].action;
-    if (action === 'resume') this.callbacks.resume();
-    else if (action === 'recenter') {
-      this.input.recenter();
-      this.input.beginMenuLook();
-      this.callbacks.recenter();
-    } else if (action === 'camera') {
-      this.cameraName = this.callbacks.camera().toUpperCase();
-      this._drawPanel(index, this.targetIndex === index);
-    } else if (action === 'respawn') this.callbacks.respawn();
-    else if (action === 'sensitivity') {
-      this.input.cycleSensitivity();
-      this._drawPanel(index, this.targetIndex === index);
-    } else if (action === 'effects') {
-      this.effectsName = this.callbacks.effects();
-      this._drawPanel(index, this.targetIndex === index);
-    } else if (action === 'restart') this.callbacks.restart();
-  }
-
-  _drawPanel(index, active) {
-    const panel = this.panels[index];
-    const context = panel.canvas.getContext('2d');
-    context.clearRect(0, 0, panel.canvas.width, panel.canvas.height);
-    const disabled = this.crashMode && panel.action === 'resume';
-    context.fillStyle = disabled ? 'rgba(24,32,35,0.72)' : active ? 'rgba(237,164,78,0.96)' : 'rgba(13,31,39,0.92)';
-    context.strokeStyle = active ? '#fff4dc' : 'rgba(195,225,231,0.62)';
-    context.lineWidth = active ? 10 : 5;
-    context.beginPath();
-    context.roundRect(8, 8, 496, 240, 38);
-    context.fill();
-    context.stroke();
-    context.fillStyle = disabled ? 'rgba(255,255,255,0.28)' : active ? '#15272d' : '#fff7e8';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.font = '800 38px system-ui, sans-serif';
-    let title = panel.label;
-    let value = '';
-    if (panel.action === 'resume' && disabled) title = 'RESPAWNING';
-    if (panel.action === 'camera') value = this.cameraName;
-    if (panel.action === 'sensitivity') value = this.input.sensitivityName;
-    if (panel.action === 'effects') value = this.effectsName;
-    context.fillText(title, 256, value ? 100 : 128);
-    if (value) {
-      context.font = '700 30px system-ui, sans-serif';
-      context.fillText(value, 256, 158);
+    for (
+      const panel of
+      this.panels
+    ) {
+      refreshPanel(
+        panel,
+        panel ===
+          this.hoveredPanel,
+        this._subtitle(panel),
+      );
     }
-    panel.texture.needsUpdate = true;
-    panel.mesh.scale.setScalar(active ? 1.06 : 1);
+  }
+
+  dispose() {
+    window.removeEventListener(
+      'skyline:aircraft-changed',
+      this._aircraftListener,
+    );
+
+    this._clearPanels();
+    this.uiScene?.remove(this.root);
   }
 }
