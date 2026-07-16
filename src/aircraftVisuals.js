@@ -1,4 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
+import { createJu87StukaCockpit } from './aircraft/ju87StukaCockpit.js';
+import { createJu87StukaExternal } from './aircraft/ju87StukaExternal.js';
 import {
   createA6MZeroExternal,
 } from './aircraft/a6mZeroExternal.js';
@@ -297,9 +299,15 @@ function createCockpit(profileId) {
   return group;
 }
 
+
+const COCKPIT_BUILDERS_V52 = Object.freeze({
+  zero: createA6MZeroCockpit,
+  stuka: createJu87StukaCockpit,
+});
+
 const EXTERNAL_BUILDERS = Object.freeze({
   zero: createA6MZeroExternal,
-  stuka: createStukaExternal,
+  stuka: createJu87StukaExternal,
   scout: createScoutExternal,
   glider: createGliderExternal,
 });
@@ -336,6 +344,7 @@ export class AircraftVisualSystem {
 
     this.cockpitRoot = new THREE.Group();
     this.cockpitRoot.name = 'selected-aircraft-cockpit-root';
+    this.scene?.add(this.cockpitRoot);
 
     this.externalModel = null;
     this.cockpitModel = null;
@@ -363,10 +372,12 @@ export class AircraftVisualSystem {
   }
 
   attach(camera) {
-    if (!camera || this.camera === camera) return;
-    this.cockpitRoot.parent?.remove(this.cockpitRoot);
-    this.camera = camera;
-    camera.add(this.cockpitRoot);
+    this.camera = camera || this.camera;
+
+    if (this.cockpitRoot.parent !== this.scene) {
+      this.scene?.remove(this.cockpitRoot);
+      this.scene?.add(this.cockpitRoot);
+    }
   }
 
   setProfile(value) {
@@ -405,18 +416,33 @@ export class AircraftVisualSystem {
     }
 
     this.externalModel = EXTERNAL_BUILDERS[this.profile.id]();
+    const cockpitBuilder =
+      COCKPIT_BUILDERS_V52[
+        this.profile.id
+      ];
+
     this.cockpitModel =
-      this.profile.id === 'zero'
-        ? createA6MZeroCockpit()
-        : createCockpit(this.profile.id);
+      cockpitBuilder
+        ? cockpitBuilder()
+        : createCockpit(
+            this.profile.id,
+          );
     this.externalRoot.add(this.externalModel);
     this.cockpitRoot.add(this.cockpitModel);
   }
 
+  // SKYLINE_BUNDLE_A_V2_WORLD_COCKPIT
+  // Cockpit follows the shared render pose instead of the head camera.
   // SKYLINE_RENDER_POSE_INTERPOLATION_V1_AIRCRAFT
   // The model consumes the same render pose as the camera. Camera shake is not
   // applied to the external root and the cockpit root has no synthetic flutter.
-  update(dt, renderPose, cameraMode = 'first') {
+  update(
+    dt,
+    renderPose,
+    cameraMode = 'first',
+    cockpitPosition = null,
+    cockpitQuaternion = null,
+  ) {
     const safeDt = Math.max(0, Math.min(0.1, dt || 0));
     this.elapsed += safeDt;
     this.cameraMode = cameraMode;
@@ -424,6 +450,30 @@ export class AircraftVisualSystem {
     this.cockpitRoot.visible = cameraMode === 'cockpit';
     this.externalRoot.visible =
       cameraMode === 'third' && Boolean(renderPose?.position);
+
+    if (this.cockpitRoot.visible) {
+      if (cockpitPosition?.isVector3) {
+        this.cockpitRoot.position.copy(
+          cockpitPosition
+        );
+      } else if (renderPose?.position) {
+        this.cockpitRoot.position.copy(
+          renderPose.position
+        );
+      }
+
+      if (cockpitQuaternion?.isQuaternion) {
+        this.cockpitRoot.quaternion.copy(
+          cockpitQuaternion
+        );
+      } else if (
+        renderPose?.attitude?.isQuaternion
+      ) {
+        this.cockpitRoot.quaternion.copy(
+          renderPose.attitude
+        );
+      }
+    }
 
     if (this.externalRoot.visible) {
       this.externalRoot.position.copy(renderPose.position);
@@ -461,8 +511,8 @@ export class AircraftVisualSystem {
         -1.4 + Math.min(2.8, speed / 120 * 2.8);
     }
 
-    // Genuine buffet belongs to camera effects. Never shake the aircraft model.
-    this.cockpitRoot.position.set(0, 0, 0);
+    // Genuine buffet belongs to camera effects.
+    // Never shake the aircraft or cockpit geometry.
   }
   dispose() {
     window.removeEventListener('skyline:aircraft-next', this._onNext);

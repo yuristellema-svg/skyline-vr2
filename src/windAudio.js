@@ -1,176 +1,219 @@
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+import { AircraftEngineAudio } from './audio/aircraftEngineAudio.js';
+import { AirflowAudio } from './audio/airflowAudio.js';
+import { BoostAudio } from './audio/boostAudio.js';
+import { FlightWarningAudio } from './audio/flightWarningAudio.js';
+import { PositionalTrafficAudio } from './audio/positionalTrafficAudio.js';
+import {
+  safeDisconnect,
+  safeSetTarget,
+} from './audio/audioMath.js';
 
-function speedOf(flight) {
-  if (Number.isFinite(flight?.speed)) return Math.max(0, flight.speed);
-  return flight?.velocity?.length?.() || 0;
-}
+const OWNER_KEY = Symbol.for('skyline-vr2.aircraft-warning-audio.owner');
 
-function noiseBuffer(context, seconds = 2) {
-  const buffer = context.createBuffer(1, Math.floor(context.sampleRate * seconds), context.sampleRate);
-  const data = buffer.getChannelData(0);
-  let brown = 0;
-  for (let index = 0; index < data.length; index += 1) {
-    const white = Math.random() * 2 - 1;
-    brown = brown * 0.984 + white * 0.016;
-    data[index] = white * 0.48 + brown * 1.25;
+function contextFactory() {
+  const Context = globalThis.AudioContext || globalThis.webkitAudioContext;
+  if (!Context) return null;
+  try {
+    return new Context({ latencyHint: 'interactive' });
+  } catch {
+    return new Context();
   }
-  return buffer;
 }
 
 export class WindAudioSystem {
-  constructor() {
+  constructor(options = {}) {
+    this.contextFactory = options.contextFactory || contextFactory;
+    this.eventTarget = options.eventTarget || globalThis.window || null;
+    this.sampleHeight = options.sampleHeight || null;
+    this.masterLevel = Math.max(0.12, Math.min(0.50, Number(options.masterLevel) || 0.36));
+    this.profile = options.initialProfile || 'zero';
     this.context = null;
     this.ready = false;
     this.disabled = false;
-    this.profile = 'zero';
-    this.trafficDistance = Infinity;
+    this.disposed = false;
+    this.failedReason = '';
+    this.duplicate = false;
+    this.legacyTrafficDistance = Infinity;
+
+    const owner = globalThis[OWNER_KEY];
+    if (owner && owner !== this && !owner.disposed) {
+      this.duplicate = true;
+      this.disabled = true;
+      this.failedReason = 'Duplicate audio engine prevented';
+      return;
+    }
+    globalThis[OWNER_KEY] = this;
 
     this._unlock = () => this.unlock();
-    this._onAircraft = event => { this.profile = event?.detail?.id || this.profile; };
-    this._onBoost = event => this.playBoost(event?.detail?.chain || 1);
+    this._onAircraft = event => {
+      this.profile = event?.detail?.id || this.profile;
+    };
+    this._onBoost = event => {
+      try { this.boost?.playActivation(event?.detail?.chain || 1); } catch {}
+    };
 
-    window.addEventListener('pointerdown', this._unlock, { passive: true });
-    window.addEventListener('keydown', this._unlock);
-    window.addEventListener('skyline:aircraft-changed', this._onAircraft);
-    window.addEventListener('skyline:boost-fired', this._onBoost);
+    this._listen('pointerdown', this._unlock, { passive: true });
+    this._listen('touchend', this._unlock, { passive: true });
+    this._listen('keydown', this._unlock);
+    this._listen('skyline:aircraft-changed', this._onAircraft);
+    this._listen('skyline:boost-fired', this._onBoost);
+  }
+
+  _listen(type, handler, options) {
+    try { this.eventTarget?.addEventListener?.(type, handler, options); } catch {}
+  }
+
+  _unlisten(type, handler) {
+    try { this.eventTarget?.removeEventListener?.(type, handler); } catch {}
+  }
+
+  _fail(error) {
+    this.disabled = true;
+    this.ready = false;
+    this.failedReason = error instanceof Error ? error.message : String(error || 'Audio unavailable');
+    try { this._disposeGraph(); } catch {}
+    try {
+      if (this.context && this.context.state !== 'closed') {
+        void this.context.close?.().catch?.(() => {});
+      }
+    } catch {}
+    this.context = null;
   }
 
   unlock() {
-    if (this.disabled) return;
-    if (!this.context) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) { this.disabled = true; return; }
-      try {
-        this.context = new AudioContextClass();
-        this._build();
-      } catch {
-        this.disabled = true;
-        return;
+    if (this.disabled || this.disposed) return false;
+    try {
+      if (!this.context) {
+        this.context = this.contextFactory?.();
+        if (!this.context) throw new Error('Web Audio is unavailable');
+        this._buildGraph();
       }
+      if (this.context.state === 'suspended') {
+        const promise = this.context.resume?.();
+        promise?.catch?.(error => this._fail(error));
+      }
+      this.ready = true;
+      return true;
+    } catch (error) {
+      this._fail(error);
+      return false;
     }
-    if (this.context.state === 'suspended') void this.context.resume().catch(() => {});
-    this.ready = true;
   }
 
-  _build() {
+  _buildGraph() {
     const context = this.context;
-    this.master = context.createGain();
-    this.master.gain.value = 0.0001;
-    this.master.connect(context.destination);
+    this.mixBus = context.createGain();
+    this.mixBus.gain.value = 0.0001;
 
-    const buffer = noiseBuffer(context);
-    const wind = context.createBufferSource();
-    wind.buffer = buffer;
-    wind.loop = true;
-    this.windFilter = context.createBiquadFilter();
-    this.windFilter.type = 'bandpass';
-    this.windFilter.frequency.value = 520;
-    this.windFilter.Q.value = 0.55;
-    this.windGain = context.createGain();
-    wind.connect(this.windFilter);
-    this.windFilter.connect(this.windGain);
-    this.windGain.connect(this.master);
-    wind.start();
+    this.phoneHighpass = context.createBiquadFilter();
+    this.phoneHighpass.type = 'highpass';
+    this.phoneHighpass.frequency.value = 38;
+    this.phoneHighpass.Q.value = 0.45;
 
-    const buffet = context.createBufferSource();
-    buffet.buffer = buffer;
-    buffet.loop = true;
-    this.buffetFilter = context.createBiquadFilter();
-    this.buffetFilter.type = 'lowpass';
-    this.buffetFilter.frequency.value = 105;
-    this.buffetGain = context.createGain();
-    buffet.connect(this.buffetFilter);
-    this.buffetFilter.connect(this.buffetGain);
-    this.buffetGain.connect(this.master);
-    buffet.start();
+    this.compressor = context.createDynamicsCompressor();
+    this.compressor.threshold.value = -20;
+    this.compressor.knee.value = 14;
+    this.compressor.ratio.value = 4.5;
+    this.compressor.attack.value = 0.008;
+    this.compressor.release.value = 0.20;
 
-    this.engineFundamental = context.createOscillator();
-    this.engineFundamental.type = 'sawtooth';
-    this.engineHarmonic = context.createOscillator();
-    this.engineHarmonic.type = 'triangle';
-    this.engineFilter = context.createBiquadFilter();
-    this.engineFilter.type = 'lowpass';
-    this.engineFilter.frequency.value = 620;
-    this.engineGain = context.createGain();
-    this.engineGain.gain.value = 0;
-    this.engineFundamental.connect(this.engineFilter);
-    this.engineHarmonic.connect(this.engineFilter);
-    this.engineFilter.connect(this.engineGain);
-    this.engineGain.connect(this.master);
-    this.engineFundamental.start();
-    this.engineHarmonic.start();
+    this.limiter = context.createDynamicsCompressor();
+    this.limiter.threshold.value = -4;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.0015;
+    this.limiter.release.value = 0.085;
 
-    this.trafficOscillator = context.createOscillator();
-    this.trafficOscillator.type = 'sawtooth';
-    this.trafficOscillator.frequency.value = 64;
-    this.trafficFilter = context.createBiquadFilter();
-    this.trafficFilter.type = 'lowpass';
-    this.trafficFilter.frequency.value = 320;
-    this.trafficGain = context.createGain();
-    this.trafficGain.gain.value = 0;
-    this.trafficOscillator.connect(this.trafficFilter);
-    this.trafficFilter.connect(this.trafficGain);
-    this.trafficGain.connect(this.master);
-    this.trafficOscillator.start();
+    this.mixBus.connect(this.phoneHighpass);
+    this.phoneHighpass.connect(this.compressor);
+    this.compressor.connect(this.limiter);
+    this.limiter.connect(context.destination);
+
+    this.engine = new AircraftEngineAudio(context, this.mixBus);
+    this.airflow = new AirflowAudio(context, this.mixBus);
+    this.warnings = new FlightWarningAudio(context, this.mixBus, {
+      sampleHeight: this.sampleHeight,
+    });
+    this.boost = new BoostAudio(context, this.mixBus);
+    this.traffic = new PositionalTrafficAudio(context, this.mixBus);
   }
 
   setTrafficDistance(distance) {
-    this.trafficDistance = Number.isFinite(distance) ? distance : Infinity;
+    this.legacyTrafficDistance = Number.isFinite(distance) ? distance : Infinity;
   }
 
-  update(_dt, flight, phase) {
-    if (!this.ready || !this.context) return;
-    const now = this.context.currentTime;
-    const active = phase === 'flying' ? 1 : 0;
-    const speed = speedOf(flight);
-    const speedAmount = clamp((speed - 18) / 210, 0, 1);
-    const extreme = clamp((speed - 180) / 800, 0, 1);
-    const stall = clamp(Number(flight?.stallAmount) || 0, 0, 1);
+  update(dt, flight, cameraOrPhase, phaseOrSources, maybeSources) {
+    if (!this.ready || !this.context || this.disabled || this.disposed) return;
+    let camera = cameraOrPhase;
+    let phase = phaseOrSources;
+    let trafficSources = maybeSources;
+    if (typeof cameraOrPhase === 'string') {
+      camera = null;
+      phase = cameraOrPhase;
+      trafficSources = Array.isArray(phaseOrSources) ? phaseOrSources : [];
+    }
+    if (typeof phase !== 'string') phase = 'flying';
+    if (!Array.isArray(trafficSources)) trafficSources = [];
 
-    const bases = { zero: 72, stuka: 58, scout: 83, glider: 0 };
-    const base = bases[this.profile] ?? 72;
-    const rpm = base + Math.min(95, speed * 0.22);
-    const engineEnabled = this.profile === 'glider' ? 0 : 1;
-
-    this.master.gain.setTargetAtTime(active * 0.36 + 0.0001, now, 0.1);
-    this.windGain.gain.setTargetAtTime(active * (0.018 + speedAmount * 0.17 + extreme * 0.11), now, 0.07);
-    this.windFilter.frequency.setTargetAtTime(320 + speedAmount * 1450 + extreme * 900, now, 0.08);
-    this.buffetGain.gain.setTargetAtTime(active * stall * stall * 0.105, now, 0.045);
-    this.buffetFilter.frequency.setTargetAtTime(72 + stall * 74, now, 0.08);
-
-    this.engineFundamental.frequency.setTargetAtTime(rpm, now, 0.08);
-    this.engineHarmonic.frequency.setTargetAtTime(rpm * (this.profile === 'zero' ? 2.5 : 2), now, 0.08);
-    this.engineFilter.frequency.setTargetAtTime(420 + speedAmount * 760, now, 0.12);
-    this.engineGain.gain.setTargetAtTime(active * engineEnabled * (0.055 + speedAmount * 0.055), now, 0.1);
-
-    const traffic = clamp(1 - (this.trafficDistance - 20) / 420, 0, 1);
-    this.trafficGain.gain.setTargetAtTime(active * traffic * traffic * 0.09, now, 0.12);
+    try {
+      const now = this.context.currentTime;
+      safeSetTarget(
+        this.mixBus.gain,
+        (phase === 'flying' ? this.masterLevel : this.masterLevel * 0.16) + 0.0001,
+        now,
+        0.12,
+      );
+      this.engine.update(this.profile, flight, phase);
+      this.airflow.update(this.profile, flight, phase);
+      this.warnings.update(dt, this.profile, flight, phase);
+      this.boost.update(flight);
+      this.traffic.update(dt, flight, camera, phase, trafficSources);
+    } catch (error) {
+      this._fail(error);
+    }
   }
 
-  playBoost(chain = 1) {
-    if (!this.ready || !this.context || !this.master) return;
-    const now = this.context.currentTime;
-    const oscillator = this.context.createOscillator();
-    const gain = this.context.createGain();
-    oscillator.type = 'sawtooth';
-    oscillator.frequency.setValueAtTime(92 + chain * 7, now);
-    oscillator.frequency.exponentialRampToValueAtTime(340 + chain * 18, now + 0.38);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
-    oscillator.connect(gain);
-    gain.connect(this.master);
-    oscillator.start(now);
-    oscillator.stop(now + 0.65);
+  getStatus() {
+    return {
+      ready: this.ready,
+      disabled: this.disabled,
+      duplicate: this.duplicate,
+      profile: this.profile,
+      failedReason: this.failedReason,
+      contextState: this.context?.state || 'none',
+    };
+  }
+
+  _disposeGraph() {
+    for (const system of [this.engine, this.airflow, this.warnings, this.boost, this.traffic]) {
+      try { system?.dispose?.(); } catch {}
+    }
+    this.engine = null;
+    this.airflow = null;
+    this.warnings = null;
+    this.boost = null;
+    this.traffic = null;
+    for (const node of [this.mixBus, this.phoneHighpass, this.compressor, this.limiter]) {
+      safeDisconnect(node);
+    }
   }
 
   dispose() {
-    window.removeEventListener('pointerdown', this._unlock);
-    window.removeEventListener('keydown', this._unlock);
-    window.removeEventListener('skyline:aircraft-changed', this._onAircraft);
-    window.removeEventListener('skyline:boost-fired', this._onBoost);
-    if (this.context && this.context.state !== 'closed') void this.context.close().catch(() => {});
+    if (this.disposed) return;
+    this.disposed = true;
+    this._unlisten('pointerdown', this._unlock);
+    this._unlisten('touchend', this._unlock);
+    this._unlisten('keydown', this._unlock);
+    this._unlisten('skyline:aircraft-changed', this._onAircraft);
+    this._unlisten('skyline:boost-fired', this._onBoost);
+    this._disposeGraph();
+    try {
+      if (this.context && this.context.state !== 'closed') {
+        void this.context.close?.().catch?.(() => {});
+      }
+    } catch {}
+    this.context = null;
+    this.ready = false;
+    if (globalThis[OWNER_KEY] === this) delete globalThis[OWNER_KEY];
   }
 }

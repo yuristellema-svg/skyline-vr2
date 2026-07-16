@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+// SKYLINE_BUNDLE_A_V2_CORE
 import { CONFIG, clamp } from './config.js';
 import { InputController, requestOrientationPermissionFromGesture } from './input.js';
 import { FlightModel } from './flightModel.js';
@@ -106,13 +107,21 @@ const menu = new GazeMenu(
       const mode = cameraRig.toggle();
 
       cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
-      menuNeedsReanchor = true;
+      menuNeedsReanchor = false;
+
+      if (phase === 'paused') {
+        resumeFromMenu();
+      }
 
       return mode;
     },
 
     respawn: () => {
-      beginRespawn('Manual respawn');
+      if (phase === 'crashed') {
+        finishRespawn();
+      } else {
+        beginRespawn('Manual respawn');
+      }
     },
 
     effects: () => {
@@ -120,10 +129,7 @@ const menu = new GazeMenu(
     },
 
     restart: () => {
-      beginRespawn(
-        'World restarted',
-        true
-      );
+      window.location.reload();
     },
   }
 );
@@ -715,7 +721,7 @@ function openMenu(
 
   cameraRig.update(
     0,
-    flight,
+    renderPoseInterpolator.sampleCurrent(renderPose),
     stereo.stereoEnabled,
     null,
     0,
@@ -902,6 +908,7 @@ function updateCalibration(now) {
 
 function updateCrash(dt) {
   crashElapsed += dt;
+  crashCountdownFinished = true;
 
   if (crashElapsed < 0.25) {
     fadeWhite =
@@ -919,59 +926,10 @@ function updateCrash(dt) {
     fadeWhite = 0;
   }
 
-  if (crashElapsed < 3) {
-    const count =
-      Math.max(
-        1,
-        3 -
-          Math.floor(
-            crashElapsed
-          )
-      );
+  setEyeMessage('');
 
-    setEyeMessage(
-      `CRASH\n${count}`
-    );
-
-    return;
-  }
-
-  crashCountdownFinished = true;
-
-  if (!worldFlightReady) {
-    setEyeMessage(
-      worldResetPromise
-        ? 'LOADING WORLD'
-        : 'WORLD LOAD FAILED'
-    );
-
-    return;
-  }
-
-  if (
-    phoneMode &&
-    (
-      !input.isTrackingFresh() ||
-      !input.isNearFlightNeutral()
-    )
-  ) {
-    neutralHold = 0;
-
-    setEyeMessage(
-      'LOOK STRAIGHT'
-    );
-
-    return;
-  }
-
-  neutralHold += dt;
-
-  setEyeMessage(
-    'HOLD STEADY'
-  );
-
-  if (neutralHold >= 0.5) {
-    finishRespawn();
+  if (!menu.isOpen) {
+    openMenu(true);
   }
 }
 
@@ -1213,6 +1171,8 @@ function frame(milliseconds) {
     frameDt,
     sharedRenderPose,
     cameraRig.mode,
+    cameraRig.basePosition,
+    cameraRig.baseQuaternion,
   );
   worldPolish.beginPerformanceFrame?.(
     frameDt,

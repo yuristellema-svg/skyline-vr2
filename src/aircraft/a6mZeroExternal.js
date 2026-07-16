@@ -1,461 +1,701 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import {
-  ZERO_COLORS,
+  AIRCRAFT_VISUAL_COLORS,
+  addBeamBetween,
   addBox,
   addCylinder,
-  addHorizontalRoundel,
+  addHorizontalDisk,
   addMesh,
   addPanelLine,
-  addSideRoundel,
+  addSideDisk,
   addSphere,
-  basic,
-  createHorizontalPlanformGeometry,
+  basicMaterial,
+  createEllipticalWingGeometry,
+  createLatheBodyGeometry,
+  createPlanformGeometry,
   createPropellerBladeGeometry,
   createVerticalPlanformGeometry,
-  standard,
-} from './a6mZeroShared.js';
+  createWedgeGeometry,
+  lineMaterial,
+  standardMaterial,
+} from './aircraftVisualShared.js';
 
-const PANEL_Y = 0.082;
+export const A6M_ZERO_VISUAL_BOUNDS = Object.freeze({
+  length: 6.35,
+  span: 8.15,
+  height: 2.05,
+  recommendedThirdPersonDistance: 8.8,
+});
+
+function createMaterials() {
+  const ivory = standardMaterial(
+    AIRCRAFT_VISUAL_COLORS.zeroIvory,
+    0.56,
+    0.14,
+  );
+  const ivoryShade = standardMaterial(
+    AIRCRAFT_VISUAL_COLORS.zeroIvoryShade,
+    0.68,
+    0.12,
+  );
+  const ivoryWarm = standardMaterial(0xe2dccb, 0.64, 0.10);
+  const red = standardMaterial(
+    AIRCRAFT_VISUAL_COLORS.zeroRed,
+    0.58,
+    0.08,
+  );
+  const redBasic = basicMaterial(
+    AIRCRAFT_VISUAL_COLORS.zeroRed,
+    { side: THREE.DoubleSide, toneMapped: false },
+  );
+  const cowling = standardMaterial(
+    AIRCRAFT_VISUAL_COLORS.zeroCowling,
+    0.42,
+    0.22,
+  );
+  const cowlingShade = standardMaterial(0x242829, 0.50, 0.18);
+  const frame = standardMaterial(AIRCRAFT_VISUAL_COLORS.frame, 0.55, 0.18);
+  const glass = standardMaterial(
+    AIRCRAFT_VISUAL_COLORS.canopyGlass,
+    0.16,
+    0.03,
+    {
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    },
+  );
+  const aluminum = standardMaterial(AIRCRAFT_VISUAL_COLORS.aluminum, 0.42, 0.42);
+  const exhaust = standardMaterial(0x2a2521, 0.78, 0.15);
+  const gun = standardMaterial(0x242728, 0.42, 0.28);
+  const propeller = standardMaterial(AIRCRAFT_VISUAL_COLORS.propeller, 0.42, 0.18);
+  const propellerTip = standardMaterial(AIRCRAFT_VISUAL_COLORS.propellerTip, 0.60, 0.08);
+  const panel = lineMaterial(AIRCRAFT_VISUAL_COLORS.line, 0.42);
+  const weather = lineMaterial(0x8d8879, 0.20);
+  const propellerBlur = basicMaterial(0x34393b, {
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+  const navRed = basicMaterial(0xe24c45, { toneMapped: false });
+  const navGreen = basicMaterial(0x62d68e, { toneMapped: false });
+
+  return {
+    ivory,
+    ivoryShade,
+    ivoryWarm,
+    red,
+    redBasic,
+    cowling,
+    cowlingShade,
+    frame,
+    glass,
+    aluminum,
+    exhaust,
+    gun,
+    propeller,
+    propellerTip,
+    panel,
+    weather,
+    propellerBlur,
+    navRed,
+    navGreen,
+  };
+}
+
+function createFuselage(root, materials) {
+  const body = addMesh(
+    root,
+    createLatheBodyGeometry([
+      [-2.52, 0.48],
+      [-2.18, 0.50],
+      [-1.55, 0.49],
+      [-0.78, 0.46],
+      [0.02, 0.42],
+      [0.82, 0.36],
+      [1.55, 0.28],
+      [2.18, 0.18],
+      [2.65, 0.08],
+    ], 28),
+    materials.ivory,
+    null,
+    null,
+    null,
+    'zero-rounded-fuselage',
+  );
+
+  const underside = addMesh(
+    root,
+    createLatheBodyGeometry([
+      [-1.72, 0.38],
+      [-0.92, 0.36],
+      [0.10, 0.31],
+      [0.98, 0.24],
+    ], 20),
+    materials.ivoryShade,
+    [0, -0.045, 0.02],
+    null,
+    [1, 0.56, 1],
+    'zero-lower-fuselage-tonal-panel',
+  );
+
+  body.userData.section = 'fuselage';
+  underside.userData.section = 'underside';
+
+  addMesh(
+    root,
+    createLatheBodyGeometry([
+      [-3.04, 0.38],
+      [-2.92, 0.47],
+      [-2.70, 0.54],
+      [-2.42, 0.52],
+      [-2.32, 0.48],
+    ], 30),
+    materials.cowling,
+    null,
+    null,
+    null,
+    'zero-tapered-radial-cowling',
+  );
+
+  addMesh(
+    root,
+    new THREE.TorusGeometry(0.455, 0.040, 8, 40),
+    materials.cowlingShade,
+    [0, 0, -3.02],
+    null,
+    null,
+    'zero-cowling-lip',
+  );
+
+  addMesh(
+    root,
+    new THREE.CircleGeometry(0.414, 32),
+    basicMaterial(0x111314, { side: THREE.DoubleSide }),
+    [0, 0, -3.024],
+    null,
+    null,
+    'zero-engine-face',
+  );
+
+  for (let index = 0; index < 14; index += 1) {
+    const angle = index / 14 * Math.PI * 2;
+    const vane = addBox(
+      root,
+      [0.040, 0.19, 0.018],
+      [Math.cos(angle) * 0.286, Math.sin(angle) * 0.286, -3.032],
+      materials.exhaust,
+      null,
+      `zero-cowling-vane-${index + 1}`,
+    );
+    vane.rotation.z = angle;
+  }
+
+  for (const z of [-2.32, -1.79, -1.17, -0.51, 0.22, 0.92, 1.54, 2.08]) {
+    const radius = Math.max(0.15, 0.50 - Math.max(0, z + 1.2) * 0.095);
+    addMesh(
+      root,
+      new THREE.TorusGeometry(radius, 0.008, 4, 38),
+      materials.cowlingShade,
+      [0, 0, z],
+      null,
+      [1, 0.96, 1],
+      `zero-fuselage-station-${z}`,
+    );
+  }
+
+  for (const side of [-1, 1]) {
+    addPanelLine(
+      root,
+      [
+        [side * 0.48, 0.04, -2.28],
+        [side * 0.42, 0.07, 0.32],
+        [side * 0.24, 0.06, 1.84],
+      ],
+      materials.panel,
+    );
+
+    addSideDisk(
+      root,
+      side,
+      0.385,
+      0.02,
+      0.66,
+      0.28,
+      materials.redBasic,
+    );
+  }
+
+  const accessPanel = [
+    [-0.43, 0.33, -1.45],
+    [0.43, 0.33, -1.45],
+    [0.43, 0.33, -0.92],
+    [-0.43, 0.33, -0.92],
+    [-0.43, 0.33, -1.45],
+  ];
+  addPanelLine(root, accessPanel, materials.panel);
+
+  addPanelLine(
+    root,
+    [
+      [-0.32, -0.42, -1.64],
+      [0.32, -0.42, -1.64],
+      [0.29, -0.37, -0.88],
+      [-0.29, -0.37, -0.88],
+      [-0.32, -0.42, -1.64],
+    ],
+    materials.weather,
+  );
+}
 
 function createWing(root, side, materials) {
-  const wingPoints = [
-    [0.18, -0.96],
-    [2.85, -0.57],
-    [3.60, -0.42, 3.86, -0.08],
-    [3.96, 0.19, 3.58, 0.55],
-    [2.72, 0.69],
-    [0.26, 0.72],
-  ];
-
-  const geometry = createHorizontalPlanformGeometry(wingPoints, 0.14);
   const wing = addMesh(
     root,
-    geometry,
+    createEllipticalWingGeometry({
+      side,
+      rootX: 0.30,
+      semiSpan: 3.73,
+      rootChord: 1.78,
+      tipChord: 0.22,
+      rootCenterZ: -0.08,
+      sweep: 0.42,
+      rootThickness: 0.125,
+      tipThickness: 0.025,
+      spanSteps: 14,
+      chordSteps: 7,
+      dihedral: t => 0.05 * t,
+    }),
     materials.ivory,
-    [side * 0.02, -0.055, -0.10],
+    null,
+    null,
+    null,
+    `zero-${side < 0 ? 'left' : 'right'}-elliptical-wing`,
   );
-  wing.scale.x = side;
 
-  const stripe = addBox(
+  const stripe = addMesh(
     root,
-    [0.34, 0.032, 1.18],
-    [side * 2.62, 0.095, -0.01],
+    createEllipticalWingGeometry({
+      side,
+      rootX: 2.50,
+      semiSpan: 0.22,
+      rootChord: 1.00,
+      tipChord: 0.86,
+      rootCenterZ: 0.15,
+      sweep: 0.02,
+      rootThickness: 0.010,
+      tipThickness: 0.008,
+      spanSteps: 2,
+      chordSteps: 3,
+      dihedral: () => 0.079,
+    }),
     materials.red,
-    [0, side * 0.025, 0],
+    null,
+    null,
+    null,
+    `zero-${side < 0 ? 'left' : 'right'}-wing-stripe`,
   );
   stripe.renderOrder = 2;
 
-  addHorizontalRoundel(
+  addHorizontalDisk(
     root,
     side * 1.72,
-    0.102,
+    0.112,
     -0.06,
-    0.43,
+    0.42,
     materials.redBasic,
   );
-  addHorizontalRoundel(
+  addHorizontalDisk(
     root,
     side * 1.72,
-    -0.142,
+    -0.113,
     -0.06,
-    0.43,
+    0.42,
     materials.redBasic,
     true,
   );
 
-  const lineMaterial = materials.panelLine;
-
-  for (const span of [0.64, 1.18, 1.74, 2.28, 2.82, 3.32]) {
+  const panelY = 0.132;
+  for (const span of [0.65, 1.15, 1.68, 2.20, 2.72, 3.20]) {
     addPanelLine(
       root,
       [
-        [side * span, PANEL_Y, -0.69 + span * 0.035],
-        [side * span, PANEL_Y, 0.60],
+        [side * span, panelY, -0.72 + span * 0.055],
+        [side * span, panelY, 0.58 - span * 0.028],
       ],
-      lineMaterial,
+      materials.panel,
     );
   }
 
   addPanelLine(
     root,
     [
-      [side * 0.54, PANEL_Y, 0.48],
-      [side * 3.35, PANEL_Y, 0.50],
-      [side * 3.62, PANEL_Y, 0.36],
+      [side * 0.72, panelY + 0.001, 0.48],
+      [side * 2.18, panelY + 0.001, 0.43],
+      [side * 3.44, panelY + 0.001, 0.28],
     ],
-    lineMaterial,
+    materials.panel,
   );
 
   addPanelLine(
     root,
     [
-      [side * 2.06, PANEL_Y, 0.25],
-      [side * 3.58, PANEL_Y, 0.29],
+      [side * 2.08, panelY + 0.002, 0.29],
+      [side * 3.48, panelY + 0.002, 0.20],
     ],
-    lineMaterial,
+    materials.panel,
   );
 
-  const navigation = addSphere(
+  addCylinder(
     root,
-    0.055,
-    [side * 3.82, 0.02, 0.08],
+    0.022,
+    0.022,
+    0.42,
+    [side * 1.32, 0.055, -0.82],
+    materials.gun,
+    [Math.PI / 2, 0, 0],
+    8,
+    true,
+    `zero-wing-cannon-${side}`,
+  );
+
+  addSphere(
+    root,
+    0.050,
+    [side * 3.94, 0.065, 0.12],
     side < 0 ? materials.navRed : materials.navGreen,
-    [1.0, 0.72, 1.1],
+    [1.0, 0.65, 1.15],
     10,
     6,
+    `zero-navigation-light-${side}`,
   );
-  navigation.renderOrder = 3;
 
   return wing;
 }
 
-function createTailplane(root, side, materials) {
-  const points = [
-    [0.10, -0.40],
-    [1.05, -0.28],
-    [1.42, -0.18, 1.51, 0.03],
-    [1.47, 0.22, 1.17, 0.32],
-    [0.12, 0.43],
-  ];
+function createTail(root, materials) {
+  for (const side of [-1, 1]) {
+    const tail = addMesh(
+      root,
+      createEllipticalWingGeometry({
+        side,
+        rootX: 0.10,
+        semiSpan: 1.42,
+        rootChord: 0.82,
+        tipChord: 0.18,
+        rootCenterZ: 2.15,
+        sweep: 0.18,
+        rootThickness: 0.062,
+        tipThickness: 0.018,
+        spanSteps: 8,
+        chordSteps: 5,
+      }),
+      materials.ivoryShade,
+      null,
+      null,
+      null,
+      `zero-${side < 0 ? 'left' : 'right'}-tailplane`,
+    );
+    tail.position.y = 0.04;
 
-  const geometry = createHorizontalPlanformGeometry(points, 0.085);
-  const tail = addMesh(
-    root,
-    geometry,
-    materials.ivoryShade,
-    [side * 0.01, 0.01, 2.18],
-  );
-  tail.scale.x = side;
+    addPanelLine(
+      root,
+      [
+        [side * 0.28, 0.108, 2.42],
+        [side * 1.28, 0.108, 2.42],
+      ],
+      materials.panel,
+    );
+  }
 
-  addPanelLine(
-    root,
-    [
-      [side * 0.18, 0.059, 2.48],
-      [side * 1.32, 0.059, 2.45],
-    ],
-    materials.panelLine,
-  );
-
-  return tail;
-}
-
-function createVerticalTail(root, materials) {
   const finPoints = [
-    [1.84, 0.00],
-    [1.90, 0.62],
-    [2.02, 1.19, 2.28, 1.42],
-    [2.53, 1.52, 2.69, 1.22],
-    [2.75, 0.18],
-    [2.68, 0.00],
+    [1.86, 0.00],
+    [1.92, 0.62],
+    [2.06, 1.18, 2.30, 1.43],
+    [2.52, 1.55, 2.69, 1.24],
+    [2.74, 0.10],
+    [2.64, 0.00],
   ];
-
   addMesh(
     root,
-    createVerticalPlanformGeometry(finPoints, 0.11),
+    createVerticalPlanformGeometry(finPoints, 0.085),
     materials.ivoryShade,
+    null,
+    null,
+    null,
+    'zero-vertical-fin',
   );
 
   const rudderPoints = [
-    [2.37, 0.18],
-    [2.42, 1.17],
-    [2.54, 1.34, 2.65, 1.16],
-    [2.72, 0.18],
+    [2.40, 0.15],
+    [2.45, 1.18],
+    [2.55, 1.36, 2.66, 1.18],
+    [2.72, 0.15],
   ];
-
   addMesh(
     root,
-    createVerticalPlanformGeometry(rudderPoints, 0.118),
+    createVerticalPlanformGeometry(rudderPoints, 0.090),
     materials.red,
+    null,
+    null,
+    null,
+    'zero-rudder',
   );
 
   addPanelLine(
     root,
     [
-      [0.061, 0.20, 2.36],
-      [0.061, 1.18, 2.42],
+      [0.048, 0.16, 2.40],
+      [0.048, 1.18, 2.45],
     ],
-    materials.panelLine,
+    materials.panel,
   );
 }
 
 function createCanopy(root, materials) {
-  const canopyRoot = new THREE.Group();
-  canopyRoot.name = 'zero-canopy';
-  canopyRoot.position.set(0, 0.16, -0.44);
-  root.add(canopyRoot);
+  const canopy = new THREE.Group();
+  canopy.name = 'zero-segmented-canopy';
+  root.add(canopy);
 
-  const glassGeometry = new THREE.SphereGeometry(
-    0.70,
-    20,
-    10,
-    0,
-    Math.PI * 2,
-    0,
-    Math.PI * 0.52,
-  );
+  const sections = [
+    {
+      name: 'windscreen',
+      frontZ: -1.31,
+      backZ: -0.82,
+      frontWidth: 0.72,
+      backWidth: 0.92,
+      frontHeight: 0.48,
+      backHeight: 0.67,
+      baseY: 0.24,
+    },
+    {
+      name: 'sliding-canopy',
+      frontZ: -0.82,
+      backZ: 0.05,
+      frontWidth: 0.92,
+      backWidth: 0.82,
+      frontHeight: 0.67,
+      backHeight: 0.59,
+      baseY: 0.23,
+    },
+    {
+      name: 'rear-canopy',
+      frontZ: 0.05,
+      backZ: 0.58,
+      frontWidth: 0.82,
+      backWidth: 0.46,
+      frontHeight: 0.59,
+      backHeight: 0.30,
+      baseY: 0.22,
+    },
+  ];
 
-  const glass = addMesh(
-    canopyRoot,
-    glassGeometry,
-    materials.glass,
-    [0, 0.10, 0],
+  for (const section of sections) {
+    const glass = addMesh(
+      canopy,
+      createWedgeGeometry(section),
+      materials.glass,
+      null,
+      null,
+      null,
+      `zero-canopy-${section.name}`,
+    );
+    glass.renderOrder = 4;
+  }
+
+  const frames = [
+    [[-0.36, 0.24, -1.31], [-0.28, 0.72, -1.31]],
+    [[0.36, 0.24, -1.31], [0.28, 0.72, -1.31]],
+    [[-0.46, 0.23, -0.82], [-0.36, 0.90, -0.82]],
+    [[0.46, 0.23, -0.82], [0.36, 0.90, -0.82]],
+    [[-0.41, 0.23, 0.05], [-0.32, 0.82, 0.05]],
+    [[0.41, 0.23, 0.05], [0.32, 0.82, 0.05]],
+    [[-0.23, 0.22, 0.58], [-0.18, 0.52, 0.58]],
+    [[0.23, 0.22, 0.58], [0.18, 0.52, 0.58]],
+    [[-0.28, 0.72, -1.31], [0.28, 0.72, -1.31]],
+    [[-0.36, 0.90, -0.82], [0.36, 0.90, -0.82]],
+    [[-0.32, 0.82, 0.05], [0.32, 0.82, 0.05]],
+    [[-0.18, 0.52, 0.58], [0.18, 0.52, 0.58]],
+    [[0, 0.72, -1.31], [0, 0.90, -0.82]],
+    [[0, 0.90, -0.82], [0, 0.82, 0.05]],
+    [[0, 0.82, 0.05], [0, 0.52, 0.58]],
+  ];
+  frames.forEach((frame, index) => addBeamBetween(
+    canopy,
+    frame[0],
+    frame[1],
+    0.022,
+    materials.frame,
+    6,
+    `zero-canopy-frame-${index + 1}`,
+  ));
+
+  addBox(
+    root,
+    [0.92, 0.09, 1.78],
+    [0, 0.19, -0.34],
+    materials.ivoryWarm,
     null,
-    [0.78, 0.82, 1.42],
+    'zero-canopy-deck',
   );
-  glass.renderOrder = 4;
-
-  addBox(canopyRoot, [0.055, 0.71, 0.055], [-0.54, 0.04, -0.15], materials.frame, [0.05, 0, -0.12]);
-  addBox(canopyRoot, [0.055, 0.71, 0.055], [0.54, 0.04, -0.15], materials.frame, [0.05, 0, 0.12]);
-  addBox(canopyRoot, [0.055, 0.68, 0.055], [-0.45, 0.06, 0.58], materials.frame, [-0.08, 0, -0.09]);
-  addBox(canopyRoot, [0.055, 0.68, 0.055], [0.45, 0.06, 0.58], materials.frame, [-0.08, 0, 0.09]);
-  addBox(canopyRoot, [1.06, 0.045, 0.045], [0, 0.62, -0.38], materials.frame);
-  addBox(canopyRoot, [0.98, 0.045, 0.045], [0, 0.60, 0.34], materials.frame);
-  addBox(canopyRoot, [0.055, 0.055, 1.48], [0, 0.62, 0.02], materials.frame);
-  addBox(canopyRoot, [1.16, 0.11, 1.63], [0, -0.17, 0.10], materials.deck);
-
-  return canopyRoot;
 }
 
 function createPropeller(root, materials) {
   const propeller = new THREE.Group();
   propeller.name = 'zero-propeller';
-  propeller.position.set(0, 0, -3.08);
+  propeller.position.set(0, 0, -3.18);
   root.add(propeller);
 
-  const bladeGeometry = createPropellerBladeGeometry();
+  const blades = new THREE.Group();
+  blades.name = 'zero-propeller-blades';
+  propeller.add(blades);
 
-  for (let blade = 0; blade < 3; blade += 1) {
-    const bladeRoot = new THREE.Group();
-    bladeRoot.rotation.z = blade / 3 * Math.PI * 2;
-    propeller.add(bladeRoot);
+  const bladeGeometry = createPropellerBladeGeometry({
+    length: 1.58,
+    rootWidth: 0.10,
+    midWidth: 0.16,
+    tipWidth: 0.075,
+    depth: 0.040,
+  });
 
-    const bladeMesh = addMesh(
-      bladeRoot,
+  for (let index = 0; index < 3; index += 1) {
+    const root = new THREE.Group();
+    root.rotation.z = index / 3 * Math.PI * 2;
+    blades.add(root);
+
+    const blade = addMesh(
+      root,
       bladeGeometry,
       materials.propeller,
-      [0, 0.08, 0],
-      [0.04, 0.13, -0.10],
+      [0, 0.05, 0],
+      [0.035, 0.12, -0.10],
+      null,
+      `zero-propeller-blade-${index + 1}`,
     );
-    bladeMesh.name = `zero-propeller-blade-${blade + 1}`;
+    blade.userData.sharedGeometry = true;
 
     addBox(
-      bladeRoot,
-      [0.13, 0.16, 0.055],
-      [0, 1.47, 0],
-      materials.tip,
+      root,
+      [0.13, 0.17, 0.050],
+      [0, 1.46, 0],
+      materials.propellerTip,
+      null,
+      `zero-propeller-tip-${index + 1}`,
     );
   }
 
-  const hub = addCylinder(
+  addCylinder(
     propeller,
-    0.18,
+    0.17,
     0.23,
-    0.36,
-    [0, 0, -0.06],
+    0.32,
+    [0, 0, -0.05],
     materials.aluminum,
     [-Math.PI / 2, 0, 0],
-    16,
+    18,
+    false,
+    'zero-propeller-hub',
   );
-  hub.name = 'zero-propeller-hub';
 
-  const spinner = addMesh(
+  addMesh(
     propeller,
-    new THREE.ConeGeometry(0.24, 0.48, 18),
+    new THREE.ConeGeometry(0.24, 0.46, 20),
     materials.ivoryShade,
-    [0, 0, -0.32],
+    [0, 0, -0.30],
     [-Math.PI / 2, 0, 0],
+    null,
+    'zero-spinner',
   );
-  spinner.name = 'zero-spinner';
 
   const blur = addMesh(
     propeller,
-    new THREE.CircleGeometry(1.66, 48),
+    new THREE.CircleGeometry(1.62, 56),
     materials.propellerBlur,
     [0, 0, 0.035],
+    null,
+    null,
+    'zero-propeller-blur',
   );
-  blur.name = 'zero-propeller-blur';
-  blur.renderOrder = 5;
   blur.frustumCulled = false;
+  blur.renderOrder = 6;
 
+  propeller.userData.blades = blades;
+  propeller.userData.blurDisk = blur;
   root.userData.propeller = propeller;
   root.userData.propellerBlur = blur;
-  return propeller;
 }
 
-function createPanelDetails(root, materials) {
-  for (const z of [-1.72, -1.22, -0.70, 0.02, 0.68, 1.28, 1.83]) {
-    const radius = z < -1.2 ? 0.57 : Math.max(0.20, 0.50 - Math.max(0, z - 0.4) * 0.12);
-    const ring = addMesh(
-      root,
-      new THREE.TorusGeometry(radius, 0.012, 5, 32),
-      materials.panelBasic,
-      [0, 0, z],
-    );
-    ring.scale.y = 0.94;
-  }
-
-  for (const side of [-1, 1]) {
-    addPanelLine(
-      root,
-      [
-        [side * 0.48, 0.05, -1.70],
-        [side * 0.42, 0.07, 1.70],
-      ],
-      materials.panelLine,
-    );
-
-    addSideRoundel(
-      root,
-      side,
-      0.405,
-      0.02,
-      0.88,
-      0.29,
-      materials.redBasic,
-    );
-  }
-
+function createDetails(root, materials) {
   for (const side of [-1, 1]) {
     for (let exhaust = 0; exhaust < 4; exhaust += 1) {
       addCylinder(
         root,
-        0.035,
-        0.043,
-        0.24,
-        [side * 0.52, -0.22 + exhaust * 0.11, -2.24],
+        0.031,
+        0.041,
+        0.22,
+        [side * 0.48, -0.18 + exhaust * 0.095, -2.40],
         materials.exhaust,
         [0, 0, side * Math.PI / 2],
         7,
         true,
+        `zero-exhaust-${side}-${exhaust + 1}`,
       );
     }
-  }
 
-  for (const side of [-1, 1]) {
     addCylinder(
       root,
-      0.022,
-      0.022,
-      0.42,
-      [side * 0.64, 0.10, -1.07],
+      0.018,
+      0.018,
+      0.32,
+      [side * 0.18, 0.27, -2.72],
       materials.gun,
       [Math.PI / 2, 0, 0],
-      8,
+      7,
       true,
+      `zero-cowl-gun-${side}`,
+    );
+
+    addSphere(
+      root,
+      0.39,
+      [side * 0.36, -0.055, -0.05],
+      materials.ivoryShade,
+      [1.45, 0.34, 1.25],
+      16,
+      8,
+      `zero-wing-root-fairing-${side}`,
+    );
+
+    addPanelLine(
+      root,
+      [
+        [side * 0.62, 0.126, -0.54],
+        [side * 1.30, 0.126, -0.56],
+        [side * 1.86, 0.126, -0.48],
+      ],
+      materials.weather,
     );
   }
 }
 
 export function createA6MZeroExternal() {
   const root = new THREE.Group();
-  root.name = 'external-a6m-zero-white-872-detailed';
+  root.name = 'external-a6m-zero-white-872-v2';
+  const materials = createMaterials();
 
-  const materials = {
-    ivory: standard(ZERO_COLORS.ivory, 0.56, 0.16),
-    ivoryShade: standard(ZERO_COLORS.ivoryShade, 0.68, 0.12),
-    red: standard(ZERO_COLORS.red, 0.58, 0.09),
-    redBasic: basic(ZERO_COLORS.red, {
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    }),
-    cowling: standard(ZERO_COLORS.cowling, 0.43, 0.22),
-    frame: standard(ZERO_COLORS.frame, 0.56, 0.18),
-    deck: standard(0x505956, 0.75, 0.10),
-    glass: standard(ZERO_COLORS.glass, 0.16, 0.04, {
-      transparent: true,
-      opacity: 0.34,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-    aluminum: standard(ZERO_COLORS.aluminum, 0.42, 0.42),
-    exhaust: standard(0x2b2521, 0.72, 0.18),
-    gun: standard(0x242728, 0.42, 0.26),
-    propeller: standard(0x25282a, 0.42, 0.18),
-    tip: standard(0xd8b35c, 0.62, 0.08),
-    panelLine: new THREE.LineBasicMaterial({
-      color: ZERO_COLORS.line,
-      transparent: true,
-      opacity: 0.48,
-      fog: true,
-    }),
-    panelBasic: basic(ZERO_COLORS.line, {
-      transparent: true,
-      opacity: 0.34,
-      fog: true,
-    }),
-    navRed: basic(0xe04d45, { toneMapped: false }),
-    navGreen: basic(0x63d58e, { toneMapped: false }),
-    propellerBlur: basic(0x3a3d3e, {
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    }),
-  };
-
-  // Proportioned fuselage: broad radial-engine nose, full cockpit section and
-  // a long, clean taper into the Zero's compact tail.
-  addCylinder(root, 0.18, 0.51, 2.85, [0, -0.01, 1.18], materials.ivoryShade, [Math.PI / 2, 0, 0], 24);
-  addCylinder(root, 0.51, 0.60, 1.74, [0, 0, -1.10], materials.ivory, [Math.PI / 2, 0, 0], 24);
-  addCylinder(root, 0.59, 0.65, 0.94, [0, 0, -2.44], materials.cowling, [Math.PI / 2, 0, 0], 28);
-
-  addMesh(
-    root,
-    new THREE.TorusGeometry(0.61, 0.055, 8, 36),
-    materials.cowling,
-    [0, 0, -2.94],
-  );
-  addMesh(
-    root,
-    new THREE.CircleGeometry(0.54, 28),
-    basic(0x111314, { side: THREE.DoubleSide }),
-    [0, 0, -2.945],
-  );
-
-  // Cowling flaps and subtle engine face.
-  for (let index = 0; index < 12; index += 1) {
-    const angle = index / 12 * Math.PI * 2;
-    const vane = addBox(
-      root,
-      [0.055, 0.22, 0.025],
-      [Math.cos(angle) * 0.37, Math.sin(angle) * 0.37, -2.97],
-      materials.exhaust,
-    );
-    vane.rotation.z = angle;
-  }
-
+  createFuselage(root, materials);
   createWing(root, -1, materials);
   createWing(root, 1, materials);
-  createTailplane(root, -1, materials);
-  createTailplane(root, 1, materials);
-  createVerticalTail(root, materials);
+  createTail(root, materials);
   createCanopy(root, materials);
-  createPanelDetails(root, materials);
   createPropeller(root, materials);
-
-  // Wing-root fairings and retracted-gear door hints.
-  for (const side of [-1, 1]) {
-    addSphere(
-      root,
-      0.46,
-      [side * 0.42, -0.07, -0.12],
-      materials.ivoryShade,
-      [1.55, 0.38, 1.30],
-      14,
-      8,
-    );
-
-    addBox(
-      root,
-      [0.22, 0.035, 0.72],
-      [side * 1.02, -0.132, -0.02],
-      materials.ivoryShade,
-      [0, side * 0.05, 0],
-    );
-  }
+  createDetails(root, materials);
 
   root.userData.engine = 'RADIAL';
-  root.userData.visualVersion = 'a6m-zero-procedural-v1';
+  root.userData.visualVersion = 'a6m-zero-procedural-v2';
+  root.userData.bounds = A6M_ZERO_VISUAL_BOUNDS;
+  root.userData.materialCountHint = Object.keys(materials).length;
   return root;
 }

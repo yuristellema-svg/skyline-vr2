@@ -2,8 +2,9 @@ import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, clamp } from './config.js';
 
 const DEG = Math.PI / 180;
-const PANEL_WIDTH = 0.60;
-const PANEL_HEIGHT = 0.27;
+// SKYLINE_BUNDLE_A_V2_MENU
+const PANEL_WIDTH = 0.66;
+const PANEL_HEIGHT = 0.30;
 
 function panelTexture(title, subtitle, selected = false, danger = false, progress = 0) {
   const canvas = document.createElement('canvas');
@@ -188,13 +189,13 @@ export class GazeMenu {
     }
 
     return [
-      { id: 'resume', title: 'RESUME', subtitle: 'BACK TO FLIGHT', yaw: -20, pitch: 7 },
-      { id: 'recenter', title: 'RECENTER', subtitle: 'RESET NEUTRAL', yaw: -7, pitch: 7 },
-      { id: 'camera', title: 'VIEW', subtitle: this.cameraName, yaw: 7, pitch: 7 },
-      { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 20, pitch: 7 },
-      { id: 'effects', title: 'EFFECTS', subtitle: this.effectsName, yaw: -13, pitch: -8 },
-      { id: 'respawn', title: 'RETURN', subtitle: 'START POSITION', yaw: 0, pitch: -8 },
-      { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 13, pitch: -8, danger: true },
+      { id: 'resume', title: 'RESUME', subtitle: 'BACK TO FLIGHT', yaw: -27, pitch: 8 },
+      { id: 'recenter', title: 'RECENTER', subtitle: 'RESET NEUTRAL', yaw: -9, pitch: 8 },
+      { id: 'camera', title: 'VIEW', subtitle: this.cameraName, yaw: 9, pitch: 8 },
+      { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 27, pitch: 8 },
+      { id: 'effects', title: 'EFFECTS', subtitle: this.effectsName, yaw: -18, pitch: -9 },
+      { id: 'respawn', title: 'RETURN', subtitle: 'START POSITION', yaw: 0, pitch: -9 },
+      { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 18, pitch: -9, danger: true },
     ];
   }
 
@@ -228,6 +229,14 @@ export class GazeMenu {
   }
 
   open(position, quaternion, crashMode = false) {
+    this.root.visible = false;
+    this._clearPanels();
+
+    this.root.scale.set(1, 1, 1);
+    this.root.position.set(0, 0, 0);
+    this.root.rotation.set(0, 0, 0);
+    this.root.quaternion.identity();
+
     this.crashMode = Boolean(crashMode);
     this.isOpen = true;
     this.root.visible = true;

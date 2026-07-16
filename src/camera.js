@@ -27,6 +27,8 @@ const LOCAL_RIGHT =
     0,
   );
 
+// SKYLINE_BUNDLE_A_V2_COCKPIT_CAMERA
+// Cockpit remains attached to the aircraft while head yaw moves the camera.
 // SKYLINE_RENDER_POSE_INTERPOLATION_V1_CAMERA
 // reset() and update() consume the shared render pose. Direct viewYaw and
 // camera shake remain current-frame values, so phone head tracking stays live.
@@ -506,8 +508,8 @@ export class CameraRig {
       this.config.camera;
 
     if (
-      this.mode ===
-      'first'
+      this.mode === 'first'
+      || this.mode === 'cockpit'
     ) {
       this._worldOffset
         .copy(
