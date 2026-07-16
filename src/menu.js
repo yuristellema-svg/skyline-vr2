@@ -242,7 +242,17 @@ export class GazeMenu {
     this.root.visible = false;
     this._clearPanels();
 
-    this.root.scale.set(1.18, 1.18, 1.18);
+    const phoneMode =
+      this.input?.mode === 'phone';
+
+    const rootScale =
+      phoneMode ? 1 : 1.18;
+
+    this.root.scale.set(
+      rootScale,
+      rootScale,
+      rootScale
+    );
     this.root.position.set(0, 0, 0);
     this.root.rotation.set(0, 0, 0);
     this.root.quaternion.identity();
@@ -257,7 +267,12 @@ export class GazeMenu {
     this._hasSmoothedLook = false;
     this._pointerMovedSinceOpen = false;
     this._hoverStartedAt = 0;
-    this._requirePhoneExit = false;
+
+    // Prevent the centre panel being selected immediately.
+    // The player must first move through a neutral gap.
+    this._requirePhoneExit =
+      this.input?.mode === 'phone';
+
     document.body.classList.add('menu-open');
     this.input?.beginMenuLook?.();
     this._buildPanels();

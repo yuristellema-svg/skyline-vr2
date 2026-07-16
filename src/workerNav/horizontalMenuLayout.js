@@ -6,17 +6,18 @@ import {
   wrapPi,
 } from './navContracts.js';
 
-const PHONE_YAWS = Object.freeze([-60, -40, -20, 0, 20, 40, 60]);
+const PHONE_YAWS = Object.freeze([-54, -36, -18, 0, 18, 36, 54]);
 const CRASH_YAWS = Object.freeze([-20, 0, 20]);
 
 export const PHONE_MENU_CONFIG = Object.freeze({
-  depth: 2.8,
-  panelScale: 1.08,
-  enterHalfAngle: 7.2 * DEG,
-  exitHalfAngle: 9.2 * DEG,
-  dwellSeconds: 1.15,
-  destructiveDwellSeconds: 1.5,
-  activationLockoutSeconds: 0.65,
+  depth: 1.55,
+  panelScale: 0.76,
+  enterHalfAngle: 5.5 * DEG,
+  exitHalfAngle: 7.5 * DEG,
+  pitchHalfAngle: 7.5 * DEG,
+  dwellSeconds: 1.25,
+  destructiveDwellSeconds: 1.7,
+  activationLockoutSeconds: 0.75,
 });
 
 function labelFor(id, state) {
@@ -85,22 +86,46 @@ export function buildDesktopMenuDefinitions({
 export function selectPhonePanel(
   definitions,
   yaw,
-  _pitchIgnored = 0,
+  pitch = 0,
   currentId = null,
   config = PHONE_MENU_CONFIG,
 ) {
+  const verticalDistance =
+    Math.abs(Number(pitch) || 0);
+
+  if (
+    verticalDistance >
+    config.pitchHalfAngle
+  ) {
+    return null;
+  }
+
   let best = null;
   let bestDistance = Infinity;
+
   for (const definition of definitions) {
-    const limit = definition.id === currentId
-      ? config.exitHalfAngle
-      : config.enterHalfAngle;
-    const distance = Math.abs(wrapPi((Number(yaw) || 0) - definition.yaw * DEG));
-    if (distance <= limit && distance < bestDistance) {
+    const limit =
+      definition.id === currentId
+        ? config.exitHalfAngle
+        : config.enterHalfAngle;
+
+    const distance =
+      Math.abs(
+        wrapPi(
+          (Number(yaw) || 0) -
+          definition.yaw * DEG
+        )
+      );
+
+    if (
+      distance <= limit &&
+      distance < bestDistance
+    ) {
       best = definition;
       bestDistance = distance;
     }
   }
+
   return best;
 }
 
