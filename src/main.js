@@ -11,6 +11,7 @@ import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
 import { AircraftVisualSystem } from './aircraftVisuals.js';
+import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -31,6 +32,10 @@ scene.add(stereo.camera);
 
 const input = new InputController();
 const flight = new FlightModel();
+// SKYLINE_RENDER_POSE_INTERPOLATION_V1
+const renderPoseInterpolator = new RenderPoseInterpolator(flight);
+const renderPose = renderPoseInterpolator.createRenderPose(flight);
+let sharedRenderPose = renderPose;
 const collision = new CollisionSystem();
 const world = createWorld(scene, collision);
 
@@ -100,7 +105,7 @@ const menu = new GazeMenu(
     camera: () => {
       const mode = cameraRig.toggle();
 
-      cameraRig.reset(flight);
+      cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
       menuNeedsReanchor = true;
 
       return mode;
@@ -226,7 +231,7 @@ function updateFloatingOrigin(
     distance <
     CONFIG.world.floatingOriginDistance
   ) {
-    return;
+    return false;
   }
 
   const step =
@@ -256,6 +261,12 @@ function updateFloatingOrigin(
   stereo.uiScene.updateMatrixWorld(
     true
   );
+
+  renderPoseInterpolator.reset(
+    flight,
+    'floating-origin',
+  );
+  return true;
 }
 
 function ensureInitialWorld() {
@@ -392,7 +403,9 @@ function resetFlight() {
     flight.position
   );
 
-  cameraRig.reset(flight);
+  renderPoseInterpolator.reset(flight, 'spawn');
+  sharedRenderPose = renderPoseInterpolator.sampleCurrent(renderPose);
+  cameraRig.reset(sharedRenderPose);
   accumulator = 0;
 }
 
@@ -436,7 +449,9 @@ function ensureLiveFlight(forceReset = false) {
 
   accumulator = 0;
   lastFrame = performance.now() / 1000;
-  cameraRig.reset(flight);
+  renderPoseInterpolator.reset(flight, 'ensure-live');
+  sharedRenderPose = renderPoseInterpolator.sampleCurrent(renderPose);
+  cameraRig.reset(sharedRenderPose);
 }
 
 function startSession(phone) {
@@ -476,7 +491,7 @@ function startSession(phone) {
 
   // SKYLINE_V42_CLEAN_START_VIEW
   cameraRig.setMode('first');
-  cameraRig.reset(flight);
+  cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
 
   phaseStarted =
     performance.now() / 1000;
@@ -695,7 +710,7 @@ function openMenu(
    * the intended menu distance.
    */
   if (crashMode) {
-    cameraRig.reset(flight);
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
   cameraRig.update(
@@ -975,7 +990,7 @@ function updateInputAndState(
     phase !== 'calibrating'
   ) {
     cameraRig.toggle();
-    cameraRig.reset(flight);
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
   if (
@@ -1089,6 +1104,8 @@ function frame(milliseconds) {
         input.controls
       );
 
+      renderPoseInterpolator.captureFixedStep(flight);
+
       accumulator -=
         CONFIG.physics.fixedStep;
 
@@ -1128,6 +1145,7 @@ function frame(milliseconds) {
 
       droppedSteps += 1;
       droppedPhysicsThisFrame = 1;
+      renderPoseInterpolator.reset(flight, 'dropped-physics-time');
     }
   }
 
@@ -1135,8 +1153,21 @@ function frame(milliseconds) {
     menu.update(frameDt);
   }
 
-  updateFloatingOrigin(
+  const originShifted = updateFloatingOrigin(
     flight.position
+  );
+
+  if (originShifted) {
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
+  }
+
+  const renderAlpha = renderInterpolationAlpha(
+    accumulator,
+    CONFIG.physics.fixedStep,
+  );
+  sharedRenderPose = renderPoseInterpolator.sample(
+    renderAlpha,
+    renderPose,
   );
 
   effects.update(
@@ -1149,7 +1180,7 @@ function frame(milliseconds) {
 
   cameraRig.update(
     frameDt,
-    flight,
+    sharedRenderPose,
     stereo.stereoEnabled,
     menu.isOpen
       ? input.menuLook
@@ -1180,7 +1211,7 @@ function frame(milliseconds) {
 
   aircraftVisuals.update(
     frameDt,
-    flight,
+    sharedRenderPose,
     cameraRig.mode,
   );
   worldPolish.beginPerformanceFrame?.(
@@ -1280,6 +1311,7 @@ document.addEventListener(
       performance.now() / 1000;
 
     accumulator = 0;
+    renderPoseInterpolator.reset(flight, 'visibility-change');
 
     if (
       document.visibilityState ===
@@ -1297,6 +1329,7 @@ window.addEventListener(
       performance.now() / 1000;
 
     accumulator = 0;
+    renderPoseInterpolator.reset(flight, 'pageshow');
 
     void acquireWakeLock();
   }
