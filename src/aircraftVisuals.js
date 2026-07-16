@@ -8,6 +8,11 @@ import {
   createA6MZeroCockpit,
 } from './aircraft/a6mZeroCockpit.js';
 
+import {
+  createWorkerExternalBuilder,
+  createWorkerCockpitBuilder,
+} from './workerAirframe/runtimeBuilders.js';
+
 const STORAGE_KEY = 'skyline-aircraft-profile-v4';
 const FORWARD = new THREE.Vector3(0, 0, -1);
 
@@ -301,15 +306,47 @@ function createCockpit(profileId) {
 
 
 const COCKPIT_BUILDERS_V52 = Object.freeze({
-  zero: createA6MZeroCockpit,
-  stuka: createJu87StukaCockpit,
+  zero: createWorkerCockpitBuilder(
+    'zero',
+    createA6MZeroCockpit,
+  ),
+
+  stuka: createWorkerCockpitBuilder(
+    'stuka',
+    createJu87StukaCockpit,
+  ),
+
+  scout: createWorkerCockpitBuilder(
+    'scout',
+    () => createCockpit('scout'),
+  ),
+
+  glider: createWorkerCockpitBuilder(
+    'glider',
+    () => createCockpit('glider'),
+  ),
 });
 
 const EXTERNAL_BUILDERS = Object.freeze({
-  zero: createA6MZeroExternal,
-  stuka: createJu87StukaExternal,
-  scout: createScoutExternal,
-  glider: createGliderExternal,
+  zero: createWorkerExternalBuilder(
+    'zero',
+    createA6MZeroExternal,
+  ),
+
+  stuka: createWorkerExternalBuilder(
+    'stuka',
+    createJu87StukaExternal,
+  ),
+
+  scout: createWorkerExternalBuilder(
+    'scout',
+    createScoutExternal,
+  ),
+
+  glider: createWorkerExternalBuilder(
+    'glider',
+    createGliderExternal,
+  ),
 });
 
 function storedIndex() {
