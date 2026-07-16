@@ -376,7 +376,6 @@ export class GazeMenu {
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
     this._hoverStartedAt = performance.now();
-    if (!candidate) this._requirePhoneExit = false;
   }
 
   _updateDesktopCandidate() {
@@ -411,8 +410,27 @@ export class GazeMenu {
         this._smoothedPitch += (rawPitch - this._smoothedPitch) * blend;
       }
 
-      const candidate = this._candidateAt(this._smoothedYaw, this._smoothedPitch, true);
-      this._setCandidate(candidate);
+      const candidate =
+        this._candidateAt(
+          this._smoothedYaw,
+          this._smoothedPitch,
+          true
+        );
+
+      if (this._requirePhoneExit) {
+        /*
+         * Nothing is highlighted immediately on open or
+         * directly after an activation. The player must
+         * first look into a gap between options.
+         */
+        if (!candidate) {
+          this._requirePhoneExit = false;
+        }
+
+        this._setCandidate(null);
+      } else {
+        this._setCandidate(candidate);
+      }
 
       const dwellSeconds = this.hoveredPanel?.userData.definition.danger
         ? PHONE_MENU_CONFIG.destructiveDwellSeconds

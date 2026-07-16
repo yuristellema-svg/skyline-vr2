@@ -6,15 +6,15 @@ import {
   wrapPi,
 } from './navContracts.js';
 
-const PHONE_YAWS = Object.freeze([-54, -36, -18, 0, 18, 36, 54]);
+const PHONE_YAWS = Object.freeze([-48, -32, -16, 0, 16, 32, 48]);
 const CRASH_YAWS = Object.freeze([-20, 0, 20]);
 
 export const PHONE_MENU_CONFIG = Object.freeze({
-  depth: 1.55,
-  panelScale: 0.76,
-  enterHalfAngle: 5.5 * DEG,
-  exitHalfAngle: 7.5 * DEG,
-  pitchHalfAngle: 7.5 * DEG,
+  depth: 1.28,
+  panelScale: 0.88,
+  enterHalfAngle: 4.8 * DEG,
+  exitHalfAngle: 6.5 * DEG,
+  pitchHalfAngle: 7.0 * DEG,
   dwellSeconds: 1.25,
   destructiveDwellSeconds: 1.7,
   activationLockoutSeconds: 0.75,
