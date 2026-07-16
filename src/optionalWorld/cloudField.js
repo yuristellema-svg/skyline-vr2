@@ -43,10 +43,43 @@ function createCloudTexture() {
   return texture;
 }
 
+// SKYLINE_BUNDLE_B_CLOUD_LIGHTING
 export class WorldSpaceCloudSystem {
   constructor(scene, options = {}) {
     this.scene = scene;
     this.elapsed = 0;
+    this.daylight = 1;
+    this.twilight = 0;
+
+    this._timeListener = event => {
+      this.daylight =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            Number(
+              event?.detail?.daylight
+            ) || 0,
+          ),
+        );
+
+      this.twilight =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            Number(
+              event?.detail?.twilight
+            ) || 0,
+          ),
+        );
+    };
+
+    globalThis.window
+      ?.addEventListener?.(
+        'skyline:time-of-day',
+        this._timeListener,
+      );
     this.bounds = {
       minX: Number(options.minX) || -5200,
       maxX: Number(options.maxX) || 5200,
@@ -111,14 +144,54 @@ export class WorldSpaceCloudSystem {
       );
 
       cloud.position.set(next.x, next.y, next.z);
+      const night =
+        1 -
+        this.daylight;
+
+      const baseOpacity =
+        (
+          0.44 +
+          Math.sin(
+            this.elapsed *
+              0.12 +
+            cloud.userData.phase
+          ) *
+            0.04
+        ) *
+        cloud.userData
+          .opacityScale;
+
       cloud.material.opacity =
-        (0.46 +
-          Math.sin(this.elapsed * 0.12 + cloud.userData.phase) * 0.04) *
-        cloud.userData.opacityScale;
+        baseOpacity *
+        (
+          1 -
+          night * 0.30
+        );
+
+      cloud.material.color
+        .setRGB(
+          1 -
+            night * 0.50 +
+            this.twilight * 0.08,
+
+          1 -
+            night * 0.46 -
+            this.twilight * 0.05,
+
+          1 -
+            night * 0.34 -
+            this.twilight * 0.12,
+        );
     }
   }
 
   dispose() {
+    globalThis.window
+      ?.removeEventListener?.(
+        'skyline:time-of-day',
+        this._timeListener,
+      );
+
     this.scene?.remove(this.root);
     this.texture.dispose();
     for (const material of this.materials) material.dispose();

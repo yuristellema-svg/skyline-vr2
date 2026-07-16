@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-shell-v5-1-20260715';
+const SHELL_CACHE = 'skyline-bundle-b-world-sim-20260716';
 
 const SHELL_FILES = [
   './',
@@ -36,6 +36,19 @@ const SHELL_FILES = [
   './src/optionalWorld/audio.js',
   './src/optionalWorld/index.js',
   './src/performanceRuntime.js',
+  './src/aircraftFlightProfiles.js',
+  './src/aircraft/aircraftVisualShared.js',
+  './src/aircraft/ju87StukaExternal.js',
+  './src/aircraft/ju87StukaCockpit.js',
+  './src/audio/audioMath.js',
+  './src/audio/aircraftProfiles.js',
+  './src/audio/aircraftEngineAudio.js',
+  './src/audio/airflowAudio.js',
+  './src/audio/flightWarningLogic.js',
+  './src/audio/proceduralWarningVoice.js',
+  './src/audio/flightWarningAudio.js',
+  './src/audio/boostAudio.js',
+  './src/audio/positionalTrafficAudio.js',
   './src/stereo.js',
   './src/menu.js',
   './src/hud.js',

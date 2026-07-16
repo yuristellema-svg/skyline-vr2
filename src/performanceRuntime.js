@@ -1,4 +1,5 @@
 // SKYLINE_V5_1_PHYSICS_PERFORMANCE
+// SKYLINE_BUNDLE_B_PHONE_PERFORMANCE
 
 const LEVELS = Object.freeze([
   Object.freeze({
@@ -113,9 +114,29 @@ export class PerformanceRuntime {
       optionalWorld?.registry ??
       null;
 
+    const coarsePointer =
+      Boolean(
+        globalThis.matchMedia
+          ?.('(pointer: coarse)')
+          ?.matches
+      ) ||
+      (
+        Number(
+          globalThis.navigator
+            ?.maxTouchPoints
+        ) || 0
+      ) > 0;
+
+    this.coarsePointer =
+      coarsePointer;
+
     this.targetFps =
-      options.targetFps ??
-      60;
+      coarsePointer
+        ? 50
+        : (
+            options.targetFps ??
+            60
+          );
 
     this.maxDrawCalls =
       options.maxDrawCalls ??
@@ -125,7 +146,11 @@ export class PerformanceRuntime {
       options.maxTriangles ??
       1200000;
 
-    this.levelIndex = 0;
+    this.levelIndex =
+      this.coarsePointer
+        ? 2
+        : 0;
+
     this.frameIndex = 0;
 
     this.pressureTime = 0;

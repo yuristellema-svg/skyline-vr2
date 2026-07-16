@@ -6,6 +6,11 @@ import {
   smoothstep,
 } from './config.js';
 
+import {
+  getAircraftFlightProfile,
+  getInitialAircraftFlightProfile,
+} from './aircraftFlightProfiles.js';
+
 const LOCAL_FORWARD =
   new THREE.Vector3(0, 0, -1);
 
@@ -28,6 +33,7 @@ const EPSILON = 1e-8;
 const ALIGNMENT_EPSILON = 1e-4;
 
 // SKYLINE_V5_INTEGRATION
+// SKYLINE_BUNDLE_B_FLIGHT_PROFILES
 const TUNING = Object.freeze({
   maximumSpeed: 50000,
   maximumAcceleration: 30,
@@ -111,6 +117,39 @@ const TUNING = Object.freeze({
 export class FlightModel {
   constructor(config = CONFIG) {
     this.config = config;
+
+    this.aircraftProfile =
+      getInitialAircraftFlightProfile();
+
+    this.aircraftProfileId =
+      this.aircraftProfile.id;
+
+    this.structuralStress = 0;
+    this.structuralWarning = false;
+    this.overspeedRatio = 0;
+    this.blackoutAmount = 0;
+    this.redoutAmount = 0;
+    this._structuralWarningState = false;
+
+    this._onAircraftProfile =
+      event => {
+        const profile =
+          getAircraftFlightProfile(
+            event?.detail?.id,
+          );
+
+        this.aircraftProfile =
+          profile;
+
+        this.aircraftProfileId =
+          profile.id;
+      };
+
+    globalThis.window
+      ?.addEventListener?.(
+        'skyline:aircraft-changed',
+        this._onAircraftProfile,
+      );
 
     this.position =
       new THREE.Vector3();
@@ -255,6 +294,13 @@ export class FlightModel {
     this.gLoad = 1;
     this.viewYaw = 0;
     this.pathTurnRate = 0;
+
+    this.structuralStress = 0;
+    this.structuralWarning = false;
+    this.overspeedRatio = 0;
+    this.blackoutAmount = 0;
+    this.redoutAmount = 0;
+    this._structuralWarningState = false;
 
     this._disableBoost();
 
@@ -408,7 +454,8 @@ export class FlightModel {
     this.dragAcceleration =
       acceleration.straightDrag;
 
-    this.assistanceAcceleration = 0;
+    this.assistanceAcceleration =
+      acceleration.energyBias;
 
     this.turnDragAcceleration =
       acceleration.turnDrag;
@@ -420,7 +467,9 @@ export class FlightModel {
       acceleration.turnDrag +
       acceleration.misalignmentDrag;
 
-    this.overspeedDragAcceleration = 0;
+    this.overspeedDragAcceleration =
+      acceleration.overspeedDrag;
+
     this.boostAcceleration = 0;
 
     this.velocity
@@ -443,6 +492,10 @@ export class FlightModel {
     this._updateGLoad(
       dt,
       physics,
+    );
+
+    this._updateStructuralState(
+      dt,
     );
 
   }
@@ -528,6 +581,9 @@ export class FlightModel {
     controls,
     physics,
   ) {
+    const profile =
+      this.aircraftProfile;
+
     const highSpeedBlend =
       smoothstep(
         this.config.controls
@@ -569,6 +625,7 @@ export class FlightModel {
 
     const angularResponse =
       physics.angularResponse *
+      profile.angularResponseScale *
       THREE.MathUtils.lerp(
         1,
         TUNING.highSpeedAngularResponseScale,
@@ -577,6 +634,7 @@ export class FlightModel {
 
     const angularRelease =
       physics.angularRelease *
+      profile.angularReleaseScale *
       THREE.MathUtils.lerp(
         1,
         TUNING.highSpeedAngularReleaseScale,
@@ -585,12 +643,14 @@ export class FlightModel {
 
     this._targetAngularVelocity.set(
       controls.pitchRate *
-        rateScale,
+        rateScale *
+        profile.pitchRateScale,
 
       0,
 
       -controls.rollRate *
-        rateScale,
+        rateScale *
+        profile.rollRateScale,
     );
 
     this._addRecoveryAngularVelocity();
@@ -788,7 +848,9 @@ export class FlightModel {
         (
           physics.gravity *
           Math.tan(bankAngle) *
-          TUNING.coordinatedTurnStrength
+          TUNING.coordinatedTurnStrength *
+          this.aircraftProfile
+            .coordinatedTurnScale
         ) /
           Math.max(
             this.speed,
@@ -964,6 +1026,8 @@ export class FlightModel {
 
     const liftRate =
       aero.liftRateCoefficient *
+      this.aircraftProfile
+        .liftScale *
       Math.abs(
         this.liftCoefficient,
       ) *
@@ -1026,6 +1090,9 @@ export class FlightModel {
   }
 
   _calculateAcceleration(physics) {
+    const profile =
+      this.aircraftProfile;
+
     const diveFactor =
       smoothstep(
         0,
@@ -1098,7 +1165,8 @@ export class FlightModel {
             clSquared
         ) *
           this.speed *
-          this.speed,
+          this.speed *
+          profile.dragScale,
       );
 
     const turnDrag =
@@ -1114,7 +1182,8 @@ export class FlightModel {
           ),
 
           TUNING.turnDragExponent,
-        ),
+        ) *
+        profile.turnDragScale,
       );
 
     const misalignmentAmount =
@@ -1140,7 +1209,43 @@ export class FlightModel {
         (
           1 -
           this._recoveryAmount()
-        ),
+        ) *
+        profile
+          .misalignmentDragScale,
+      );
+
+    const overspeed =
+      Math.max(
+        0,
+        this.speed -
+          profile.overspeedStart,
+      );
+
+    const overspeedDrag =
+      Math.min(
+        profile.maxOverspeedDrag,
+
+        profile.overspeedDrag *
+          overspeed *
+          overspeed,
+      );
+
+    const energyBias =
+      profile.energyBias *
+      (
+        1 -
+        clamp(
+          this.stallAmount,
+          0,
+          1,
+        )
+      );
+
+    this.overspeedRatio =
+      overspeed /
+      Math.max(
+        1,
+        profile.overspeedStart,
       );
 
     return {
@@ -1148,12 +1253,16 @@ export class FlightModel {
       straightDrag,
       turnDrag,
       misalignmentDrag,
+      overspeedDrag,
+      energyBias,
 
       total:
-        gravity -
+        gravity +
+        energyBias -
         straightDrag -
         turnDrag -
-        misalignmentDrag,
+        misalignmentDrag -
+        overspeedDrag,
     };
   }
 
@@ -1161,8 +1270,13 @@ export class FlightModel {
     return (
       1 -
       smoothstep(
-        TUNING.lowSpeedStallFull,
-        TUNING.lowSpeedStallStart,
+        TUNING.lowSpeedStallFull *
+          this.aircraftProfile
+            .stallSpeedScale,
+
+        TUNING.lowSpeedStallStart *
+          this.aircraftProfile
+            .stallSpeedScale,
         this.speed,
       )
     ) *
@@ -1374,6 +1488,110 @@ export class FlightModel {
         6.7,
         dt,
       );
+  }
+
+  _updateStructuralState(dt) {
+    const profile =
+      this.aircraftProfile;
+
+    const positiveLoad =
+      smoothstep(
+        profile.structuralPositiveG *
+          0.72,
+
+        profile.structuralPositiveG *
+          1.06,
+
+        this.gLoad,
+      );
+
+    const negativeLoad =
+      smoothstep(
+        Math.abs(
+          profile.structuralNegativeG
+        ) *
+          0.70,
+
+        Math.abs(
+          profile.structuralNegativeG
+        ) *
+          1.06,
+
+        Math.abs(
+          Math.min(
+            0,
+            this.gLoad,
+          ),
+        ),
+      );
+
+    const overspeedLoad =
+      smoothstep(
+        0.08,
+        0.52,
+        this.overspeedRatio,
+      );
+
+    const target =
+      Math.max(
+        positiveLoad,
+        negativeLoad,
+        overspeedLoad,
+      );
+
+    this.structuralStress =
+      damp(
+        this.structuralStress,
+        target,
+
+        target >
+          this.structuralStress
+          ? 2.6
+          : 0.55,
+
+        dt,
+      );
+
+    this.structuralWarning =
+      this.structuralStress >
+      0.52;
+
+    if (
+      this.structuralWarning !==
+      this._structuralWarningState
+    ) {
+      this._structuralWarningState =
+        this.structuralWarning;
+
+      const EventType =
+        globalThis.CustomEvent;
+
+      if (
+        typeof EventType ===
+          'function' &&
+        globalThis.window
+          ?.dispatchEvent
+      ) {
+        globalThis.window
+          .dispatchEvent(
+            new EventType(
+              'skyline:structural-warning',
+              {
+                detail: {
+                  active:
+                    this.structuralWarning,
+
+                  stress:
+                    this.structuralStress,
+
+                  profile:
+                    profile.id,
+                },
+              },
+            ),
+          );
+      }
+    }
   }
 
   getForward(target) {

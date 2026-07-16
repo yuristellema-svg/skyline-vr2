@@ -2,8 +2,9 @@ export const DEG = Math.PI / 180;
 
 // SKYLINE_V5_INTEGRATION
 // SKYLINE_V5_1_PHYSICS_PERFORMANCE
+// SKYLINE_BUNDLE_B_CONFIG
 export const CONFIG = Object.freeze({
-  version: 'skyline-integrated-v5',
+  version: 'skyline-bundle-b-world-sim',
 
   physics: Object.freeze({
     fixedStep: 1 / 90,
@@ -157,7 +158,7 @@ export const CONFIG = Object.freeze({
     rollLagResponse: 14,
 
     near: 0.08,
-    far: 6200,
+    far: 7200,
   }),
 
   effects: Object.freeze({
@@ -169,14 +170,14 @@ export const CONFIG = Object.freeze({
 
     boostIntensity: 1,
 
-    gVignetteStart: 4.5,
-    gVignetteFull: 8.5,
+    gVignetteStart: 3.8,
+    gVignetteFull: 7.5,
 
-    maxViewSqueeze: 0,
+    maxViewSqueeze: 0.035,
     maxVrShake: 0.12 * DEG,
     stallBuffetAngle: 18 * DEG,
 
-    negativeGTintStart: -1,
+    negativeGTintStart: -0.8,
     promptDepth: 5000,
   }),
 

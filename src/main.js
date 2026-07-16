@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 // SKYLINE_BUNDLE_A_V2_CORE
+// SKYLINE_BUNDLE_B_WORLD_SIM
 import { CONFIG, clamp } from './config.js';
 import { InputController, requestOrientationPermissionFromGesture } from './input.js';
 import { FlightModel } from './flightModel.js';

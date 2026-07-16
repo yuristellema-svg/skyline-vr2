@@ -16,7 +16,12 @@ function flightSpeed(flight) {
 }
 
 function readLoadFactor(flight) {
-  const candidates = [flight?.loadFactor, flight?.gForce, flight?.currentG];
+  const candidates = [
+    flight?.gLoad,
+    flight?.loadFactor,
+    flight?.gForce,
+    flight?.currentG,
+  ];
   for (const value of candidates) if (Number.isFinite(value)) return value;
   return 1;
 }
@@ -67,6 +72,7 @@ function makeStreakGeometry(count, depth, radius) {
 }
 
 // SKYLINE_V5_INTEGRATION
+// SKYLINE_BUNDLE_B_G_FORCE
 export class EffectsSystem {
   constructor(scene) {
     this.scene = scene;
@@ -76,6 +82,12 @@ export class EffectsSystem {
     this.vignette = 0;
     this.redTint = 0;
     this.viewSqueeze = 0;
+
+    this.positiveGExposure = 0;
+    this.negativeGExposure = 0;
+    this.blackout = 0;
+    this.redout = 0;
+
     this.shakePitch = 0;
     this.shakeYaw = 0;
     this.shakeRoll = 0;
@@ -110,6 +122,12 @@ export class EffectsSystem {
     this.vignette = 0;
     this.redTint = 0;
     this.viewSqueeze = 0;
+
+    this.positiveGExposure = 0;
+    this.negativeGExposure = 0;
+    this.blackout = 0;
+    this.redout = 0;
+
     this.shakePitch = 0;
     this.shakeYaw = 0;
     this.shakeRoll = 0;
@@ -171,6 +189,112 @@ export class EffectsSystem {
     const stall = readStall(flight);
     const boost = readBoost(flight);
 
+    const positiveDose =
+      clamp(
+        (
+          load -
+          3.6
+        ) /
+          5.4,
+        0,
+        1,
+      );
+
+    const negativeDose =
+      clamp(
+        (
+          -load -
+          0.8
+        ) /
+          2.2,
+        0,
+        1,
+      );
+
+    this.positiveGExposure =
+      clamp(
+        this.positiveGExposure +
+          (
+            positiveDose > 0
+              ? positiveDose *
+                safeDt
+              : -0.48 *
+                safeDt
+          ),
+
+        0,
+        2.4,
+      );
+
+    this.negativeGExposure =
+      clamp(
+        this.negativeGExposure +
+          (
+            negativeDose > 0
+              ? negativeDose *
+                safeDt
+              : -0.70 *
+                safeDt
+          ),
+
+        0,
+        1.8,
+      );
+
+    const blackoutTarget =
+      smoothstep(
+        0.34,
+        1.48,
+        this.positiveGExposure,
+      );
+
+    const redoutTarget =
+      smoothstep(
+        0.18,
+        0.92,
+        this.negativeGExposure,
+      );
+
+    this.blackout =
+      damp(
+        this.blackout,
+        blackoutTarget,
+        blackoutTarget >
+          this.blackout
+          ? 3.4
+          : 0.85,
+        safeDt,
+      );
+
+    this.redout =
+      damp(
+        this.redout,
+        redoutTarget,
+        redoutTarget >
+          this.redout
+          ? 4.2
+          : 1.15,
+        safeDt,
+      );
+
+    if (flight) {
+      flight.blackoutAmount =
+        this.blackout;
+
+      flight.redoutAmount =
+        this.redout;
+    }
+
+    const structural =
+      clamp(
+        Number(
+          flight
+            ?.structuralStress,
+        ) || 0,
+        0,
+        1,
+      );
+
     const start = CONFIG.effects?.streakStartSpeed ?? 45;
     const full = Math.max(start + 1, CONFIG.effects?.streakFullSpeed ?? 115);
     const speedAmount = smoothstep(start, full, speed);
@@ -190,20 +314,47 @@ export class EffectsSystem {
 
     this.vignette = damp(
       this.vignette,
-      clamp((positiveG * 0.50 + speedAmount * 0.08 + stall * 0.24) * level.multiplier, 0, 0.72),
+      clamp(
+        (
+          positiveG * 0.42 +
+          speedAmount * 0.05 +
+          stall * 0.20 +
+          this.blackout * 0.96 +
+          structural * 0.10
+        ) *
+          level.multiplier,
+        0,
+        0.97,
+      ),
       7,
       safeDt,
     );
     const stallWarningTint = stall * stall * 0.11;
     this.redTint = damp(
       this.redTint,
-      (negativeG * 0.13 + stallWarningTint) * level.multiplier,
+      (
+        negativeG * 0.12 +
+        this.redout * 0.78 +
+        stallWarningTint
+      ) *
+        level.multiplier,
       6,
       safeDt,
     );
     this.viewSqueeze = damp(
       this.viewSqueeze,
-      positiveG * (CONFIG.effects?.maxViewSqueeze ?? 0.02) * level.multiplier,
+      Math.max(
+        positiveG *
+          (
+            CONFIG.effects
+              ?.maxViewSqueeze ??
+            0.02
+          ),
+
+        this.blackout *
+          0.032
+      ) *
+        level.multiplier,
       8,
       safeDt,
     );

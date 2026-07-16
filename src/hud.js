@@ -15,6 +15,7 @@ function headingOf(flight) {
   return (Math.atan2(velocity.x, -velocity.z) * 180 / Math.PI + 360) % 360;
 }
 
+// SKYLINE_BUNDLE_B_HUD
 export class MonoHud {
   constructor(root) {
     this.root = root;
@@ -67,6 +68,42 @@ export class MonoHud {
     const stall = Math.max(0, Math.min(1, finite(flight?.stallAmount)));
     const path = finite(flight?.pathAngle);
 
+    const structural =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          finite(
+            flight
+              ?.structuralStress,
+          ),
+        ),
+      );
+
+    const blackout =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          finite(
+            flight
+              ?.blackoutAmount,
+          ),
+        ),
+      );
+
+    const redout =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          finite(
+            flight
+              ?.redoutAmount,
+          ),
+        ),
+      );
+
     this.nodes.speed.textContent = String(Math.round(speed * KMH)).padStart(3, '0');
     this.nodes.altitude.textContent = String(Math.max(0, Math.round(finite(flight?.position?.y)))).padStart(4, '0');
     this.nodes.heading.textContent = String(Math.round(headingOf(flight)) % 360).padStart(3, '0');
@@ -76,13 +113,57 @@ export class MonoHud {
     this.nodes.aircraft.textContent = this.aircraftName;
 
     let state = 'CRUISE';
-    if (stall > 0.65) state = 'STALL · NOSE DOWN';
-    else if (stall > 0.22) state = 'BUFFET';
-    else if (path < -0.22) state = 'DIVE';
-    else if (path > 0.18) state = 'CLIMB';
-    else if (speed < 18) state = 'RECOVERY';
-    this.nodes.state.textContent = state;
-    this.nodes.state.dataset.warning = stall > 0.22 ? 'true' : 'false';
+
+    if (
+      structural > 0.72
+    ) {
+      state =
+        'STRUCTURAL LOAD';
+    } else if (
+      blackout > 0.48
+    ) {
+      state =
+        'G-LOC WARNING';
+    } else if (
+      redout > 0.40
+    ) {
+      state =
+        'NEGATIVE G';
+    } else if (
+      stall > 0.65
+    ) {
+      state =
+        'STALL · NOSE DOWN';
+    } else if (
+      stall > 0.22
+    ) {
+      state = 'BUFFET';
+    } else if (
+      path < -0.22
+    ) {
+      state = 'DIVE';
+    } else if (
+      path > 0.18
+    ) {
+      state = 'CLIMB';
+    } else if (
+      speed < 18
+    ) {
+      state = 'RECOVERY';
+    }
+
+    this.nodes.state.textContent =
+      state;
+
+    this.nodes.state.dataset.warning =
+      (
+        structural > 0.46 ||
+        blackout > 0.28 ||
+        redout > 0.26 ||
+        stall > 0.22
+      )
+        ? 'true'
+        : 'false';
     this.nodes.boost.textContent = now < this.boostUntil ? this.boostText : '';
   }
 
