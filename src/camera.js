@@ -5,6 +5,9 @@ import {
   damp,
   smoothstep,
 } from './config.js';
+import { PHONE_CONTROL_CONFIG } from './workerNav/phoneControlCurve.js';
+import { nextViewMode } from './workerNav/phoneViewModes.js';
+// SKYLINE_WORKER_NAV_V1_CAMERA
 
 const LOCAL_FORWARD =
   new THREE.Vector3(
@@ -412,15 +415,13 @@ export class CameraRig {
     return mesh;
   }
 
-  toggle() {
-    this.mode =
-      this.mode === 'first'
-        ? 'cockpit'
-        : this.mode === 'cockpit'
-          ? 'third'
-          : 'first';
-
-    this._syncVisibility();
+  toggle(phoneMode = false) {
+    this.setMode(
+      nextViewMode(
+        this.mode,
+        { phone: Boolean(phoneMode) },
+      ),
+    );
     return this.mode;
   }
 
@@ -677,11 +678,13 @@ export class CameraRig {
               ? renderPose.viewYaw
               : 0,
 
-            -this.config.controls
-              .headLookMaxYaw,
+            -(stereoEnabled
+              ? PHONE_CONTROL_CONFIG.headLookMaxYaw
+              : this.config.controls.headLookMaxYaw),
 
-            this.config.controls
-              .headLookMaxYaw,
+            stereoEnabled
+              ? PHONE_CONTROL_CONFIG.headLookMaxYaw
+              : this.config.controls.headLookMaxYaw,
           ),
         );
 

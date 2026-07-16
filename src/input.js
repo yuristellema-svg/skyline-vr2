@@ -6,6 +6,11 @@ import {
   rateFromDeflection,
   wrapPi,
 } from './config.js';
+import {
+  PHONE_CONTROL_CONFIG,
+  shapePhoneAxis,
+} from './workerNav/phoneControlCurve.js';
+// SKYLINE_WORKER_NAV_V1_INPUT
 
 const SAMPLE_CAPACITY = 48;
 
@@ -531,16 +536,12 @@ export class InputController {
         ]
         .multiplier;
 
-    // SKYLINE_PHONE_CONTROL_SCALE_RUNTIME
-    // This must be calculated here because the input mode can change
-    // after construction and this function runs every flight frame.
-    const phoneControlScale =
-      this.mode === 'phone'
-        ? 0.84
-        : 1;
-
     let pitchDeflection;
     let rollDeflection;
+    const phoneMode = this.mode === 'phone';
+    const headLookMaxYaw = phoneMode
+      ? PHONE_CONTROL_CONFIG.headLookMaxYaw
+      : controlsConfig.headLookMaxYaw;
 
     if (
       this.mode ===
@@ -566,11 +567,9 @@ export class InputController {
                 this.baselineHeading,
               ),
 
-              -controlsConfig
-                .headLookMaxYaw,
+              -headLookMaxYaw,
 
-              controlsConfig
-                .headLookMaxYaw,
+              headLookMaxYaw,
             )
           : 0;
     } else {
@@ -591,39 +590,41 @@ export class InputController {
       this._targetViewYaw = 0;
     }
 
-    let pitchRate =
-      rateFromDeflection(
-        pitchDeflection,
+    let pitchRate = phoneMode
+      ? shapePhoneAxis(
+          pitchDeflection,
+          {
+            deadzone: PHONE_CONTROL_CONFIG.pitchDeadzone,
+            fullDeflection: PHONE_CONTROL_CONFIG.pitchFullDeflection,
+            maxRate: PHONE_CONTROL_CONFIG.pitchMaxRate,
+            exponent: PHONE_CONTROL_CONFIG.responseExponent,
+          },
+        )
+      : rateFromDeflection(
+          pitchDeflection,
+          controlsConfig.pitchDeadzone,
+          controlsConfig.pitchFullDeflection,
+          controlsConfig.pitchMaxRate,
+          controlsConfig.responseExponent,
+        );
 
-        controlsConfig
-          .pitchDeadzone,
-
-        controlsConfig
-          .pitchFullDeflection,
-
-        controlsConfig
-          .pitchMaxRate,
-
-        controlsConfig
-          .responseExponent,
-      );
-
-    let rollRate =
-      rateFromDeflection(
-        rollDeflection,
-
-        controlsConfig
-          .rollDeadzone,
-
-        controlsConfig
-          .rollFullDeflection,
-
-        controlsConfig
-          .rollMaxRate,
-
-        controlsConfig
-          .responseExponent,
-      );
+    let rollRate = phoneMode
+      ? shapePhoneAxis(
+          rollDeflection,
+          {
+            deadzone: PHONE_CONTROL_CONFIG.rollDeadzone,
+            fullDeflection: PHONE_CONTROL_CONFIG.rollFullDeflection,
+            maxRate: PHONE_CONTROL_CONFIG.rollMaxRate,
+            exponent: PHONE_CONTROL_CONFIG.responseExponent,
+          },
+        )
+      : rateFromDeflection(
+          rollDeflection,
+          controlsConfig.rollDeadzone,
+          controlsConfig.rollFullDeflection,
+          controlsConfig.rollMaxRate,
+          controlsConfig.responseExponent,
+        );
 
     if (
       this.keyPitch !==
@@ -647,20 +648,19 @@ export class InputController {
 
     this._targetPitchRate =
       pitchRate *
-      sensitivity *
-      phoneControlScale;
+      sensitivity;
 
     this._targetRollRate =
       rollRate *
-      sensitivity *
-      phoneControlScale;
+      sensitivity;
 
     const controlTau =
       Math.max(
         1e-4,
 
-        controlsConfig
-          .inputSlewSeconds,
+        phoneMode
+          ? PHONE_CONTROL_CONFIG.inputSlewSeconds
+          : controlsConfig.inputSlewSeconds,
       );
 
     const controlBlend =
@@ -694,8 +694,9 @@ export class InputController {
           0,
           dt,
         ) *
-          controlsConfig
-            .headLookResponse,
+          phoneMode
+            ? PHONE_CONTROL_CONFIG.headLookResponse
+            : controlsConfig.headLookResponse,
       );
 
     this.controls.viewYaw +=
