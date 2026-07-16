@@ -1,35 +1,86 @@
 import {
   DEG,
-  PHONE_CRASH_MENU_IDS,
-  PHONE_MENU_IDS,
   clamp,
   wrapPi,
 } from './navContracts.js';
 
-const PHONE_YAWS = Object.freeze([-48, -32, -16, 0, 16, 32, 48]);
-const CRASH_YAWS = Object.freeze([-20, 0, 20]);
+const PHONE_FLIGHT_LAYOUT = Object.freeze([
+  { id: 'resume', yaw: -36, pitch: 10 },
+  { id: 'recenter', yaw: -12, pitch: 10 },
+  { id: 'camera', yaw: 12, pitch: 10 },
+  { id: 'aircraft', yaw: 36, pitch: 10 },
+
+  { id: 'effects', yaw: -24, pitch: -10 },
+  { id: 'respawn', yaw: 0, pitch: -10 },
+  { id: 'restart', yaw: 24, pitch: -10 },
+]);
+
+const PHONE_CRASH_LAYOUT = Object.freeze([
+  { id: 'respawn', yaw: -24, pitch: 0 },
+  { id: 'aircraft', yaw: 0, pitch: 0 },
+  { id: 'restart', yaw: 24, pitch: 0 },
+]);
 
 export const PHONE_MENU_CONFIG = Object.freeze({
-  depth: 1.28,
-  panelScale: 0.88,
-  enterHalfAngle: 4.8 * DEG,
-  exitHalfAngle: 6.5 * DEG,
-  pitchHalfAngle: 7.0 * DEG,
-  dwellSeconds: 1.25,
-  destructiveDwellSeconds: 1.7,
-  activationLockoutSeconds: 0.75,
+  depth: 0.9,
+
+  panelWidth: 0.4,
+  panelHeight: 0.25,
+  panelScale: 1.1,
+
+  enterHalfAngle: 9 * DEG,
+  exitHalfAngle: 11 * DEG,
+
+  enterPitchHalfAngle: 7 * DEG,
+  exitPitchHalfAngle: 9 * DEG,
+
+  pitchHalfAngle: 14 * DEG,
+
+  dwellSeconds: 1.05,
+  destructiveDwellSeconds: 1.55,
+  activationLockoutSeconds: 0.55,
 });
 
 function labelFor(id, state) {
   const labels = {
-    resume: ['RESUME', 'BACK TO FLIGHT'],
-    recenter: ['RECENTER', 'RESET NEUTRAL'],
-    camera: ['VIEW', state.cameraName || 'COCKPIT'],
-    aircraft: ['AIRCRAFT', state.aircraftName || 'A6M ZERO'],
-    effects: ['EFFECTS', state.effectsName || 'STANDARD'],
-    respawn: ['RETURN', state.crashMode ? 'RE-ENTER FLIGHT' : 'START POSITION'],
-    restart: ['REBUILD', 'RELOAD WORLD'],
+    resume: [
+      'RESUME',
+      'BACK TO FLIGHT',
+    ],
+
+    recenter: [
+      'RECENTER',
+      'RESET HEAD CENTRE',
+    ],
+
+    camera: [
+      'VIEW',
+      state.cameraName || 'COCKPIT',
+    ],
+
+    aircraft: [
+      'AIRCRAFT',
+      state.aircraftName || 'A6M ZERO',
+    ],
+
+    effects: [
+      'EFFECTS',
+      state.effectsName || 'STANDARD',
+    ],
+
+    respawn: [
+      'RETURN',
+      state.crashMode
+        ? 'RE-ENTER FLIGHT'
+        : 'START POSITION',
+    ],
+
+    restart: [
+      'REBUILD',
+      'RELOAD WORLD',
+    ],
   };
+
   return labels[id];
 }
 
@@ -39,22 +90,26 @@ export function buildPhoneMenuDefinitions({
   aircraftName = 'A6M ZERO',
   effectsName = 'STANDARD',
 } = {}) {
-  const ids = crashMode ? PHONE_CRASH_MENU_IDS : PHONE_MENU_IDS;
-  const yaws = crashMode ? CRASH_YAWS : PHONE_YAWS;
-  return ids.map((id, index) => {
-    const [title, subtitle] = labelFor(id, {
-      crashMode,
-      cameraName,
-      aircraftName,
-      effectsName,
-    });
+  const layout =
+    crashMode
+      ? PHONE_CRASH_LAYOUT
+      : PHONE_FLIGHT_LAYOUT;
+
+  return layout.map(item => {
+    const [title, subtitle] =
+      labelFor(item.id, {
+        crashMode,
+        cameraName,
+        aircraftName,
+        effectsName,
+      });
+
     return {
-      id,
+      ...item,
       title,
       subtitle,
-      yaw: yaws[index],
-      pitch: 0,
-      danger: id === 'restart',
+      danger:
+        item.id === 'restart',
     };
   });
 }
@@ -67,19 +122,82 @@ export function buildDesktopMenuDefinitions({
 } = {}) {
   if (crashMode) {
     return [
-      { id: 'respawn', title: 'RETURN', subtitle: 'RE-ENTER FLIGHT', yaw: -13, pitch: 3 },
-      { id: 'aircraft', title: 'AIRCRAFT', subtitle: aircraftName, yaw: 0, pitch: 3 },
-      { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 13, pitch: 3, danger: true },
+      {
+        id: 'respawn',
+        title: 'RETURN',
+        subtitle: 'RE-ENTER FLIGHT',
+        yaw: -13,
+        pitch: 3,
+      },
+      {
+        id: 'aircraft',
+        title: 'AIRCRAFT',
+        subtitle: aircraftName,
+        yaw: 0,
+        pitch: 3,
+      },
+      {
+        id: 'restart',
+        title: 'REBUILD',
+        subtitle: 'RELOAD WORLD',
+        yaw: 13,
+        pitch: 3,
+        danger: true,
+      },
     ];
   }
+
   return [
-    { id: 'resume', title: 'RESUME', subtitle: 'BACK TO FLIGHT', yaw: -27, pitch: 8 },
-    { id: 'recenter', title: 'RECENTER', subtitle: 'RESET NEUTRAL', yaw: -9, pitch: 8 },
-    { id: 'camera', title: 'VIEW', subtitle: cameraName, yaw: 9, pitch: 8 },
-    { id: 'aircraft', title: 'AIRCRAFT', subtitle: aircraftName, yaw: 27, pitch: 8 },
-    { id: 'effects', title: 'EFFECTS', subtitle: effectsName, yaw: -18, pitch: -9 },
-    { id: 'respawn', title: 'RETURN', subtitle: 'START POSITION', yaw: 0, pitch: -9 },
-    { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 18, pitch: -9, danger: true },
+    {
+      id: 'resume',
+      title: 'RESUME',
+      subtitle: 'BACK TO FLIGHT',
+      yaw: -27,
+      pitch: 8,
+    },
+    {
+      id: 'recenter',
+      title: 'RECENTER',
+      subtitle: 'RESET NEUTRAL',
+      yaw: -9,
+      pitch: 8,
+    },
+    {
+      id: 'camera',
+      title: 'VIEW',
+      subtitle: cameraName,
+      yaw: 9,
+      pitch: 8,
+    },
+    {
+      id: 'aircraft',
+      title: 'AIRCRAFT',
+      subtitle: aircraftName,
+      yaw: 27,
+      pitch: 8,
+    },
+    {
+      id: 'effects',
+      title: 'EFFECTS',
+      subtitle: effectsName,
+      yaw: -18,
+      pitch: -9,
+    },
+    {
+      id: 'respawn',
+      title: 'RETURN',
+      subtitle: 'START POSITION',
+      yaw: 0,
+      pitch: -9,
+    },
+    {
+      id: 'restart',
+      title: 'REBUILD',
+      subtitle: 'RELOAD WORLD',
+      yaw: 18,
+      pitch: -9,
+      danger: true,
+    },
   ];
 }
 
@@ -90,39 +208,61 @@ export function selectPhonePanel(
   currentId = null,
   config = PHONE_MENU_CONFIG,
 ) {
-  const verticalDistance =
-    Math.abs(Number(pitch) || 0);
+  const safeYaw =
+    Number(yaw) || 0;
 
-  if (
-    verticalDistance >
-    config.pitchHalfAngle
-  ) {
-    return null;
-  }
+  const safePitch =
+    Number(pitch) || 0;
 
   let best = null;
-  let bestDistance = Infinity;
+  let bestScore = Infinity;
 
   for (const definition of definitions) {
-    const limit =
-      definition.id === currentId
+    const continuing =
+      definition.id === currentId;
+
+    const yawLimit =
+      continuing
         ? config.exitHalfAngle
         : config.enterHalfAngle;
 
-    const distance =
+    const pitchLimit =
+      continuing
+        ? config.exitPitchHalfAngle
+        : config.enterPitchHalfAngle;
+
+    const yawDistance =
       Math.abs(
         wrapPi(
-          (Number(yaw) || 0) -
+          safeYaw -
           definition.yaw * DEG
         )
       );
 
+    const pitchDistance =
+      Math.abs(
+        wrapPi(
+          safePitch -
+          definition.pitch * DEG
+        )
+      );
+
+    const score =
+      Math.pow(
+        yawDistance / yawLimit,
+        2
+      ) +
+      Math.pow(
+        pitchDistance / pitchLimit,
+        2
+      );
+
     if (
-      distance <= limit &&
-      distance < bestDistance
+      score <= 1 &&
+      score < bestScore
     ) {
       best = definition;
-      bestDistance = distance;
+      bestScore = score;
     }
   }
 
@@ -141,7 +281,12 @@ export function createPhoneMenuDwellState() {
 
 export function updatePhoneMenuDwell(
   previous,
-  { definitions, yaw = 0, pitch = 0, dt = 0 },
+  {
+    definitions,
+    yaw = 0,
+    pitch = 0,
+    dt = 0,
+  },
   config = PHONE_MENU_CONFIG,
 ) {
   const state = {
@@ -149,44 +294,71 @@ export function updatePhoneMenuDwell(
     ...(previous || {}),
     activatedId: null,
   };
-  const safeDt = clamp(Number(dt) || 0, 0, 0.1);
-  state.lockout = Math.max(0, state.lockout - safeDt);
 
-  const candidate = selectPhonePanel(
-    definitions,
-    yaw,
-    pitch,
-    state.hoveredId,
-    config,
-  );
-  const candidateId = candidate?.id || null;
+  const safeDt =
+    clamp(
+      Number(dt) || 0,
+      0,
+      0.1
+    );
 
-  if (candidateId !== state.hoveredId) {
-    state.hoveredId = candidateId;
+  state.lockout =
+    Math.max(
+      0,
+      state.lockout - safeDt
+    );
+
+  const candidate =
+    selectPhonePanel(
+      definitions,
+      yaw,
+      pitch,
+      state.hoveredId,
+      config
+    );
+
+  const candidateId =
+    candidate?.id || null;
+
+  if (
+    candidateId !==
+    state.hoveredId
+  ) {
+    state.hoveredId =
+      candidateId;
+
     state.progress = 0;
   }
 
-  if (!candidate) {
-    state.requireExit = false;
+  if (
+    !candidate ||
+    state.lockout > 0
+  ) {
     state.progress = 0;
     return state;
   }
 
-  if (state.requireExit || state.lockout > 0) {
-    state.progress = 0;
-    return state;
-  }
+  const dwellSeconds =
+    candidate.danger
+      ? config.destructiveDwellSeconds
+      : config.dwellSeconds;
 
-  const dwellSeconds = candidate.danger
-    ? config.destructiveDwellSeconds
-    : config.dwellSeconds;
-  state.progress = clamp(state.progress + safeDt / dwellSeconds, 0, 1);
+  state.progress =
+    clamp(
+      state.progress +
+        safeDt / dwellSeconds,
+      0,
+      1
+    );
 
   if (state.progress >= 1) {
-    state.activatedId = candidate.id;
+    state.activatedId =
+      candidate.id;
+
     state.progress = 0;
-    state.lockout = config.activationLockoutSeconds;
-    state.requireExit = true;
+
+    state.lockout =
+      config.activationLockoutSeconds;
   }
 
   return state;
