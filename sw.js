@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-bundle-b-polish-1-20260716';
+const SHELL_CACHE = 'skyline-menu-beacon-v1-20260716';
 
 const SHELL_FILES = [
   './',
@@ -50,6 +50,7 @@ const SHELL_FILES = [
   './src/audio/boostAudio.js',
   './src/audio/positionalTrafficAudio.js',
   './src/stereo.js',
+  './src/vrMenuBeacon.js',
   './src/menu.js',
   './src/hud.js',
   './src/world/world.js',

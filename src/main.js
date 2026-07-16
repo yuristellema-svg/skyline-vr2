@@ -9,6 +9,7 @@ import { CameraRig } from './camera.js';
 import { EffectsSystem } from './effects.js';
 import { StereoRenderer } from './stereo.js';
 import { GazeMenu } from './menu.js';
+import { VrMenuBeacon } from './vrMenuBeacon.js';
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
@@ -52,6 +53,11 @@ const cameraRig = new CameraRig(
 const effects = new EffectsSystem(scene);
 const hud = new MonoHud(hudRoot);
 
+const vrMenuBeacon =
+  new VrMenuBeacon(
+    stereo.uiScene,
+  );
+
 const aircraftVisuals = new AircraftVisualSystem(scene);
 aircraftVisuals.attach(stereo.camera);
 
@@ -90,18 +96,7 @@ let renderOriginZ = 0;
 let lastWorldError = '';
 let initialWorldPromise = null;
 
-// SKYLINE_B_POLISH_LEFT_MENU
-let leftMenuHold = 0;
-let leftMenuArmed = true;
-
-const leftMenuForward =
-  new THREE.Vector3();
-
-const leftMenuDirection =
-  new THREE.Vector3();
-
-const leftMenuUp =
-  new THREE.Vector3();
+// SKYLINE_VR_MENU_BEACON_WIRING
 
 const menu = new GazeMenu(
   stereo.uiScene,
@@ -1005,74 +1000,27 @@ function updateInputAndState(
 
 
 function updateLeftGazeMenu(dt) {
-  if (
-    !phoneMode ||
-    phase !== 'flying' ||
-    menu.isOpen
-  ) {
-    leftMenuHold = 0;
-    return;
-  }
+  const triggered =
+    vrMenuBeacon.update(
+      dt,
+      {
+        active:
+          phoneMode &&
+          phase === 'flying' &&
+          !menu.isOpen,
 
-  leftMenuForward
-    .set(0, 0, -1)
-    .applyQuaternion(
-      stereo.camera.quaternion
-    )
-    .normalize();
+        camera:
+          stereo.camera,
 
-  leftMenuDirection
-    .set(-1, 0, 0)
-    .applyQuaternion(
-      cameraRig.baseQuaternion
-    )
-    .normalize();
+        basePosition:
+          cameraRig.basePosition,
 
-  leftMenuUp
-    .set(0, 1, 0)
-    .applyQuaternion(
-      cameraRig.baseQuaternion
-    )
-    .normalize();
-
-  const leftAmount =
-    leftMenuForward.dot(
-      leftMenuDirection
+        baseQuaternion:
+          cameraRig.baseQuaternion,
+      },
     );
 
-  const verticalAmount =
-    Math.abs(
-      leftMenuForward.dot(
-        leftMenuUp
-      )
-    );
-
-  if (leftAmount < 0.34) {
-    leftMenuArmed = true;
-  }
-
-  const insideTarget =
-    leftAmount > 0.78 &&
-    verticalAmount < 0.64;
-
-  if (
-    !leftMenuArmed ||
-    !insideTarget
-  ) {
-    leftMenuHold =
-      Math.max(
-        0,
-        leftMenuHold - dt * 2.5
-      );
-
-    return;
-  }
-
-  leftMenuHold += dt;
-
-  if (leftMenuHold >= 1.15) {
-    leftMenuHold = 0;
-    leftMenuArmed = false;
+  if (triggered) {
     openMenu(false);
   }
 }
