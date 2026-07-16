@@ -78,7 +78,7 @@ function panelTexture(title, subtitle, selected = false, danger = false, progres
   return texture;
 }
 
-function makePanel(definition, depth) {
+function makePanel(definition, depth, phoneMode = false) {
   const material = new THREE.MeshBasicMaterial({
     map: panelTexture(definition.title, definition.subtitle, false, definition.danger, 0),
     transparent: true,
@@ -87,7 +87,14 @@ function makePanel(definition, depth) {
     side: THREE.DoubleSide,
   });
   const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT),
+    new THREE.PlaneGeometry(
+      phoneMode
+        ? PHONE_MENU_CONFIG.panelWidth
+        : PANEL_WIDTH,
+      phoneMode
+        ? PHONE_MENU_CONFIG.panelHeight
+        : PANEL_HEIGHT,
+    ),
     material,
   );
   panel.renderOrder = 110;
@@ -135,6 +142,7 @@ export class GazeMenu {
     this._pointerMovedSinceOpen = false;
     this._hoverStartedAt = 0;
     this._requirePhoneExit = false;
+    this._blockedPhoneId = null;
 
     this._onPointerMove = event => {
       if (!this.isOpen || this.input?.mode === 'phone') return;
@@ -216,7 +224,12 @@ export class GazeMenu {
       ? PHONE_MENU_CONFIG.depth
       : (CONFIG.menu?.depth || 2.5);
     for (const definition of this._definitions()) {
-      const panel = makePanel(definition, depth);
+      const panel =
+        makePanel(
+          definition,
+          depth,
+          phoneMode
+        );
       if (phoneMode) {
         panel.scale.set(
           PHONE_MENU_CONFIG.panelScale,
@@ -242,7 +255,17 @@ export class GazeMenu {
     this.root.visible = false;
     this._clearPanels();
 
-    this.root.scale.set(1.18, 1.18, 1.18);
+    const phoneMode =
+      this.input?.mode === 'phone';
+
+    const rootScale =
+      phoneMode ? 1 : 1.18;
+
+    this.root.scale.set(
+      rootScale,
+      rootScale,
+      rootScale
+    );
     this.root.position.set(0, 0, 0);
     this.root.rotation.set(0, 0, 0);
     this.root.quaternion.identity();
@@ -257,7 +280,14 @@ export class GazeMenu {
     this._hasSmoothedLook = false;
     this._pointerMovedSinceOpen = false;
     this._hoverStartedAt = 0;
+
+    /*
+     * There is deliberately no panel at gaze centre.
+     * The player must look clearly at one of the cards.
+     */
     this._requirePhoneExit = false;
+    this._blockedPhoneId = null;
+
     document.body.classList.add('menu-open');
     this.input?.beginMenuLook?.();
     this._buildPanels();
@@ -314,7 +344,19 @@ export class GazeMenu {
     this.activationLockout = 0.65;
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
-    if (this.input?.mode === 'phone') this._requirePhoneExit = true;
+    if (
+      this.input?.mode === 'phone' &&
+      this.isOpen
+    ) {
+      /*
+       * Block only the option that was just activated.
+       * Looking directly at another option immediately
+       * re-enables selection.
+       */
+      this._requirePhoneExit = true;
+      this._blockedPhoneId = id;
+    }
+
     return result;
   }
 
@@ -361,7 +403,6 @@ export class GazeMenu {
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
     this._hoverStartedAt = performance.now();
-    if (!candidate) this._requirePhoneExit = false;
   }
 
   _updateDesktopCandidate() {
@@ -396,8 +437,33 @@ export class GazeMenu {
         this._smoothedPitch += (rawPitch - this._smoothedPitch) * blend;
       }
 
-      const candidate = this._candidateAt(this._smoothedYaw, this._smoothedPitch, true);
-      this._setCandidate(candidate);
+      const candidate =
+        this._candidateAt(
+          this._smoothedYaw,
+          this._smoothedPitch,
+          true
+        );
+
+      if (this._requirePhoneExit) {
+        const candidateId =
+          candidate?.userData
+            ?.definition?.id ||
+          null;
+
+        if (
+          !candidate ||
+          candidateId !==
+            this._blockedPhoneId
+        ) {
+          this._requirePhoneExit = false;
+          this._blockedPhoneId = null;
+          this._setCandidate(candidate);
+        } else {
+          this._setCandidate(null);
+        }
+      } else {
+        this._setCandidate(candidate);
+      }
 
       const dwellSeconds = this.hoveredPanel?.userData.definition.danger
         ? PHONE_MENU_CONFIG.destructiveDwellSeconds

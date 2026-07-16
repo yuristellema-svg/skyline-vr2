@@ -687,16 +687,16 @@ export class InputController {
       ) *
       controlBlend;
 
+    const lookResponse =
+      phoneMode
+        ? PHONE_CONTROL_CONFIG.headLookResponse
+        : controlsConfig.headLookResponse;
+
     const lookBlend =
       1 -
       Math.exp(
-        -Math.max(
-          0,
-          dt,
-        ) *
-          phoneMode
-            ? PHONE_CONTROL_CONFIG.headLookResponse
-            : controlsConfig.headLookResponse,
+        -Math.max(0, dt) *
+          lookResponse
       );
 
     this.controls.viewYaw +=
