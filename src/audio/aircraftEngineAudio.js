@@ -15,6 +15,7 @@ import {
   resolveAircraftAudioProfile,
 } from './aircraftProfiles.js';
 
+// SKYLINE_RECOVERED_STUKA_SIREN
 export function computeStukaSirenTarget(profileValue, flight, phase = 'flying') {
   const profile = resolveAircraftAudioProfile(profileValue);
   if (phase !== 'flying' || profile.id !== 'stuka' || !profile.sirenAllowed) return 0;
@@ -23,9 +24,27 @@ export function computeStukaSirenTarget(profileValue, flight, phase = 'flying') 
   const pathAngle = pathAngleOf(flight);
   const descentRate = Math.max(0, -verticalSpeedOf(flight));
 
-  const speedGate = smoothstep(78, 124, speed);
-  const angleGate = smoothstep(0.34, 0.70, Math.max(0, -pathAngle));
-  const descentGate = smoothstep(15, 58, descentRate);
+  const speedGate =
+    smoothstep(
+      70,
+      112,
+      speed,
+    );
+  const angleGate =
+    smoothstep(
+      0.28,
+      0.62,
+      Math.max(
+        0,
+        -pathAngle,
+      ),
+    );
+  const descentGate =
+    smoothstep(
+      12,
+      50,
+      descentRate,
+    );
 
   return clamp(speedGate * angleGate * descentGate);
 }
@@ -252,7 +271,7 @@ export class AircraftEngineAudio {
     safeSetTarget(this.sirenVoices[0].frequency, sirenFrequency, now, 0.14);
     safeSetTarget(this.sirenVoices[1].frequency, sirenFrequency * 1.021, now, 0.14);
     safeSetTarget(this.sirenFilter.frequency, 720 + targets.sirenTarget * 260, now, 0.12);
-    safeSetTarget(this.sirenBus.gain, targets.sirenTarget * 0.205 + 0.0001, now, targets.sirenTarget > 0 ? 0.22 : 0.34);
+    safeSetTarget(this.sirenBus.gain, targets.sirenTarget * 0.255 + 0.0001, now, targets.sirenTarget > 0 ? 0.22 : 0.34);
     safeSetTarget(this.sirenModDepth.gain, targets.sirenTarget * 0.064, now, 0.16);
   }
 

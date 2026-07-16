@@ -1,25 +1,26 @@
 import * as THREE from '../vendor/three.module.min.js';
 
-const DWELL_SECONDS = 1.25;
+const DWELL_SECONDS = 1.10;
 const TARGET_ALIGNMENT =
   Math.cos(
-    THREE.MathUtils.degToRad(5.5),
+    THREE.MathUtils.degToRad(8),
   );
 
 const RESET_ALIGNMENT =
   Math.cos(
-    THREE.MathUtils.degToRad(11),
+    THREE.MathUtils.degToRad(14),
   );
 
 // About 60 degrees left of the normal forward view.
 const LOCAL_POSITION =
   new THREE.Vector3(
-    -1.42,
-    -0.10,
-    -0.82,
+    -0.92,
+    0,
+    -1.48,
   );
 
 // SKYLINE_VR_MENU_BEACON_V1
+// SKYLINE_RECOVERED_REACHABLE_BEACON
 export class VrMenuBeacon {
   constructor(scene) {
     this.scene = scene;
@@ -80,8 +81,8 @@ export class VrMenuBeacon {
       'vr-menu-beacon';
 
     this.sprite.scale.set(
-      0.34,
-      0.34,
+      0.42,
+      0.42,
       1,
     );
 

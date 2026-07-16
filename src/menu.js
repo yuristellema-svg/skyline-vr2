@@ -3,6 +3,7 @@ import { CONFIG, clamp } from './config.js';
 
 const DEG = Math.PI / 180;
 // SKYLINE_B_POLISH_LARGE_MENU
+// SKYLINE_RECOVERED_HORIZONTAL_PHONE_MENU
 // SKYLINE_BUNDLE_A_V2_MENU
 const PANEL_WIDTH = 0.78;
 const PANEL_HEIGHT = 0.35;
@@ -181,22 +182,169 @@ export class GazeMenu {
   }
 
   _definitions() {
+    const phoneMode =
+      this.input?.mode === 'phone';
+
     if (this.crashMode) {
+      if (phoneMode) {
+        return [
+          {
+            id: 'respawn',
+            title: 'RETURN',
+            subtitle: 'RE-ENTER FLIGHT',
+            yaw: -22,
+            pitch: 0,
+          },
+          {
+            id: 'aircraft',
+            title: 'AIRCRAFT',
+            subtitle: this.aircraftName,
+            yaw: 0,
+            pitch: 0,
+          },
+          {
+            id: 'restart',
+            title: 'REBUILD',
+            subtitle: 'RELOAD WORLD',
+            yaw: 22,
+            pitch: 0,
+            danger: true,
+          },
+        ];
+      }
+
       return [
-        { id: 'respawn', title: 'RETURN', subtitle: 'RE-ENTER FLIGHT', yaw: -13, pitch: 3 },
-        { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 0, pitch: 3 },
-        { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 13, pitch: 3, danger: true },
+        {
+          id: 'respawn',
+          title: 'RETURN',
+          subtitle: 'RE-ENTER FLIGHT',
+          yaw: -13,
+          pitch: 3,
+        },
+        {
+          id: 'aircraft',
+          title: 'AIRCRAFT',
+          subtitle: this.aircraftName,
+          yaw: 0,
+          pitch: 3,
+        },
+        {
+          id: 'restart',
+          title: 'REBUILD',
+          subtitle: 'RELOAD WORLD',
+          yaw: 13,
+          pitch: 3,
+          danger: true,
+        },
+      ];
+    }
+
+    if (phoneMode) {
+      return [
+        {
+          id: 'resume',
+          title: 'RESUME',
+          subtitle: 'BACK TO FLIGHT',
+          yaw: -54,
+          pitch: 0,
+        },
+        {
+          id: 'recenter',
+          title: 'RECENTER',
+          subtitle: 'RESET NEUTRAL',
+          yaw: -36,
+          pitch: 0,
+        },
+        {
+          id: 'camera',
+          title: 'VIEW',
+          subtitle: this.cameraName,
+          yaw: -18,
+          pitch: 0,
+        },
+        {
+          id: 'aircraft',
+          title: 'AIRCRAFT',
+          subtitle: this.aircraftName,
+          yaw: 0,
+          pitch: 0,
+        },
+        {
+          id: 'effects',
+          title: 'EFFECTS',
+          subtitle: this.effectsName,
+          yaw: 18,
+          pitch: 0,
+        },
+        {
+          id: 'respawn',
+          title: 'RETURN',
+          subtitle: 'START POSITION',
+          yaw: 36,
+          pitch: 0,
+        },
+        {
+          id: 'restart',
+          title: 'REBUILD',
+          subtitle: 'RELOAD WORLD',
+          yaw: 54,
+          pitch: 0,
+          danger: true,
+        },
       ];
     }
 
     return [
-      { id: 'resume', title: 'RESUME', subtitle: 'BACK TO FLIGHT', yaw: -27, pitch: 8 },
-      { id: 'recenter', title: 'RECENTER', subtitle: 'RESET NEUTRAL', yaw: -9, pitch: 8 },
-      { id: 'camera', title: 'VIEW', subtitle: this.cameraName, yaw: 9, pitch: 8 },
-      { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 27, pitch: 8 },
-      { id: 'effects', title: 'EFFECTS', subtitle: this.effectsName, yaw: -18, pitch: -9 },
-      { id: 'respawn', title: 'RETURN', subtitle: 'START POSITION', yaw: 0, pitch: -9 },
-      { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 18, pitch: -9, danger: true },
+      {
+        id: 'resume',
+        title: 'RESUME',
+        subtitle: 'BACK TO FLIGHT',
+        yaw: -27,
+        pitch: 8,
+      },
+      {
+        id: 'recenter',
+        title: 'RECENTER',
+        subtitle: 'RESET NEUTRAL',
+        yaw: -9,
+        pitch: 8,
+      },
+      {
+        id: 'camera',
+        title: 'VIEW',
+        subtitle: this.cameraName,
+        yaw: 9,
+        pitch: 8,
+      },
+      {
+        id: 'aircraft',
+        title: 'AIRCRAFT',
+        subtitle: this.aircraftName,
+        yaw: 27,
+        pitch: 8,
+      },
+      {
+        id: 'effects',
+        title: 'EFFECTS',
+        subtitle: this.effectsName,
+        yaw: -18,
+        pitch: -9,
+      },
+      {
+        id: 'respawn',
+        title: 'RETURN',
+        subtitle: 'START POSITION',
+        yaw: 0,
+        pitch: -9,
+      },
+      {
+        id: 'restart',
+        title: 'REBUILD',
+        subtitle: 'RELOAD WORLD',
+        yaw: 18,
+        pitch: -9,
+        danger: true,
+      },
     ];
   }
 
@@ -322,7 +470,14 @@ export class GazeMenu {
         ? (continuing ? 5.8 : 4.5)
         : (continuing ? 6.2 : 5.0)) * DEG;
       const yawDelta = Math.abs(yaw - definition.yaw * DEG);
-      const pitchDelta = Math.abs(pitch - definition.pitch * DEG);
+      const pitchDelta =
+        phoneMode
+          ? 0
+          : Math.abs(
+              pitch -
+              definition.pitch *
+                DEG
+            );
       if (yawDelta <= yawLimit && pitchDelta <= pitchLimit) {
         const score = yawDelta / yawLimit + pitchDelta / pitchLimit;
         if (score < bestScore) {

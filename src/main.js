@@ -71,7 +71,12 @@ const worldPolish = new WorldPolishSystem(
     routes: true,
     wildlife: true,
     contrails: true,
-  },
+
+    clouds: true,
+    city: true,
+    aiTraffic: true,
+    crownMountain: true,
+},
 );
 
 let phase = 'boot';
@@ -98,6 +103,21 @@ let initialWorldPromise = null;
 
 // SKYLINE_VR_MENU_BEACON_WIRING
 
+// SKYLINE_RECOVERED_FULL_V1_CAMERA_MODES
+function toggleUserCameraMode() {
+  if (phoneMode) {
+    const mode =
+      cameraRig.mode === 'cockpit'
+        ? 'third'
+        : 'cockpit';
+
+    cameraRig.setMode(mode);
+    return mode;
+  }
+
+  return toggleUserCameraMode();
+}
+
 const menu = new GazeMenu(
   stereo.uiScene,
   input,
@@ -113,7 +133,7 @@ const menu = new GazeMenu(
     },
 
     camera: () => {
-      const mode = cameraRig.toggle();
+      const mode = toggleUserCameraMode();
 
       cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
       menuNeedsReanchor = false;
@@ -505,7 +525,11 @@ function startSession(phone) {
   resetFlight();
 
   // SKYLINE_V42_CLEAN_START_VIEW
-  cameraRig.setMode('first');
+  cameraRig.setMode(
+    phone
+      ? 'cockpit'
+      : 'first'
+  );
   cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
 
   phaseStarted =
@@ -956,7 +980,7 @@ function updateInputAndState(
     phase !== 'boot' &&
     phase !== 'calibrating'
   ) {
-    cameraRig.toggle();
+    toggleUserCameraMode();
     cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 

@@ -532,12 +532,59 @@ export class InputController {
         .multiplier;
 
     // SKYLINE_PHONE_CONTROL_SCALE_RUNTIME
-    // This must be calculated here because the input mode can change
-    // after construction and this function runs every flight frame.
+    // SKYLINE_RECOVERED_SMOOTH_PHONE_CONTROLS
+    const phoneMode =
+      this.mode === 'phone';
+
     const phoneControlScale =
-      this.mode === 'phone'
-        ? 0.84
+      phoneMode
+        ? 0.96
         : 1;
+
+    const pitchDeadzone =
+      phoneMode
+        ? 2.2 * DEG
+        : pitchDeadzone;
+
+    const rollDeadzone =
+      phoneMode
+        ? 2.8 * DEG
+        : rollDeadzone;
+
+    const pitchFullDeflection =
+      phoneMode
+        ? 23 * DEG
+        : pitchFullDeflection;
+
+    const rollFullDeflection =
+      phoneMode
+        ? 27 * DEG
+        : rollFullDeflection;
+
+    const pitchMaxRate =
+      phoneMode
+        ? 64 * DEG
+        : pitchMaxRate;
+
+    const rollMaxRate =
+      phoneMode
+        ? 88 * DEG
+        : rollMaxRate;
+
+    const responseExponent =
+      phoneMode
+        ? 1.40
+        : responseExponent;
+
+    const controlTauSeconds =
+      phoneMode
+        ? 0.13
+        : controlTauSeconds;
+
+    const lookResponse =
+      phoneMode
+        ? 9.5
+        : lookResponse;
 
     let pitchDeflection;
     let rollDeflection;
@@ -577,15 +624,13 @@ export class InputController {
       pitchDeflection =
         this.desktopMouseArmed
           ? -this.mouseY *
-            controlsConfig
-              .pitchFullDeflection
+            pitchFullDeflection
           : 0;
 
       rollDeflection =
         this.desktopMouseArmed
           ? this.mouseX *
-            controlsConfig
-              .rollFullDeflection
+            rollFullDeflection
           : 0;
 
       this._targetViewYaw = 0;
@@ -595,34 +640,26 @@ export class InputController {
       rateFromDeflection(
         pitchDeflection,
 
-        controlsConfig
-          .pitchDeadzone,
+        pitchDeadzone,
 
-        controlsConfig
-          .pitchFullDeflection,
+        pitchFullDeflection,
 
-        controlsConfig
-          .pitchMaxRate,
+        pitchMaxRate,
 
-        controlsConfig
-          .responseExponent,
+        responseExponent,
       );
 
     let rollRate =
       rateFromDeflection(
         rollDeflection,
 
-        controlsConfig
-          .rollDeadzone,
+        rollDeadzone,
 
-        controlsConfig
-          .rollFullDeflection,
+        rollFullDeflection,
 
-        controlsConfig
-          .rollMaxRate,
+        rollMaxRate,
 
-        controlsConfig
-          .responseExponent,
+        responseExponent,
       );
 
     if (
@@ -631,8 +668,7 @@ export class InputController {
     ) {
       pitchRate =
         this.keyPitch *
-        controlsConfig
-          .pitchMaxRate;
+        pitchMaxRate;
     }
 
     if (
@@ -641,8 +677,7 @@ export class InputController {
     ) {
       rollRate =
         this.keyRoll *
-        controlsConfig
-          .rollMaxRate;
+        rollMaxRate;
     }
 
     this._targetPitchRate =
@@ -659,8 +694,7 @@ export class InputController {
       Math.max(
         1e-4,
 
-        controlsConfig
-          .inputSlewSeconds,
+        controlTauSeconds,
       );
 
     const controlBlend =
@@ -694,8 +728,7 @@ export class InputController {
           0,
           dt,
         ) *
-          controlsConfig
-            .headLookResponse,
+          lookResponse,
       );
 
     this.controls.viewYaw +=

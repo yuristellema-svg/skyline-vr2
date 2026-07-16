@@ -96,9 +96,10 @@ export const CONFIG = Object.freeze({
 
     responseExponent: 1.05,
 
+    // SKYLINE_RECOVERED_VR_TUNING
     // Looking left/right is now camera look.
-    headLookMaxYaw: 72 * DEG,
-    headLookResponse: 18,
+    headLookMaxYaw: 88 * DEG,
+    headLookResponse: 10,
 
     // Kept for compatibility. Yaw no longer opens the menu.
     yawMenuThreshold: 180 * DEG,

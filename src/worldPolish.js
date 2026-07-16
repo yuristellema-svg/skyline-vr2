@@ -1,4 +1,4 @@
-// SKYLINE_V5_1_PHYSICS_PERFORMANCE
+// SKYLINE_RECOVERED_WORLD_FEATURES_V1
 import {
   OptionalWorldSystem,
 } from './optionalWorld/index.js';
@@ -11,47 +11,132 @@ import {
   WindAudioSystem,
 } from './windAudio.js';
 
+import {
+  CrownMountainSystem,
+} from './crownMountain.js';
+
+import {
+  RouteSystem,
+} from './routeSystem.js';
+
+import {
+  WildlifeSystem,
+} from './wildlife.js';
+
+function safeCreate(
+  label,
+  factory,
+) {
+  try {
+    return factory();
+  } catch (error) {
+    console.warn(
+      `[Skyline] ${label} unavailable`,
+      error,
+    );
+
+    return null;
+  }
+}
+
+function safeUpdate(
+  system,
+  method,
+  ...args
+) {
+  try {
+    system?.[method]?.(
+      ...args
+    );
+  } catch (error) {
+    console.warn(
+      `[Skyline] ${method} failed`,
+      error,
+    );
+  }
+}
+
 export class WorldPolishSystem {
   constructor(
     scene,
     options = {},
   ) {
     const sampleHeight =
-      options.sampleHeight || null;
+      options.sampleHeight ||
+      null;
 
-    // Disable the older optional-world audio engine so only one Web Audio
-    // graph can exist. All other optional-world systems remain unchanged.
+    /*
+     * Keep the current optional systems:
+     * atmosphere, clouds, city, AI aircraft and contrails.
+     *
+     * RouteSystem replaces the older anonymous hoop system.
+     * The advanced WindAudioSystem remains the only audio owner.
+     */
     this.optionalWorld =
       new OptionalWorldSystem(
         scene,
         {
           ...options,
           audio: false,
+          routes: false,
+          wildlife: false,
         },
       );
 
-    this.audio = null;
-    this.audioFailureReported = false;
+    this.crownMountain =
+      options.crownMountain === false
+        ? null
+        : safeCreate(
+            'Crown Mountain',
+            () =>
+              new CrownMountainSystem(
+                scene,
+              ),
+          );
 
-    try {
-      this.audio =
-        new WindAudioSystem({
-          sampleHeight,
-        });
-    } catch (error) {
-      console.warn(
-        '[Skyline] Aircraft audio unavailable',
-        error,
+    this.routes =
+      options.routes === false
+        ? null
+        : safeCreate(
+            'route gates',
+            () =>
+              new RouteSystem(
+                scene,
+              ),
+          );
+
+    this.wildlife =
+      options.wildlife === false
+        ? null
+        : safeCreate(
+            'wildlife and sailplanes',
+            () =>
+              new WildlifeSystem(
+                scene,
+              ),
+          );
+
+    this.audio =
+      safeCreate(
+        'aircraft audio',
+        () =>
+          new WindAudioSystem({
+            sampleHeight,
+            masterLevel: 0.42,
+          }),
       );
-    }
+
+    this.audioFailureReported =
+      false;
 
     this.performance =
       new PerformanceRuntime(
         this.optionalWorld,
         {
           targetFps: 60,
-          maxDrawCalls: 420,
-          maxTriangles: 1200000,
+          maxDrawCalls: 460,
+          maxTriangles:
+            1250000,
         },
       );
   }
@@ -61,23 +146,25 @@ export class WorldPolishSystem {
     flight,
     phase = 'flying',
   ) {
-    this.optionalWorld
-      .fixedStepUpdate?.(
-        dt,
-        flight,
-        phase,
-      );
+    safeUpdate(
+      this.optionalWorld,
+      'fixedStepUpdate',
+      dt,
+      flight,
+      phase,
+    );
   }
 
   beginPerformanceFrame(
     dt,
     details = {},
   ) {
-    this.performance
-      .beginFrame(
-        dt,
-        details,
-      );
+    safeUpdate(
+      this.performance,
+      'beginFrame',
+      dt,
+      details,
+    );
   }
 
   update(
@@ -86,20 +173,46 @@ export class WorldPolishSystem {
     camera,
     phase = 'flying',
   ) {
-    this.optionalWorld
-      .update(
-        dt,
-        flight,
-        camera,
-        phase,
-      );
+    safeUpdate(
+      this.optionalWorld,
+      'update',
+      dt,
+      flight,
+      camera,
+      phase,
+    );
+
+    safeUpdate(
+      this.crownMountain,
+      'update',
+      dt,
+      camera,
+    );
+
+    safeUpdate(
+      this.routes,
+      'update',
+      dt,
+      flight,
+      camera,
+      phase === 'flying',
+    );
+
+    safeUpdate(
+      this.wildlife,
+      'update',
+      dt,
+    );
 
     try {
       const trafficSources =
         this.optionalWorld
-          .registry
-          ?.get?.('AI aircraft')
-          ?.getAudioSources?.() ?? [];
+          ?.registry
+          ?.get?.(
+            'AI aircraft'
+          )
+          ?.getAudioSources?.() ??
+        [];
 
       this.audio?.update(
         dt,
@@ -109,8 +222,12 @@ export class WorldPolishSystem {
         trafficSources,
       );
     } catch (error) {
-      if (!this.audioFailureReported) {
-        this.audioFailureReported = true;
+      if (
+        !this.audioFailureReported
+      ) {
+        this.audioFailureReported =
+          true;
+
         console.warn(
           '[Skyline] Aircraft audio disabled',
           error,
@@ -118,7 +235,8 @@ export class WorldPolishSystem {
       }
 
       try {
-        this.audio?.dispose?.();
+        this.audio
+          ?.dispose?.();
       } catch {}
 
       this.audio = null;
@@ -128,21 +246,24 @@ export class WorldPolishSystem {
   endPerformanceFrame(
     renderMetrics = {},
   ) {
-    this.performance
-      .endFrame(
-        renderMetrics,
-      );
+    safeUpdate(
+      this.performance,
+      'endFrame',
+      renderMetrics,
+    );
   }
 
   getStatus() {
     return {
       systems:
         this.optionalWorld
-          .getStatus(),
+          ?.getStatus?.() ??
+        {},
 
       performance:
         this.performance
-          .getState(),
+          ?.getState?.() ??
+        {},
 
       audio:
         this.audio
@@ -150,15 +271,46 @@ export class WorldPolishSystem {
             ready: false,
             disabled: true,
           },
+
+      recovered: {
+        crownMountain:
+          Boolean(
+            this.crownMountain
+          ),
+
+        routeGates:
+          Boolean(
+            this.routes
+          ),
+
+        wildlife:
+          Boolean(
+            this.wildlife
+          ),
+
+        sailplanes:
+          Boolean(
+            this.wildlife
+          ),
+      },
     };
   }
 
   dispose() {
-    try {
-      this.audio?.dispose?.();
-    } catch {}
-
-    this.performance.dispose();
-    this.optionalWorld.dispose();
+    for (
+      const system of [
+        this.audio,
+        this.crownMountain,
+        this.routes,
+        this.wildlife,
+        this.performance,
+        this.optionalWorld,
+      ]
+    ) {
+      try {
+        system
+          ?.dispose?.();
+      } catch {}
+    }
   }
 }
