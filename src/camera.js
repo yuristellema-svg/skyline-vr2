@@ -27,6 +27,9 @@ const LOCAL_RIGHT =
     0,
   );
 
+// SKYLINE_RENDER_POSE_INTERPOLATION_V1_CAMERA
+// reset() and update() consume the shared render pose. Direct viewYaw and
+// camera shake remain current-frame values, so phone head tracking stays live.
 export class CameraRig {
   constructor(
     scene,
@@ -439,7 +442,7 @@ export class CameraRig {
       'third';
   }
 
-  reset(flight) {
+  reset(renderPose) {
     const pullback =
       this.config.camera
         .thirdPullback *
@@ -450,7 +453,7 @@ export class CameraRig {
         this.config.camera
           .fovSpeedFull,
 
-        flight.speed,
+        renderPose.speed,
       );
 
     this._localOffset.set(
@@ -469,12 +472,12 @@ export class CameraRig {
         this._localOffset,
       )
       .applyQuaternion(
-        flight.attitude,
+        renderPose.attitude,
       );
 
     this._thirdPosition
       .copy(
-        flight.position,
+        renderPose.position,
       )
       .add(
         this._worldOffset,
@@ -491,7 +494,7 @@ export class CameraRig {
 
   update(
     dt,
-    flight,
+    renderPose,
     stereoEnabled,
     menuLook,
     shakePitch,
@@ -503,20 +506,19 @@ export class CameraRig {
       this.config.camera;
 
     if (
-      this.mode ===
-      'first'
+      this.mode !== 'third'
     ) {
       this._worldOffset
         .copy(
           this._firstOffset,
         )
         .applyQuaternion(
-          flight.attitude,
+          renderPose.attitude,
         );
 
       this.basePosition
         .copy(
-          flight.position,
+          renderPose.position,
         )
         .add(
           this._worldOffset,
@@ -524,7 +526,7 @@ export class CameraRig {
 
       this.baseQuaternion
         .copy(
-          flight.attitude,
+          renderPose.attitude,
         );
     } else {
       const pullback =
@@ -537,7 +539,7 @@ export class CameraRig {
           cameraConfig
             .fovSpeedFull,
 
-          flight.speed,
+          renderPose.speed,
         );
 
       this._localOffset.set(
@@ -556,12 +558,12 @@ export class CameraRig {
           this._localOffset,
         )
         .applyQuaternion(
-          flight.attitude,
+          renderPose.attitude,
         );
 
       this._thirdTarget
         .copy(
-          flight.position,
+          renderPose.position,
         )
         .add(
           this._worldOffset,
@@ -584,7 +586,7 @@ export class CameraRig {
         );
 
       const semanticRollRate =
-        -flight.angularVelocity.z;
+        -renderPose.angularVelocity.z;
 
       const rollLagTarget =
         clamp(
@@ -619,7 +621,7 @@ export class CameraRig {
 
       this.baseQuaternion
         .copy(
-          flight.attitude,
+          renderPose.attitude,
         )
         .multiply(
           this._qRollLag,
@@ -667,9 +669,9 @@ export class CameraRig {
 
           -clamp(
             Number.isFinite(
-              flight.viewYaw,
+              renderPose.viewYaw,
             )
-              ? flight.viewYaw
+              ? renderPose.viewYaw
               : 0,
 
             -this.config.controls
@@ -725,7 +727,7 @@ export class CameraRig {
         cameraConfig
           .fovSpeedFull,
 
-        flight.speed,
+        renderPose.speed,
       );
 
     const baseFov =
@@ -758,24 +760,24 @@ export class CameraRig {
 
     this.pilot.position
       .copy(
-        flight.position,
+        renderPose.position,
       );
 
     this.pilot.quaternion
       .copy(
-        flight.attitude,
+        renderPose.attitude,
       );
 
     const ground =
       this.heightSampler(
-        flight.position.x,
-        flight.position.z,
+        renderPose.position.x,
+        renderPose.position.z,
       );
 
     const height =
       Math.max(
         0,
-        flight.position.y -
+        renderPose.position.y -
           ground,
       );
 
@@ -792,10 +794,10 @@ export class CameraRig {
       );
 
     this.shadow.position.set(
-      flight.position.x,
+      renderPose.position.x,
       ground +
         0.035,
-      flight.position.z,
+      renderPose.position.z,
     );
 
     this.shadow.scale.set(

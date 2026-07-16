@@ -1,0 +1,23 @@
+# Reference wiring summary; APPLY_RENDER_INTERPOLATION.mjs is authoritative.
+
+src/main.js
+- import RenderPoseInterpolator and renderInterpolationAlpha
+- instantiate one interpolator beside FlightModel
+- capture the completed pose after every flight.step()
+- compute alpha = accumulator / CONFIG.physics.fixedStep
+- sample one sharedRenderPose per display frame
+- pass sharedRenderPose to CameraRig.update and AircraftVisualSystem.update
+- leave collision/effects/world/HUD on raw flight
+- reset interpolation after spawn, respawn/reset, recovery teleport,
+  floating-origin shift, dropped physics time, visibility change and pageshow
+
+src/camera.js
+- reset(renderPose) and update(dt, renderPose, ...)
+- derive position/attitude/FOV/third-person target from renderPose
+- keep viewYaw current; apply head look and camera shake after the base pose
+
+src/aircraftVisuals.js
+- update(dt, renderPose, cameraMode)
+- copy external root position/quaternion from renderPose
+- retain child propeller rotation and instruments
+- remove cockpitRoot speed sine offsets

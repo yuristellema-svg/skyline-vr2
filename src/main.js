@@ -6,11 +6,13 @@ import { CollisionSystem } from './collision.js';
 import { CameraRig } from './camera.js';
 import { EffectsSystem } from './effects.js';
 import { StereoRenderer } from './stereo.js';
-import { GazeMenu } from './menu.js';
+import { GazeMenu } from './menuRuntime.js';
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
 import { AircraftVisualSystem } from './aircraftVisuals.js';
+import { installSkylineVrIntegration } from './vrIntegration.js';
+import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -31,6 +33,10 @@ scene.add(stereo.camera);
 
 const input = new InputController();
 const flight = new FlightModel();
+// SKYLINE_RENDER_POSE_INTERPOLATION_V1
+const renderPoseInterpolator = new RenderPoseInterpolator(flight);
+const renderPose = renderPoseInterpolator.createRenderPose(flight);
+let sharedRenderPose = renderPose;
 const collision = new CollisionSystem();
 const world = createWorld(scene, collision);
 
@@ -66,6 +72,7 @@ let phoneMode = false;
 let phaseStarted = performance.now() / 1000;
 let crashElapsed = 0;
 let crashCountdownFinished = false;
+let crashRespawnRequested = false;
 let neutralHold = 0;
 let accumulator = 0;
 let lastFrame = performance.now() / 1000;
@@ -100,14 +107,14 @@ const menu = new GazeMenu(
     camera: () => {
       const mode = cameraRig.toggle();
 
-      cameraRig.reset(flight);
+      cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
       menuNeedsReanchor = true;
 
       return mode;
     },
 
     respawn: () => {
-      beginRespawn('Manual respawn');
+      requestRespawnFromMenu(false);
     },
 
     effects: () => {
@@ -115,13 +122,22 @@ const menu = new GazeMenu(
     },
 
     restart: () => {
-      beginRespawn(
-        'World restarted',
-        true
-      );
+      requestRespawnFromMenu(true);
     },
   }
 );
+
+
+// SKYLINE_V52_MASTER_INTEGRATION
+const vrIntegration =
+  installSkylineVrIntegration({
+    aircraftVisuals,
+    cameraRig,
+    stereo,
+    worldPolish,
+    input,
+    menu,
+  });
 
 function setStartStatus(
   message,
@@ -226,7 +242,7 @@ function updateFloatingOrigin(
     distance <
     CONFIG.world.floatingOriginDistance
   ) {
-    return;
+    return false;
   }
 
   const step =
@@ -256,6 +272,12 @@ function updateFloatingOrigin(
   stereo.uiScene.updateMatrixWorld(
     true
   );
+
+  renderPoseInterpolator.reset(
+    flight,
+    'floating-origin',
+  );
+  return true;
 }
 
 function ensureInitialWorld() {
@@ -392,7 +414,9 @@ function resetFlight() {
     flight.position
   );
 
-  cameraRig.reset(flight);
+  renderPoseInterpolator.reset(flight, 'spawn');
+  sharedRenderPose = renderPoseInterpolator.sampleCurrent(renderPose);
+  cameraRig.reset(sharedRenderPose);
   accumulator = 0;
 }
 
@@ -436,7 +460,9 @@ function ensureLiveFlight(forceReset = false) {
 
   accumulator = 0;
   lastFrame = performance.now() / 1000;
-  cameraRig.reset(flight);
+  renderPoseInterpolator.reset(flight, 'ensure-live');
+  sharedRenderPose = renderPoseInterpolator.sampleCurrent(renderPose);
+  cameraRig.reset(sharedRenderPose);
 }
 
 function startSession(phone) {
@@ -476,7 +502,7 @@ function startSession(phone) {
 
   // SKYLINE_V42_CLEAN_START_VIEW
   cameraRig.setMode('first');
-  cameraRig.reset(flight);
+  cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
 
   phaseStarted =
     performance.now() / 1000;
@@ -695,7 +721,7 @@ function openMenu(
    * the intended menu distance.
    */
   if (crashMode) {
-    cameraRig.reset(flight);
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
   cameraRig.update(
@@ -774,24 +800,50 @@ function prepareRespawnWorld(
       });
 }
 
+
+function requestRespawnFromMenu(
+  rebuildWorld = false
+) {
+  if (phase !== 'crashed') {
+    beginRespawn(
+      rebuildWorld
+        ? 'World restarted'
+        : 'Manual respawn',
+      rebuildWorld
+    );
+
+    return;
+  }
+
+  crashRespawnRequested = true;
+
+  if (rebuildWorld) {
+    prepareRespawnWorld(true);
+  } else if (
+    !worldFlightReady &&
+    !worldResetPromise
+  ) {
+    prepareRespawnWorld(false);
+  }
+
+  if (!worldFlightReady) {
+    setEyeMessage('LOADING WORLD');
+  }
+}
+
 function beginRespawn(
   reason,
   rebuildWorld = false
 ) {
   if (phase === 'crashed') {
-    if (rebuildWorld) {
-      prepareRespawnWorld(true);
-    }
-
-    crashElapsed = 3;
-    neutralHold = 0;
-
+    requestRespawnFromMenu(rebuildWorld);
     return;
   }
 
   phase = 'crashed';
   crashElapsed = 0;
   crashCountdownFinished = false;
+  crashRespawnRequested = false;
   neutralHold = 0;
   accumulator = 0;
 
@@ -822,6 +874,8 @@ function finishRespawn() {
     performance.now() / 1000;
 
   crashElapsed = 0;
+  crashCountdownFinished = false;
+  crashRespawnRequested = false;
   fadeWhite = 0;
   neutralHold = 0;
 
@@ -888,75 +942,48 @@ function updateCalibration(now) {
 function updateCrash(dt) {
   crashElapsed += dt;
 
-  if (crashElapsed < 0.25) {
+  if (crashElapsed < 0.22) {
     fadeWhite =
-      crashElapsed / 0.25;
+      crashElapsed / 0.22;
   } else if (
-    crashElapsed < 0.75
+    crashElapsed < 0.62
   ) {
     fadeWhite =
       1 -
       (
-        crashElapsed - 0.25
+        crashElapsed - 0.22
       ) /
-        0.5;
+        0.40;
   } else {
     fadeWhite = 0;
   }
 
-  if (crashElapsed < 3) {
-    const count =
-      Math.max(
-        1,
-        3 -
-          Math.floor(
-            crashElapsed
-          )
+  crashCountdownFinished =
+    crashElapsed >= 0.62;
+
+  if (!menu.isOpen) {
+    openMenu(true);
+  }
+
+  if (crashRespawnRequested) {
+    if (!worldFlightReady) {
+      setEyeMessage(
+        worldResetPromise
+          ? 'LOADING WORLD'
+          : 'WORLD LOAD FAILED'
       );
 
-    setEyeMessage(
-      `CRASH\n${count}`
-    );
+      return;
+    }
 
-    return;
-  }
-
-  crashCountdownFinished = true;
-
-  if (!worldFlightReady) {
-    setEyeMessage(
-      worldResetPromise
-        ? 'LOADING WORLD'
-        : 'WORLD LOAD FAILED'
-    );
-
-    return;
-  }
-
-  if (
-    phoneMode &&
-    (
-      !input.isTrackingFresh() ||
-      !input.isNearFlightNeutral()
-    )
-  ) {
-    neutralHold = 0;
-
-    setEyeMessage(
-      'LOOK STRAIGHT'
-    );
-
-    return;
-  }
-
-  neutralHold += dt;
-
-  setEyeMessage(
-    'HOLD STEADY'
-  );
-
-  if (neutralHold >= 0.5) {
     finishRespawn();
+    return;
+  }
+
+  if (crashElapsed < 0.80) {
+    setEyeMessage('CRASH');
+  } else {
+    setEyeMessage('');
   }
 }
 
@@ -975,7 +1002,7 @@ function updateInputAndState(
     phase !== 'calibrating'
   ) {
     cameraRig.toggle();
-    cameraRig.reset(flight);
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
   if (
@@ -1089,6 +1116,8 @@ function frame(milliseconds) {
         input.controls
       );
 
+      renderPoseInterpolator.captureFixedStep(flight);
+
       accumulator -=
         CONFIG.physics.fixedStep;
 
@@ -1128,6 +1157,7 @@ function frame(milliseconds) {
 
       droppedSteps += 1;
       droppedPhysicsThisFrame = 1;
+      renderPoseInterpolator.reset(flight, 'dropped-physics-time');
     }
   }
 
@@ -1135,8 +1165,21 @@ function frame(milliseconds) {
     menu.update(frameDt);
   }
 
-  updateFloatingOrigin(
+  const originShifted = updateFloatingOrigin(
     flight.position
+  );
+
+  if (originShifted) {
+    cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
+  }
+
+  const renderAlpha = renderInterpolationAlpha(
+    accumulator,
+    CONFIG.physics.fixedStep,
+  );
+  sharedRenderPose = renderPoseInterpolator.sample(
+    renderAlpha,
+    renderPose,
   );
 
   effects.update(
@@ -1149,7 +1192,7 @@ function frame(milliseconds) {
 
   cameraRig.update(
     frameDt,
-    flight,
+    sharedRenderPose,
     stereo.stereoEnabled,
     menu.isOpen
       ? input.menuLook
@@ -1180,7 +1223,7 @@ function frame(milliseconds) {
 
   aircraftVisuals.update(
     frameDt,
-    flight,
+    sharedRenderPose,
     cameraRig.mode,
   );
   worldPolish.beginPerformanceFrame?.(
@@ -1280,6 +1323,7 @@ document.addEventListener(
       performance.now() / 1000;
 
     accumulator = 0;
+    renderPoseInterpolator.reset(flight, 'visibility-change');
 
     if (
       document.visibilityState ===
@@ -1297,6 +1341,7 @@ window.addEventListener(
       performance.now() / 1000;
 
     accumulator = 0;
+    renderPoseInterpolator.reset(flight, 'pageshow');
 
     void acquireWakeLock();
   }

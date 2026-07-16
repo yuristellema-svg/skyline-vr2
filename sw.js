@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-shell-v5-1-20260715';
+const SHELL_CACHE = 'skyline-safe-menu-cockpit-v2-20260716-140849';
 
 const SHELL_FILES = [
   './',
@@ -7,6 +7,7 @@ const SHELL_FILES = [
   './manifest.webmanifest',
   './icon.svg',
   './apple-touch-icon.png',
+  './src/menuRuntime.js',
   './src/main.js',
   './src/config.js',
   './src/input.js',
@@ -41,6 +42,17 @@ const SHELL_FILES = [
   './src/hud.js',
   './src/world/world.js',
   './vendor/three.module.min.js',
+  './src/aircraft/aircraftVisualShared.js',
+  './src/aircraft/ju87StukaCockpit.js',
+  './src/aircraft/ju87StukaExternal.js',
+  './src/audio/aircraftAudioProfiles.js',
+  './src/audio/audioMath.js',
+  './src/audio/audioTargets.js',
+  './src/audio/proceduralAircraftAudio.js',
+  './src/renderPoseInterpolator.js',
+  './src/reliableFlightAudio.js',
+  './src/iosAudioBridge.js',
+  './src/vrIntegration.js',
 ];
 
 self.addEventListener('install', event => {

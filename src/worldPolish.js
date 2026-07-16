@@ -7,16 +7,43 @@ import {
   PerformanceRuntime,
 } from './performanceRuntime.js';
 
+import {
+  WindAudioSystem,
+} from './windAudio.js';
+
 export class WorldPolishSystem {
   constructor(
     scene,
     options = {},
   ) {
+    const sampleHeight =
+      options.sampleHeight || null;
+
+    // Disable the older optional-world audio engine so only one Web Audio
+    // graph can exist. All other optional-world systems remain unchanged.
     this.optionalWorld =
       new OptionalWorldSystem(
         scene,
-        options,
+        {
+          ...options,
+          audio: false,
+        },
       );
+
+    this.audio = null;
+    this.audioFailureReported = false;
+
+    try {
+      this.audio =
+        new WindAudioSystem({
+          sampleHeight,
+        });
+    } catch (error) {
+      console.warn(
+        '[Skyline] Aircraft audio unavailable',
+        error,
+      );
+    }
 
     this.performance =
       new PerformanceRuntime(
@@ -66,6 +93,36 @@ export class WorldPolishSystem {
         camera,
         phase,
       );
+
+    try {
+      const trafficSources =
+        this.optionalWorld
+          .registry
+          ?.get?.('AI aircraft')
+          ?.getAudioSources?.() ?? [];
+
+      this.audio?.update(
+        dt,
+        flight,
+        camera,
+        phase,
+        trafficSources,
+      );
+    } catch (error) {
+      if (!this.audioFailureReported) {
+        this.audioFailureReported = true;
+        console.warn(
+          '[Skyline] Aircraft audio disabled',
+          error,
+        );
+      }
+
+      try {
+        this.audio?.dispose?.();
+      } catch {}
+
+      this.audio = null;
+    }
   }
 
   endPerformanceFrame(
@@ -86,10 +143,21 @@ export class WorldPolishSystem {
       performance:
         this.performance
           .getState(),
+
+      audio:
+        this.audio
+          ?.getStatus?.() ?? {
+            ready: false,
+            disabled: true,
+          },
     };
   }
 
   dispose() {
+    try {
+      this.audio?.dispose?.();
+    } catch {}
+
     this.performance.dispose();
     this.optionalWorld.dispose();
   }
