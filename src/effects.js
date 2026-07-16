@@ -193,9 +193,9 @@ export class EffectsSystem {
       clamp(
         (
           load -
-          3.6
+          4.6
         ) /
-          5.4,
+          5.8,
         0,
         1,
       );
@@ -204,9 +204,9 @@ export class EffectsSystem {
       clamp(
         (
           -load -
-          0.8
+          1.25
         ) /
-          2.2,
+          2.8,
         0,
         1,
       );
@@ -218,7 +218,7 @@ export class EffectsSystem {
             positiveDose > 0
               ? positiveDose *
                 safeDt
-              : -0.48 *
+              : -0.78 *
                 safeDt
           ),
 
@@ -233,7 +233,7 @@ export class EffectsSystem {
             negativeDose > 0
               ? negativeDose *
                 safeDt
-              : -0.70 *
+              : -1.00 *
                 safeDt
           ),
 
@@ -243,15 +243,15 @@ export class EffectsSystem {
 
     const blackoutTarget =
       smoothstep(
-        0.34,
-        1.48,
+        0.50,
+        1.75,
         this.positiveGExposure,
       );
 
     const redoutTarget =
       smoothstep(
-        0.18,
-        0.92,
+        0.32,
+        1.15,
         this.negativeGExposure,
       );
 
@@ -262,7 +262,7 @@ export class EffectsSystem {
         blackoutTarget >
           this.blackout
           ? 3.4
-          : 0.85,
+          : 1.45,
         safeDt,
       );
 
@@ -273,7 +273,7 @@ export class EffectsSystem {
         redoutTarget >
           this.redout
           ? 4.2
-          : 1.15,
+          : 1.65,
         safeDt,
       );
 

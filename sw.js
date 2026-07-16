@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-bundle-b-world-sim-20260716';
+const SHELL_CACHE = 'skyline-bundle-b-polish-1-20260716';
 
 const SHELL_FILES = [
   './',

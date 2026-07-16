@@ -90,6 +90,19 @@ let renderOriginZ = 0;
 let lastWorldError = '';
 let initialWorldPromise = null;
 
+// SKYLINE_B_POLISH_LEFT_MENU
+let leftMenuHold = 0;
+let leftMenuArmed = true;
+
+const leftMenuForward =
+  new THREE.Vector3();
+
+const leftMenuDirection =
+  new THREE.Vector3();
+
+const leftMenuUp =
+  new THREE.Vector3();
+
 const menu = new GazeMenu(
   stereo.uiScene,
   input,
@@ -990,6 +1003,80 @@ function updateInputAndState(
   }
 }
 
+
+function updateLeftGazeMenu(dt) {
+  if (
+    !phoneMode ||
+    phase !== 'flying' ||
+    menu.isOpen
+  ) {
+    leftMenuHold = 0;
+    return;
+  }
+
+  leftMenuForward
+    .set(0, 0, -1)
+    .applyQuaternion(
+      stereo.camera.quaternion
+    )
+    .normalize();
+
+  leftMenuDirection
+    .set(-1, 0, 0)
+    .applyQuaternion(
+      cameraRig.baseQuaternion
+    )
+    .normalize();
+
+  leftMenuUp
+    .set(0, 1, 0)
+    .applyQuaternion(
+      cameraRig.baseQuaternion
+    )
+    .normalize();
+
+  const leftAmount =
+    leftMenuForward.dot(
+      leftMenuDirection
+    );
+
+  const verticalAmount =
+    Math.abs(
+      leftMenuForward.dot(
+        leftMenuUp
+      )
+    );
+
+  if (leftAmount < 0.34) {
+    leftMenuArmed = true;
+  }
+
+  const insideTarget =
+    leftAmount > 0.78 &&
+    verticalAmount < 0.64;
+
+  if (
+    !leftMenuArmed ||
+    !insideTarget
+  ) {
+    leftMenuHold =
+      Math.max(
+        0,
+        leftMenuHold - dt * 2.5
+      );
+
+    return;
+  }
+
+  leftMenuHold += dt;
+
+  if (leftMenuHold >= 1.15) {
+    leftMenuHold = 0;
+    leftMenuArmed = false;
+    openMenu(false);
+  }
+}
+
 function updateMessages(now) {
   if (
     phase === 'flying' &&
@@ -1155,6 +1242,8 @@ function frame(milliseconds) {
       : effects.shakeRoll,
     effects.viewSqueeze
   );
+
+  updateLeftGazeMenu(frameDt);
 
   if (
     menuNeedsReanchor &&

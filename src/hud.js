@@ -120,12 +120,12 @@ export class MonoHud {
       state =
         'STRUCTURAL LOAD';
     } else if (
-      blackout > 0.48
+      blackout > 0.62
     ) {
       state =
         'G-LOC WARNING';
     } else if (
-      redout > 0.40
+      redout > 0.55
     ) {
       state =
         'NEGATIVE G';
@@ -158,8 +158,8 @@ export class MonoHud {
     this.nodes.state.dataset.warning =
       (
         structural > 0.46 ||
-        blackout > 0.28 ||
-        redout > 0.26 ||
+        blackout > 0.40 ||
+        redout > 0.36 ||
         stall > 0.22
       )
         ? 'true'

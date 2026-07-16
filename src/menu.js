@@ -2,9 +2,10 @@ import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, clamp } from './config.js';
 
 const DEG = Math.PI / 180;
+// SKYLINE_B_POLISH_LARGE_MENU
 // SKYLINE_BUNDLE_A_V2_MENU
-const PANEL_WIDTH = 0.66;
-const PANEL_HEIGHT = 0.30;
+const PANEL_WIDTH = 0.78;
+const PANEL_HEIGHT = 0.35;
 
 function panelTexture(title, subtitle, selected = false, danger = false, progress = 0) {
   const canvas = document.createElement('canvas');
@@ -232,7 +233,7 @@ export class GazeMenu {
     this.root.visible = false;
     this._clearPanels();
 
-    this.root.scale.set(1, 1, 1);
+    this.root.scale.set(1.18, 1.18, 1.18);
     this.root.position.set(0, 0, 0);
     this.root.rotation.set(0, 0, 0);
     this.root.quaternion.identity();
