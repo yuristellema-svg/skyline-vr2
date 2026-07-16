@@ -1,5 +1,12 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { CONFIG, clamp } from './config.js';
+import {
+  PHONE_MENU_CONFIG,
+  buildDesktopMenuDefinitions,
+  buildPhoneMenuDefinitions,
+  selectPhonePanel,
+} from './workerNav/horizontalMenuLayout.js';
+// SKYLINE_WORKER_NAV_V1_MENU
 
 const DEG = Math.PI / 180;
 // SKYLINE_B_POLISH_LARGE_MENU
@@ -181,23 +188,15 @@ export class GazeMenu {
   }
 
   _definitions() {
-    if (this.crashMode) {
-      return [
-        { id: 'respawn', title: 'RETURN', subtitle: 'RE-ENTER FLIGHT', yaw: -13, pitch: 3 },
-        { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 0, pitch: 3 },
-        { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 13, pitch: 3, danger: true },
-      ];
-    }
-
-    return [
-      { id: 'resume', title: 'RESUME', subtitle: 'BACK TO FLIGHT', yaw: -27, pitch: 8 },
-      { id: 'recenter', title: 'RECENTER', subtitle: 'RESET NEUTRAL', yaw: -9, pitch: 8 },
-      { id: 'camera', title: 'VIEW', subtitle: this.cameraName, yaw: 9, pitch: 8 },
-      { id: 'aircraft', title: 'AIRCRAFT', subtitle: this.aircraftName, yaw: 27, pitch: 8 },
-      { id: 'effects', title: 'EFFECTS', subtitle: this.effectsName, yaw: -18, pitch: -9 },
-      { id: 'respawn', title: 'RETURN', subtitle: 'START POSITION', yaw: 0, pitch: -9 },
-      { id: 'restart', title: 'REBUILD', subtitle: 'RELOAD WORLD', yaw: 18, pitch: -9, danger: true },
-    ];
+    const state = {
+      crashMode: this.crashMode,
+      cameraName: this.cameraName,
+      aircraftName: this.aircraftName,
+      effectsName: this.effectsName,
+    };
+    return this.input?.mode === 'phone'
+      ? buildPhoneMenuDefinitions(state)
+      : buildDesktopMenuDefinitions(state);
   }
 
   _clearPanels() {
@@ -212,9 +211,19 @@ export class GazeMenu {
 
   _buildPanels() {
     this._clearPanels();
-    const depth = CONFIG.menu?.depth || 2.5;
+    const phoneMode = this.input?.mode === 'phone';
+    const depth = phoneMode
+      ? PHONE_MENU_CONFIG.depth
+      : (CONFIG.menu?.depth || 2.5);
     for (const definition of this._definitions()) {
       const panel = makePanel(definition, depth);
+      if (phoneMode) {
+        panel.scale.set(
+          PHONE_MENU_CONFIG.panelScale,
+          PHONE_MENU_CONFIG.panelScale,
+          1,
+        );
+      }
       const yaw = definition.yaw * DEG;
       const pitch = definition.pitch * DEG;
       const horizontal = Math.cos(pitch) * depth;
@@ -310,6 +319,18 @@ export class GazeMenu {
   }
 
   _candidateAt(yaw, pitch, phoneMode) {
+    if (phoneMode) {
+      const definition = selectPhonePanel(
+        this.panels.map(panel => panel.userData.definition),
+        yaw,
+        pitch,
+        this.hoveredPanel?.userData?.definition?.id || null,
+      );
+      return definition
+        ? this.panels.find(panel => panel.userData.definition.id === definition.id) || null
+        : null;
+    }
+
     let candidate = null;
     let bestScore = Infinity;
     for (const panel of this.panels) {
@@ -378,14 +399,17 @@ export class GazeMenu {
       const candidate = this._candidateAt(this._smoothedYaw, this._smoothedPitch, true);
       this._setCandidate(candidate);
 
-      const dwellSeconds = this.hoveredPanel?.userData.definition.danger ? 1.8 : 1.35;
+      const dwellSeconds = this.hoveredPanel?.userData.definition.danger
+        ? PHONE_MENU_CONFIG.destructiveDwellSeconds
+        : PHONE_MENU_CONFIG.dwellSeconds;
       if (this.hoveredPanel && !this._requirePhoneExit && this.activationLockout <= 0) {
         this.dwellElapsed += safeDt;
         this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
         if (this.dwellElapsed >= dwellSeconds) this._activate(this.hoveredPanel);
       } else {
-        this.dwellElapsed = Math.max(0, this.dwellElapsed - safeDt * 2.0);
-        this.dwellProgress = clamp(this.dwellElapsed / dwellSeconds, 0, 1);
+        // Phone selection never carries partial progress across a look-away.
+        this.dwellElapsed = 0;
+        this.dwellProgress = 0;
       }
     }
 

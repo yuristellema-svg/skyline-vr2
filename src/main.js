@@ -10,6 +10,8 @@ import { EffectsSystem } from './effects.js';
 import { StereoRenderer } from './stereo.js';
 import { GazeMenu } from './menu.js';
 import { VrMenuBeacon } from './vrMenuBeacon.js';
+import { initialViewMode } from './workerNav/phoneViewModes.js';
+// SKYLINE_WORKER_NAV_V1_MAIN
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
@@ -113,7 +115,7 @@ const menu = new GazeMenu(
     },
 
     camera: () => {
-      const mode = cameraRig.toggle();
+      const mode = cameraRig.toggle(phoneMode);
 
       cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
       menuNeedsReanchor = false;
@@ -505,7 +507,7 @@ function startSession(phone) {
   resetFlight();
 
   // SKYLINE_V42_CLEAN_START_VIEW
-  cameraRig.setMode('first');
+  cameraRig.setMode(initialViewMode({ phone }));
   cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
 
   phaseStarted =
@@ -956,7 +958,7 @@ function updateInputAndState(
     phase !== 'boot' &&
     phase !== 'calibrating'
   ) {
-    cameraRig.toggle();
+    cameraRig.toggle(phoneMode);
     cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
