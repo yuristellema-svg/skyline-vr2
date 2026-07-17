@@ -17,6 +17,9 @@ import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
 import { AircraftVisualSystem } from './aircraftVisuals.js';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
+import {
+  createLazyWorkerWorld,
+} from './workerRuntime/lazyWorldRuntime.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -70,11 +73,27 @@ const worldPolish = new WorldPolishSystem(
       world.sampleHeight,
     atmosphere: true,
     audio: true,
-    routes: true,
-    wildlife: true,
+
+    /*
+     * Worker WORLD owns these systems on this stage.
+     * Existing engine/warning audio remains untouched.
+     */
+    routes: false,
+    wildlife: false,
     contrails: true,
   },
 );
+
+const workerWorld =
+  createLazyWorkerWorld({
+    scene,
+    THREE,
+    eventTarget: window,
+    quality: 'balanced',
+  });
+
+window.skylineWorkerWorld =
+  workerWorld;
 
 let phase = 'boot';
 let phoneMode = false;
@@ -537,6 +556,28 @@ function startSession(phone) {
       3
     );
   }
+
+  /*
+   * The flight is already running before any
+   * worker-world module is downloaded or created.
+   * A worker failure can therefore never trap the
+   * player on the start screen.
+   */
+  void workerWorld
+    .activate()
+    .then((status) => {
+      if (status.active) {
+        showTransient(
+          'WORLD SYSTEMS ONLINE',
+          2
+        );
+      } else {
+        showTransient(
+          'BASE WORLD ACTIVE',
+          2
+        );
+      }
+    });
 }
 
 async function waitForLandscape() {
@@ -1135,6 +1176,12 @@ function frame(milliseconds) {
         phase,
       );
 
+      workerWorld.fixedStepUpdate(
+        CONFIG.physics.fixedStep,
+        flight,
+        phase,
+      );
+
       if (
         collision.check(
           flight.position
@@ -1270,6 +1317,13 @@ function frame(milliseconds) {
 
 
   worldPolish.update(
+    frameDt,
+    flight,
+    stereo.camera,
+    phase,
+  );
+
+  workerWorld.update(
     frameDt,
     flight,
     stereo.camera,
