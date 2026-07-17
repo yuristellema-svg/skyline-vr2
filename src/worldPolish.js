@@ -56,6 +56,13 @@ export class WorldPolishSystem {
       );
   }
 
+  unlockAudio() {
+    return (
+      this.audio?.unlock?.() ??
+      false
+    );
+  }
+
   fixedStepUpdate(
     dt,
     flight,

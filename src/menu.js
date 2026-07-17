@@ -144,6 +144,8 @@ export class GazeMenu {
     this._requirePhoneExit = false;
     this._blockedPhoneId = null;
 
+    this.camera = null;
+
     this._onPointerMove = event => {
       if (!this.isOpen || this.input?.mode === 'phone') return;
       this._setPointerFromEvent(event);
@@ -189,10 +191,45 @@ export class GazeMenu {
   }
 
   _setPointerFromEvent(event) {
-    const width = Math.max(1, window.innerWidth);
-    const height = Math.max(1, window.innerHeight);
-    this._pointerYaw = ((event.clientX / width) - 0.5) * 54 * DEG;
-    this._pointerPitch = (0.5 - (event.clientY / height)) * 34 * DEG;
+    const width =
+      Math.max(1, window.innerWidth);
+
+    const height =
+      Math.max(1, window.innerHeight);
+
+    const ndcX =
+      event.clientX / width * 2 - 1;
+
+    const ndcY =
+      1 - event.clientY / height * 2;
+
+    const verticalFov =
+      (
+        Number(this.camera?.fov) ||
+        80
+      ) * DEG;
+
+    const aspect =
+      Number(this.camera?.aspect) ||
+      width / height;
+
+    const horizontalFov =
+      2 * Math.atan(
+        Math.tan(verticalFov / 2) *
+        aspect
+      );
+
+    this._pointerYaw =
+      Math.atan(
+        Math.tan(horizontalFov / 2) *
+        ndcX
+      );
+
+    this._pointerPitch =
+      Math.atan(
+        Math.tan(verticalFov / 2) *
+        ndcY
+      );
   }
 
   _definitions() {
@@ -251,7 +288,15 @@ export class GazeMenu {
     }
   }
 
-  open(position, quaternion, crashMode = false) {
+  open(
+    position,
+    quaternion,
+    crashMode = false,
+    camera = null,
+  ) {
+    this.camera =
+      camera ||
+      this.camera;
     this.root.visible = false;
     this._clearPanels();
 

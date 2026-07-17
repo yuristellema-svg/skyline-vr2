@@ -141,7 +141,7 @@ export const CONFIG = Object.freeze({
     ]),
 
     monoBaseFov: 80,
-    monoSpeedFov: 20,
+    monoSpeedFov: 0,
     stereoFov: 80,
 
     fovSpeedStart: 50,
@@ -149,7 +149,7 @@ export const CONFIG = Object.freeze({
 
     thirdBack: 11,
     thirdUp: 3.5,
-    thirdPullback: 2,
+    thirdPullback: 0,
 
     thirdPositionResponse: 12,
     thirdRollLagSeconds: 0.08,

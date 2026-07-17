@@ -107,6 +107,11 @@ export class CameraRig {
 
     this._rollLagAngle = 0;
 
+    this._menuPoseActive = false;
+    this._menuPosition = new THREE.Vector3();
+    this._menuQuaternion = new THREE.Quaternion();
+    this._menuFov = config.camera.stereoFov;
+
     this.firstPersonRig =
       this._buildFirstPersonRig();
 
@@ -415,6 +420,21 @@ export class CameraRig {
     return mesh;
   }
 
+  beginMenuPose() {
+    this._menuPoseActive = true;
+    this._menuPosition.copy(this.camera.position);
+    this._menuQuaternion.copy(this.camera.quaternion);
+    this._menuFov = this.camera.fov;
+  }
+
+  endMenuPose() {
+    this._menuPoseActive = false;
+  }
+
+  get menuPoseActive() {
+    return this._menuPoseActive;
+  }
+
   toggle(phoneMode = false) {
     this.setMode(
       nextViewMode(
@@ -509,6 +529,38 @@ export class CameraRig {
       this.config.camera;
 
     if (
+      this._menuPoseActive &&
+      menuLook
+    ) {
+      this.camera.position.copy(
+        this._menuPosition
+      );
+
+      this.camera.quaternion.copy(
+        this._menuQuaternion
+      );
+
+      this._qYaw.setFromAxisAngle(
+        LOCAL_UP,
+        -(Number(menuLook.yaw) || 0),
+      );
+
+      this._qPitch.setFromAxisAngle(
+        LOCAL_RIGHT,
+        Number(menuLook.pitch) || 0,
+      );
+
+      this.camera.quaternion
+        .multiply(this._qYaw)
+        .multiply(this._qPitch);
+
+      this.camera.fov = this._menuFov;
+      this.camera.updateProjectionMatrix();
+      this.camera.updateMatrixWorld(true);
+      return;
+    }
+
+    if (
       this.mode === 'first'
       || this.mode === 'cockpit'
     ) {
@@ -573,15 +625,14 @@ export class CameraRig {
           this._worldOffset,
         );
 
-      this._spring(
-        this._thirdPosition,
-        this._thirdVelocity,
-        this._thirdTarget,
+      this._thirdPosition.copy(
+        this._thirdTarget
+      );
 
-        cameraConfig
-          .thirdPositionResponse,
-
-        dt,
+      this._thirdVelocity.set(
+        0,
+        0,
+        0
       );
 
       this.basePosition

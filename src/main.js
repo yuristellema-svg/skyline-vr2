@@ -110,7 +110,6 @@ let lastEyeText = null;
 let transientMessage = '';
 let transientUntil = 0;
 let menuNeedsReanchor = false;
-let menuOpeningViewYaw = 0;
 
 const menuCameraLook = {
   yaw: 0,
@@ -137,9 +136,13 @@ const menu = new GazeMenu(
     },
 
     recenter: () => {
-      menuOpeningViewYaw = 0;
-      menuNeedsReanchor = menu.isOpen;
-      showTransient('RECENTERED', 1.2);
+      menuNeedsReanchor =
+        menu.isOpen;
+
+      showTransient(
+        'RECENTERED',
+        1.2
+      );
     },
 
     camera: () => {
@@ -698,6 +701,8 @@ async function beginPhone(
 phoneStart.addEventListener(
   'click',
   () => {
+    worldPolish.unlockAudio();
+
     let permissionPromise;
 
     try {
@@ -743,6 +748,7 @@ async function beginDesktop() {
 desktopStart.addEventListener(
   'click',
   () => {
+    worldPolish.unlockAudio();
     void beginDesktop();
   }
 );
@@ -794,26 +800,13 @@ function openMenu(
   menu.effectsName =
     effects.intensityName;
 
-  /*
-   * Preserve the absolute head-yaw direction where
-   * the menu was opened. Menu cursor movement is then
-   * measured relative to this exact direction.
-   */
-  menuOpeningViewYaw =
-    phoneMode
-      ? (
-          Number.isFinite(
-            sharedRenderPose?.viewYaw
-          )
-            ? sharedRenderPose.viewYaw
-            : Number(input.controls?.viewYaw) || 0
-        )
-      : 0;
+  cameraRig.beginMenuPose();
 
   menu.open(
     stereo.camera.position,
     stereo.camera.quaternion,
-    crashMode
+    crashMode,
+    stereo.camera,
   );
 }
 
@@ -823,6 +816,7 @@ function resumeFromMenu() {
   }
 
   menu.close();
+  cameraRig.endMenuPose();
 
   phase = 'flying';
 
@@ -892,6 +886,7 @@ function beginRespawn(
 
   if (menu.isOpen) {
     menu.close();
+    cameraRig.endMenuPose();
   }
 
   prepareRespawnWorld(
@@ -910,6 +905,7 @@ function finishRespawn() {
   resetFlight();
   input.recenter();
   menu.close();
+  cameraRig.endMenuPose();
 
   phase = 'flying';
 
@@ -1245,15 +1241,18 @@ function frame(milliseconds) {
 
   if (menu.isOpen) {
     menuCameraLook.yaw =
-      menuOpeningViewYaw +
-      (
-        Number(input.menuLook?.yaw) ||
-        0
-      );
+      phoneMode
+        ? Number(
+            input.menuLook?.yaw
+          ) || 0
+        : 0;
 
     menuCameraLook.pitch =
-      Number(input.menuLook?.pitch) ||
-      0;
+      phoneMode
+        ? Number(
+            input.menuLook?.pitch
+          ) || 0
+        : 0;
   }
 
   cameraRig.update(
@@ -1281,8 +1280,22 @@ function frame(milliseconds) {
     menuNeedsReanchor &&
     menu.isOpen
   ) {
-    // Re-centre the menu directly in the current
-    // visible camera direction, not aircraft-forward.
+    cameraRig.endMenuPose();
+
+    cameraRig.update(
+      0,
+      sharedRenderPose,
+      stereo.stereoEnabled,
+      null,
+      0,
+      0,
+      0,
+      0
+    );
+
+    cameraRig.beginMenuPose();
+    input.beginMenuLook();
+
     menu.reanchor(
       stereo.camera.position,
       stereo.camera.quaternion

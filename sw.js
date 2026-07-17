@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-menu-beacon-v1-20260716';
+const SHELL_CACHE = 'skyline-menu-camera-v1-20260717';
 
 const SHELL_FILES = [
   './',
