@@ -4,6 +4,7 @@ import { BoostAudio } from './audio/boostAudio.js';
 import { FlightWarningAudio } from './audio/flightWarningAudio.js';
 import { PositionalTrafficAudio } from './audio/positionalTrafficAudio.js';
 import { StukaDiveSiren } from './audio/stukaDiveSiren.js';
+import { ZeroRadioAudio } from './audio/zeroRadioAudio.js';
 import { LandingAudio } from './expansion/landingAudio.js';
 import {
   safeDisconnect,
@@ -29,6 +30,7 @@ export class WindAudioSystem {
     this.sampleHeight = options.sampleHeight || null;
     this.masterLevel = Math.max(0.12, Math.min(0.50, Number(options.masterLevel) || 0.36));
     this.profile = options.initialProfile || 'zero';
+    this.radioEnabled = false;
     this.context = null;
     this.ready = false;
     this.disabled = false;
@@ -52,6 +54,10 @@ export class WindAudioSystem {
     this._onAircraft = event => {
       this.profile = event?.detail?.id || this.profile;
     };
+    this._onRadio = event => {
+      this.radioEnabled = Boolean(event?.detail?.enabled);
+      this.zeroRadio?.setEnabled(this.radioEnabled);
+    };
     this._onBoost = event => {
       try { this.boost?.playActivation(event?.detail?.chain || 1); } catch {}
     };
@@ -61,6 +67,7 @@ export class WindAudioSystem {
     this._listen('touchend', this._unlock, { passive: true });
     this._listen('keydown', this._unlock);
     this._listen('skyline:aircraft-changed', this._onAircraft);
+    this._listen('skyline:radio-changed', this._onRadio);
     this._listen('skyline:boost-fired', this._onBoost);
   }
 
@@ -306,6 +313,8 @@ export class WindAudioSystem {
     this.boost = new BoostAudio(context, this.mixBus);
     this.traffic = new PositionalTrafficAudio(context, this.mixBus);
     this.stukaSiren = new StukaDiveSiren(context, this.mixBus);
+    this.zeroRadio = new ZeroRadioAudio(context, this.mixBus);
+    this.zeroRadio.setEnabled(this.radioEnabled);
     this.landing = new LandingAudio(context, this.mixBus, this.eventTarget);
   }
 
@@ -340,6 +349,7 @@ export class WindAudioSystem {
       this.boost.update(flight);
       this.traffic.update(dt, flight, camera, phase, trafficSources);
       this.stukaSiren.update(this.profile, flight, phase);
+      this.zeroRadio.update(this.profile, phase);
     } catch (error) {
       this._fail(error);
     }
@@ -353,6 +363,7 @@ export class WindAudioSystem {
       profile: this.profile,
       failedReason: this.failedReason,
       contextState: this.context?.state || 'none',
+      radioEnabled: this.radioEnabled,
     };
   }
 
@@ -364,6 +375,7 @@ export class WindAudioSystem {
       this.boost,
       this.traffic,
       this.stukaSiren,
+      this.zeroRadio,
       this.landing,
     ]) {
       try { system?.dispose?.(); } catch {}
@@ -374,6 +386,7 @@ export class WindAudioSystem {
     this.boost = null;
     this.traffic = null;
     this.stukaSiren = null;
+    this.zeroRadio = null;
     this.landing = null;
     for (const node of [this.mixBus, this.phoneHighpass, this.compressor, this.limiter]) {
       safeDisconnect(node);
@@ -388,6 +401,7 @@ export class WindAudioSystem {
     this._unlisten('touchend', this._unlock);
     this._unlisten('keydown', this._unlock);
     this._unlisten('skyline:aircraft-changed', this._onAircraft);
+    this._unlisten('skyline:radio-changed', this._onRadio);
     this._unlisten('skyline:boost-fired', this._onBoost);
     this._disposeGraph();
     try {

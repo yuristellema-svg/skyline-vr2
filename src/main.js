@@ -22,6 +22,7 @@ import {
 } from './workerRuntime/lazyWorldRuntime.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
+import { RadioBeacon } from './expansion/radioBeacon.js';
 import { LandingSystem } from './expansion/landingSystem.js';
 import { NearWorldSystem } from './expansion/nearWorldSystem.js';
 import { RunwayGuidanceSystem } from './expansion/runwayGuidance.js';
@@ -80,6 +81,10 @@ const powerControl = new PowerControlSystem(
 const powerStrip = new PowerStrip(
   stereo.uiScene,
   powerControl,
+);
+
+const radioBeacon = new RadioBeacon(
+  stereo.uiScene,
 );
 
 const landingSystem = new LandingSystem(
@@ -191,6 +196,10 @@ const menu = new GazeMenu(
     camera: () => {
       const mode = cameraRig.toggle(phoneMode);
 
+      if (phoneMode) {
+        input.recenterViewYaw?.();
+      }
+
       cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
       // VIEW changes should not close the menu.
       menuNeedsReanchor = menu.isOpen;
@@ -236,6 +245,7 @@ function beginHeadRecalibration() {
   menu.close();
   cameraRig.endMenuPose();
   powerStrip.close();
+  radioBeacon.close();
 
   menuNeedsReanchor = false;
 
@@ -1013,6 +1023,7 @@ function openMenu(
     effects.intensityName;
 
   powerStrip.close();
+  radioBeacon.close();
   cameraRig.beginMenuPose();
 
   menu.open(
@@ -1254,6 +1265,9 @@ function updateInputAndState(
     phase !== 'calibrating'
   ) {
     cameraRig.toggle(phoneMode);
+    if (phoneMode) {
+      input.recenterViewYaw?.();
+    }
     cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
   }
 
@@ -1549,6 +1563,21 @@ function frame(milliseconds) {
     },
   );
 
+  radioBeacon.update(
+    frameDt,
+    {
+      active:
+        phoneMode &&
+        phase === 'flying' &&
+        !menu.isOpen,
+      camera: stereo.camera,
+      basePosition:
+        cameraRig.basePosition,
+      baseQuaternion:
+        cameraRig.baseQuaternion,
+    },
+  );
+
   if (
     menuNeedsReanchor &&
     menu.isOpen
@@ -1665,6 +1694,7 @@ function frame(milliseconds) {
       ? Math.max(
           menu.isOpen ? menu.dwellProgress : 0,
           powerStrip.progress,
+          radioBeacon.progress,
         )
       : 0,
     phase !== 'boot' &&

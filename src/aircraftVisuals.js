@@ -9,6 +9,14 @@ import {
 } from './aircraft/a6mZeroCockpit.js';
 
 import {
+  createBiplaneExternal,
+} from './aircraft/biplaneExternal.js';
+
+import {
+  createBiplaneCockpit,
+} from './aircraft/biplaneCockpit.js';
+
+import {
   createScoutExternal as createWorkerScoutExternal,
 } from './workerAirframe/scoutExternalClean.js';
 
@@ -32,6 +40,7 @@ export const AIRCRAFT_PROFILES = Object.freeze([
   Object.freeze({ id: 'zero', name: 'A6M ZERO · WHITE 872', engine: 'RADIAL' }),
   Object.freeze({ id: 'stuka', name: 'JU 87 STUKA', engine: 'INVERTED V12' }),
   Object.freeze({ id: 'scout', name: 'ALPINE SCOUT', engine: 'LIGHT INLINE' }),
+  Object.freeze({ id: 'biplane', name: 'PT-17 BIPLANE', engine: 'RADIAL' }),
   Object.freeze({ id: 'glider', name: 'SKYLINE GLIDER', engine: 'WIND' }),
 ]);
 
@@ -321,6 +330,7 @@ const COCKPIT_BUILDERS_V52 = Object.freeze({
   zero: createA6MZeroCockpit,
   stuka: createJu87StukaCockpit,
   scout: createWorkerScoutCockpit,
+  biplane: createBiplaneCockpit,
   glider: createWorkerGliderCockpit,
 });
 
@@ -328,6 +338,7 @@ const EXTERNAL_BUILDERS = Object.freeze({
   zero: createA6MZeroExternal,
   stuka: createJu87StukaExternal,
   scout: createWorkerScoutExternal,
+  biplane: createBiplaneExternal,
   glider: createWorkerGliderExternal,
 });
 
@@ -377,7 +388,7 @@ export class AircraftVisualSystem {
     this._onKeyDown = event => {
       if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.code === 'KeyV') this.next();
-      else if (/^Digit[1-4]$/.test(event.code)) this.setProfile(Number(event.code.slice(-1)) - 1);
+      else if (/^Digit[1-5]$/.test(event.code)) this.setProfile(Number(event.code.slice(-1)) - 1);
     };
     window.addEventListener('keydown', this._onKeyDown);
   }

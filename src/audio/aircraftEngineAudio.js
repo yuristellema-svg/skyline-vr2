@@ -277,7 +277,7 @@ export class AircraftEngineAudio {
     safeSetTarget(this.sirenVoices[0].frequency, sirenFrequency, now, 0.14);
     safeSetTarget(this.sirenVoices[1].frequency, sirenFrequency * 1.021, now, 0.14);
     safeSetTarget(this.sirenFilter.frequency, 720 + targets.sirenTarget * 260, now, 0.12);
-    safeSetTarget(this.sirenBus.gain, targets.sirenTarget * 0.205 + 0.0001, now, targets.sirenTarget > 0 ? 0.22 : 0.34);
+    safeSetTarget(this.sirenBus.gain, 0.0001, now, 0.18);
     safeSetTarget(this.sirenModDepth.gain, targets.sirenTarget * 0.064, now, 0.16);
   }
 

@@ -1,3 +1,7 @@
+import {
+  BIPLANE_FLIGHT_PROFILE_PROPOSAL,
+} from './aircraft/biplaneProfile.js';
+
 const PROFILE_STORAGE_KEY =
   'skyline-aircraft-profile-v4';
 
@@ -114,6 +118,8 @@ export const AIRCRAFT_FLIGHT_PROFILES =
       structuralPositiveG: 7.8,
       structuralNegativeG: -3.8,
     }),
+
+    biplane: BIPLANE_FLIGHT_PROFILE_PROPOSAL,
 
     glider: profile({
       id: 'glider',

@@ -1,0 +1,24 @@
+{
+  "package": "skyline-biplane-airframe-v1",
+  "aircraftId": "biplane",
+  "displayName": "PT-17 BIPLANE",
+  "baseline": "origin/skyline-quick-fixes-v2",
+  "liveRosterWiringIncluded": false,
+  "files": [
+    "src/aircraft/biplaneSpecs.js",
+    "src/aircraft/biplaneVisualShared.js",
+    "src/aircraft/biplaneExternal.js",
+    "src/aircraft/biplaneCockpit.js",
+    "src/aircraft/biplaneRuntime.js",
+    "src/aircraft/biplaneProfile.js",
+    "tests/biplane-airframe.test.mjs",
+    "tests/biplane-runtime.test.mjs",
+    "tests/biplane-package.test.mjs",
+    "BIPLANE_HANDOFF.md",
+    "BIPLANE_RESEARCH.md",
+    "TEST_RESULTS.txt",
+    "BIPLANE_PACKAGE_MANIFEST.json",
+    "PACKAGE_CONTENTS.txt",
+    "CHECKSUMS.sha256"
+  ]
+}

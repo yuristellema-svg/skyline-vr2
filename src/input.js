@@ -523,6 +523,14 @@ export class InputController {
       this.sensorValid;
   }
 
+  recenterViewYaw() {
+    if (!this.yawValid) return false;
+    this.baselineHeading = this.latestHeading;
+    this.controls.viewYaw = 0;
+    this._targetViewYaw = 0;
+    return true;
+  }
+
   sampleFlightControls(
     dt = 1 / 60,
   ) {

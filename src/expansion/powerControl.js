@@ -96,7 +96,7 @@ export class PowerControlSystem {
 
   setAircraft(id, emit = true) {
     this.aircraftId =
-      ['zero', 'stuka', 'scout', 'glider'].includes(id)
+      ['zero', 'stuka', 'scout', 'biplane', 'glider'].includes(id)
         ? id
         : 'zero';
     if (!this.indices.has(this.aircraftId)) {

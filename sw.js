@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-stall-hotfix-v1-20260717';
+const SHELL_CACHE = 'skyline-biplane-audio-view-v1-r2-20260718';
 
 const SHELL_FILES = [
   './',
@@ -54,6 +54,17 @@ const SHELL_FILES = [
   './src/menu.js',
   './src/hud.js',
   './src/world/world.js',
+  './src/expansion/radioBeacon.js',
+  './src/audio/zeroRadioAudio.js',
+  './src/audio/stukaDiveSiren.js',
+  './src/aircraft/biplaneCockpit.js',
+  './src/aircraft/biplaneExternal.js',
+  './src/aircraft/biplaneProfile.js',
+  './src/aircraft/biplaneRuntime.js',
+  './src/aircraft/biplaneSpecs.js',
+  './src/aircraft/biplaneVisualShared.js',
+  './assets/audio/zero-radio.mp3',
+  './assets/audio/stuka-siren.mp3',
   './vendor/three.module.min.js',
 ];
 

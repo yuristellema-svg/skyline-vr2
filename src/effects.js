@@ -76,7 +76,7 @@ function makeStreakGeometry(count, depth, radius) {
 export class EffectsSystem {
   constructor(scene) {
     this.scene = scene;
-    this.intensityIndex = 1;
+    this.intensityIndex = 2;
     this.intensityName = INTENSITY_LEVELS[this.intensityIndex].name;
 
     this.vignette = 0;
