@@ -3,9 +3,9 @@ import { CONFIG, clamp, damp, smoothstep } from './config.js';
 import { SkyDecorSystem } from './skyDecor.js';
 
 const INTENSITY_LEVELS = Object.freeze([
-  Object.freeze({ name: 'COMFORT', multiplier: 0.42, shake: 0.16 }),
-  Object.freeze({ name: 'STANDARD', multiplier: 0.72, shake: 0.34 }),
-  Object.freeze({ name: 'FULL', multiplier: 1, shake: 0.58 }),
+  Object.freeze({ name: 'COMFORT', multiplier: 0.42, shake: 0.24 }),
+  Object.freeze({ name: 'STANDARD', multiplier: 0.72, shake: 0.60 }),
+  Object.freeze({ name: 'FULL', multiplier: 1, shake: 0.90 }),
   Object.freeze({ name: 'OFF', multiplier: 0, shake: 0 }),
 ]);
 
@@ -361,7 +361,10 @@ export class EffectsSystem {
 
     // VR comfort rule: shake stays tiny and is driven mainly by severe stall.
     const shakeLimit = CONFIG.effects?.maxVrShake ?? (0.18 * Math.PI / 180);
-    const shakeAmount = stall * stall * shakeLimit * level.shake;
+    const shakeAmount =
+      smoothstep(0.16, 0.88, stall) *
+      shakeLimit *
+      level.shake;
     this.shakePitch = Math.sin(this.elapsed * 39.1) * shakeAmount;
     this.shakeYaw = Math.sin(this.elapsed * 31.7 + 1.9) * shakeAmount * 0.62;
     this.shakeRoll = Math.sin(this.elapsed * 35.3 + 0.7) * shakeAmount * 0.45;

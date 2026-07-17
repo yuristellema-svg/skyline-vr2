@@ -103,6 +103,8 @@ const worldPolish = new WorldPolishSystem(
      */
     routes: false,
     wildlife: false,
+    city: false,
+    aiTraffic: false,
     contrails: true,
   },
 );
@@ -586,27 +588,15 @@ function startSession(phone) {
     );
   }
 
-  /*
-   * The flight is already running before any
-   * worker-world module is downloaded or created.
-   * A worker failure can therefore never trap the
-   * player on the start screen.
-   */
-  void workerWorld
-    .activate()
-    .then((status) => {
-      if (status.active) {
-        showTransient(
-          'WORLD SYSTEMS ONLINE',
-          2
-        );
-      } else {
-        showTransient(
-          'BASE WORLD ACTIVE',
-          2
-        );
-      }
-    });
+  const visibleWorld =
+    nearWorld.getStatus();
+
+  showTransient(
+    `WORLD · ${visibleWorld.visibleBirds} BIRDS · ` +
+    `${visibleWorld.visibleAI} AI · ` +
+    `${visibleWorld.visibleSailplanes} GLIDER`,
+    3
+  );
 }
 
 async function waitForLandscape() {
@@ -1224,12 +1214,6 @@ function frame(milliseconds) {
         phase,
       );
 
-      workerWorld.fixedStepUpdate(
-        CONFIG.physics.fixedStep,
-        flight,
-        phase,
-      );
-
             const collisionHit =
         !landingResult.suppressCollision &&
         collision.check(flight.position);
@@ -1398,13 +1382,6 @@ function frame(milliseconds) {
 
 
   worldPolish.update(
-    frameDt,
-    flight,
-    stereo.camera,
-    phase,
-  );
-
-  workerWorld.update(
     frameDt,
     flight,
     stereo.camera,

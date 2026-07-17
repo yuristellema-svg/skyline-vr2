@@ -52,6 +52,7 @@ function birdShape() {
   );
   geometry.computeVertexNormals();
   group.add(new THREE.Mesh(geometry, material));
+  group.scale.setScalar(2.2);
   return group;
 }
 
@@ -122,12 +123,12 @@ export class NearWorldSystem {
           type: 'bird',
           name: `skyline-bird-${flock}-${index}`,
           center: new THREE.Vector3(
-            sx + (flock ? 330 : -280),
-            sy - 90 - flock * 40,
-            sz - 520 - flock * 300,
+            sx + (flock ? 250 : -190),
+            sy - 55 - flock * 42,
+            sz - 340 - flock * 280,
           ),
-          radiusX: 90 + index * 5,
-          radiusZ: 70 + index * 4,
+          radiusX: 62 + index * 4,
+          radiusZ: 52 + index * 3,
           speed: (flock ? -1 : 1) * (0.22 + index * 0.012),
           phase: index * 0.72,
           phoneAllowed: index < 4,
@@ -237,10 +238,33 @@ export class NearWorldSystem {
       actor.object.position.set(
         actor.center.x + Math.cos(angle) * actor.radiusX,
         actor.center.y + Math.sin(angle * 1.7) *
-          (actor.type === 'bird' ? 12 : 34),
+          (
+            actor.type === 'bird'
+              ? 8
+              : actor.type === 'sailplane'
+                ? 13
+                : 18
+          ),
         actor.center.z + Math.sin(angle) * actor.radiusZ,
       );
-      actor.object.rotation.y = -angle + Math.PI / 2;
+      const direction =
+        Math.sign(actor.speed || 1);
+
+      actor.object.rotation.set(
+        Math.sin(angle * 1.7) * 0.035,
+        -angle +
+          (
+            direction > 0
+              ? Math.PI / 2
+              : -Math.PI / 2
+          ),
+        actor.type === 'bird'
+          ? -direction * 0.12
+          : actor.type === 'sailplane'
+            ? -direction * 0.14
+            : -direction * 0.22,
+        'YXZ',
+      );
       if (
         actor.type === 'ai' &&
         this.collisionCooldown <= 0 &&
