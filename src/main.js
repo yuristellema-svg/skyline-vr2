@@ -32,6 +32,7 @@ const startPanel = document.querySelector('#start-panel');
 const phoneStart = document.querySelector('#phone-start');
 const desktopStart = document.querySelector('#desktop-start');
 const startStatus = document.querySelector('#start-status');
+const phoneStartLabel = phoneStart.querySelector('span');
 const orientationWarning = document.querySelector('#orientation-warning');
 const installHint = document.querySelector('#install-hint');
 const installDismiss = document.querySelector('#install-dismiss');
@@ -149,6 +150,16 @@ let transientMessage = '';
 let transientUntil = 0;
 let menuNeedsReanchor = false;
 
+let awaitingPhoneAudioGesture =
+  false;
+
+let phoneAudioGestureResolve =
+  null;
+
+const PHONE_START_DEFAULT_LABEL =
+  phoneStartLabel?.textContent ||
+  'START PHONE VR';
+
 const menuCameraLook = {
   yaw: 0,
   pitch: 0,
@@ -241,6 +252,121 @@ function showTransient(
   transientUntil =
     performance.now() / 1000 +
     seconds;
+}
+
+function audioIsRunning() {
+  return (
+    worldPolish
+      .getStatus()
+      ?.audio
+      ?.contextState ===
+    'running'
+  );
+}
+
+async function requestAudioFromGesture(
+  forceRebuild = false,
+) {
+  try {
+    return await worldPolish
+      .unlockAudioFromGesture(
+        forceRebuild,
+      );
+  } catch {
+    return false;
+  }
+}
+
+function waitForPhoneAudioGesture() {
+  awaitingPhoneAudioGesture =
+    true;
+
+  phoneStart.disabled = false;
+  desktopStart.disabled = true;
+
+  if (phoneStartLabel) {
+    phoneStartLabel.textContent =
+      'ENABLE SOUND & START';
+  }
+
+  setStartStatus(
+    'Motion is ready. Tap once more to enable sound and fly.'
+  );
+
+  return new Promise(
+    resolve => {
+      phoneAudioGestureResolve =
+        resolve;
+    },
+  );
+}
+
+async function completePhoneAudioGesture() {
+  phoneStart.disabled = true;
+
+  setStartStatus(
+    'Enabling sound…'
+  );
+
+  const unlocked =
+    await requestAudioFromGesture(
+      true,
+    );
+
+  if (
+    !unlocked ||
+    !audioIsRunning()
+  ) {
+    phoneStart.disabled = false;
+
+    setStartStatus(
+      'Sound is still blocked. Tap again to retry.',
+      true,
+    );
+
+    return;
+  }
+
+  awaitingPhoneAudioGesture =
+    false;
+
+  if (phoneStartLabel) {
+    phoneStartLabel.textContent =
+      PHONE_START_DEFAULT_LABEL;
+  }
+
+  const resolve =
+    phoneAudioGestureResolve;
+
+  phoneAudioGestureResolve =
+    null;
+
+  resolve?.(true);
+}
+
+for (
+  const type of [
+    'pointerdown',
+    'touchend',
+  ]
+) {
+  canvas.addEventListener(
+    type,
+    () => {
+      if (
+        phoneMode &&
+        phase !== 'boot' &&
+        !audioIsRunning()
+      ) {
+        void requestAudioFromGesture(
+          true,
+        );
+      }
+    },
+    {
+      passive: true,
+    },
+  );
 }
 
 function isLandscape() {
@@ -642,7 +768,8 @@ async function waitForLandscape() {
 }
 
 async function beginPhone(
-  permissionPromise
+  permissionPromise,
+  initialAudioPromise,
 ) {
   phoneStart.disabled = true;
   desktopStart.disabled = true;
@@ -689,6 +816,19 @@ async function beginPhone(
       );
     }
 
+    try {
+      await initialAudioPromise;
+    } catch {}
+
+    /*
+     * The motion-permission dialog can interrupt
+     * the AudioContext created by the first tap.
+     *
+     * This second tap happens after the dialog,
+     * rebuilds Web Audio and verifies it is running.
+     */
+    await waitForPhoneAudioGesture();
+
     setStartStatus(
       'Loading the open world...'
     );
@@ -715,7 +855,17 @@ async function beginPhone(
 phoneStart.addEventListener(
   'click',
   () => {
-    worldPolish.unlockAudio();
+    if (
+      awaitingPhoneAudioGesture
+    ) {
+      void completePhoneAudioGesture();
+      return;
+    }
+
+    const initialAudioPromise =
+      requestAudioFromGesture(
+        false,
+      );
 
     let permissionPromise;
 
@@ -730,7 +880,8 @@ phoneStart.addEventListener(
     requestFullscreenFromGesture();
 
     void beginPhone(
-      permissionPromise
+      permissionPromise,
+      initialAudioPromise,
     );
   }
 );
@@ -762,7 +913,10 @@ async function beginDesktop() {
 desktopStart.addEventListener(
   'click',
   () => {
-    worldPolish.unlockAudio();
+    void requestAudioFromGesture(
+      false,
+    );
+
     void beginDesktop();
   }
 );
@@ -1541,6 +1695,10 @@ window.skylineExpansionDiagnostics = () => ({
     zone: landingSystem.zone?.id || null,
   },
   world: nearWorld.getStatus(),
+  audio:
+    worldPolish
+      .getStatus()
+      ?.audio,
 });
 
 configureInstallHint();

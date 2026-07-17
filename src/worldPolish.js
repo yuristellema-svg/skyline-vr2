@@ -19,6 +19,9 @@ export class WorldPolishSystem {
     const sampleHeight =
       options.sampleHeight || null;
 
+    this.sampleHeight =
+      sampleHeight;
+
     // Disable the older optional-world audio engine so only one Web Audio
     // graph can exist. All other optional-world systems remain unchanged.
     this.optionalWorld =
@@ -56,11 +59,55 @@ export class WorldPolishSystem {
       );
   }
 
-  unlockAudio() {
+  async unlockAudioFromGesture(
+    forceRebuild = false,
+  ) {
+    if (
+      forceRebuild ||
+      !this.audio ||
+      this.audio.disabled ||
+      this.audio.disposed
+    ) {
+      try {
+        this.audio?.dispose?.();
+      } catch {}
+
+      this.audio = null;
+
+      this.audioFailureReported =
+        false;
+
+      try {
+        this.audio =
+          new WindAudioSystem({
+            sampleHeight:
+              this.sampleHeight,
+          });
+      } catch (error) {
+        console.warn(
+          '[Skyline] Audio rebuild unavailable',
+          error,
+        );
+
+        return false;
+      }
+    }
+
     return (
-      this.audio?.unlock?.() ??
-      false
-    );
+      await this.audio
+        ?.unlockFromGesture?.(
+          forceRebuild,
+        )
+    ) ?? false;
+  }
+
+  unlockAudio() {
+    void this
+      .unlockAudioFromGesture(
+        false,
+      );
+
+    return true;
   }
 
   fixedStepUpdate(

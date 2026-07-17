@@ -46,7 +46,9 @@ export class WindAudioSystem {
     }
     globalThis[OWNER_KEY] = this;
 
-    this._unlock = () => this.unlock();
+    this._unlock = () => {
+      void this.unlockFromGesture(false);
+    };
     this._onAircraft = event => {
       this.profile = event?.detail?.id || this.profile;
     };
@@ -55,6 +57,7 @@ export class WindAudioSystem {
     };
 
     this._listen('pointerdown', this._unlock, { passive: true });
+    this._listen('click', this._unlock, { passive: true });
     this._listen('touchend', this._unlock, { passive: true });
     this._listen('keydown', this._unlock);
     this._listen('skyline:aircraft-changed', this._onAircraft);
@@ -82,24 +85,168 @@ export class WindAudioSystem {
     this.context = null;
   }
 
-  unlock() {
-    if (this.disabled || this.disposed) return false;
+  _playUnlockTone() {
+    const context =
+      this.context;
+
+    if (!context) {
+      return;
+    }
+
+    const now =
+      context.currentTime;
+
+    const oscillator =
+      context.createOscillator();
+
+    const gain =
+      context.createGain();
+
+    oscillator.type =
+      'sine';
+
+    oscillator.frequency
+      .setValueAtTime(
+        420,
+        now,
+      );
+
+    gain.gain
+      .setValueAtTime(
+        0.0001,
+        now,
+      );
+
+    gain.gain
+      .exponentialRampToValueAtTime(
+        0.018,
+        now + 0.012,
+      );
+
+    gain.gain
+      .exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.09,
+      );
+
+    oscillator.connect(gain);
+    gain.connect(
+      context.destination,
+    );
+
+    oscillator.start(now);
+    oscillator.stop(
+      now + 0.10,
+    );
+
+    oscillator.onended =
+      () => {
+        safeDisconnect(
+          oscillator,
+        );
+
+        safeDisconnect(gain);
+      };
+  }
+
+  async _discardContextForRetry() {
     try {
+      this._disposeGraph();
+    } catch {}
+
+    try {
+      if (
+        this.context &&
+        this.context.state !==
+          'closed'
+      ) {
+        await this.context
+          .close?.();
+      }
+    } catch {}
+
+    this.context = null;
+    this.ready = false;
+  }
+
+  async unlockFromGesture(
+    forceRebuild = false,
+  ) {
+    if (this.disposed) {
+      return false;
+    }
+
+    try {
+      const state =
+        this.context
+          ?.state ||
+        'none';
+
+      if (
+        forceRebuild ||
+        this.disabled ||
+        state === 'closed' ||
+        state === 'interrupted'
+      ) {
+        await this
+          ._discardContextForRetry();
+
+        this.disabled = false;
+        this.failedReason = '';
+      }
+
       if (!this.context) {
-        this.context = this.contextFactory?.();
-        if (!this.context) throw new Error('Web Audio is unavailable');
+        this.context =
+          this.contextFactory?.();
+
+        if (!this.context) {
+          throw new Error(
+            'Web Audio is unavailable',
+          );
+        }
+
         this._buildGraph();
       }
-      if (this.context.state === 'suspended') {
-        const promise = this.context.resume?.();
-        promise?.catch?.(error => this._fail(error));
+
+      if (
+        this.context.state !==
+        'running'
+      ) {
+        await this.context
+          .resume?.();
       }
+
+      this._playUnlockTone();
+
+      if (
+        this.context.state !==
+        'running'
+      ) {
+        throw new Error(
+          `AudioContext remained ${this.context.state}`,
+        );
+      }
+
       this.ready = true;
+      this.disabled = false;
+      this.failedReason = '';
+
       return true;
     } catch (error) {
       this._fail(error);
       return false;
     }
+  }
+
+  unlock() {
+    if (this.disposed) {
+      return false;
+    }
+
+    void this
+      .unlockFromGesture(false);
+
+    return true;
   }
 
   _buildGraph() {
@@ -217,6 +364,7 @@ export class WindAudioSystem {
     if (this.disposed) return;
     this.disposed = true;
     this._unlisten('pointerdown', this._unlock);
+    this._unlisten('click', this._unlock);
     this._unlisten('touchend', this._unlock);
     this._unlisten('keydown', this._unlock);
     this._unlisten('skyline:aircraft-changed', this._onAircraft);
