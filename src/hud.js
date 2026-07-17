@@ -36,7 +36,7 @@ export class MonoHud {
             <div class="analog-gauge analog-gauge--small"><small>HDG</small><strong data-hud="heading">000</strong><em>DEG</em></div>
             <div class="analog-gauge analog-gauge--small"><small>LOAD</small><strong data-hud="load">1.0</strong><em>G</em></div>
           </div>
-          <div class="analog-hud__footer"><span>V/S <b data-hud="vertical">+000</b></span><span>VIEW <b data-hud="camera">FIRST</b></span><span>PWR <b data-hud="power">MIDDLE</b></span><span data-hud="boost"></span></div>
+          <div class="analog-hud__footer"><span>V/S <b data-hud="vertical">+000</b></span><span>VIEW <b data-hud="camera">FIRST</b></span><span>PWR <b data-hud="power">MIDDLE</b></span><span>RWY <b data-hud="runway">----</b></span><span data-hud="boost"></span></div>
         </div>
       </section>`;
 
@@ -114,12 +114,33 @@ export class MonoHud {
     this.nodes.power.textContent =
       String(flight?.powerLabel || 'MIDDLE').toUpperCase();
 
+    const runwayDistance =
+      Number(
+        flight?.runwayDistance,
+      );
+
+    this.nodes.runway.textContent =
+      Number.isFinite(
+        runwayDistance,
+      )
+        ? runwayDistance >= 1000
+          ? `${(
+              runwayDistance /
+              1000
+            ).toFixed(1)}K`
+          : `${Math.round(
+              runwayDistance,
+            )}M`
+        : '----';
+
     let state = 'CRUISE';
 
     if (flight?.landingState === 'stopped') {
       state = 'LANDED';
     } else if (flight?.landingState === 'rollout') {
       state = 'ROLLOUT';
+    } else if (flight?.runwayApproach) {
+      state = 'APPROACH';
     } else if (
       structural > 0.72
     ) {

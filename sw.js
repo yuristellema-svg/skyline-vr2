@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-flight-expansion-v1-20260717';
+const SHELL_CACHE = 'skyline-quick-fixes-v2-20260717';
 
 const SHELL_FILES = [
   './',

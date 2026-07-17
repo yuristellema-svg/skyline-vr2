@@ -3,6 +3,7 @@ import { AirflowAudio } from './audio/airflowAudio.js';
 import { BoostAudio } from './audio/boostAudio.js';
 import { FlightWarningAudio } from './audio/flightWarningAudio.js';
 import { PositionalTrafficAudio } from './audio/positionalTrafficAudio.js';
+import { StukaDiveSiren } from './audio/stukaDiveSiren.js';
 import { LandingAudio } from './expansion/landingAudio.js';
 import {
   safeDisconnect,
@@ -137,6 +138,7 @@ export class WindAudioSystem {
     });
     this.boost = new BoostAudio(context, this.mixBus);
     this.traffic = new PositionalTrafficAudio(context, this.mixBus);
+    this.stukaSiren = new StukaDiveSiren(context, this.mixBus);
     this.landing = new LandingAudio(context, this.mixBus, this.eventTarget);
   }
 
@@ -170,6 +172,7 @@ export class WindAudioSystem {
       this.warnings.update(dt, this.profile, flight, phase);
       this.boost.update(flight);
       this.traffic.update(dt, flight, camera, phase, trafficSources);
+      this.stukaSiren.update(this.profile, flight, phase);
     } catch (error) {
       this._fail(error);
     }
@@ -187,7 +190,15 @@ export class WindAudioSystem {
   }
 
   _disposeGraph() {
-    for (const system of [this.engine, this.airflow, this.warnings, this.boost, this.traffic, this.landing]) {
+    for (const system of [
+      this.engine,
+      this.airflow,
+      this.warnings,
+      this.boost,
+      this.traffic,
+      this.stukaSiren,
+      this.landing,
+    ]) {
       try { system?.dispose?.(); } catch {}
     }
     this.engine = null;
@@ -195,6 +206,7 @@ export class WindAudioSystem {
     this.warnings = null;
     this.boost = null;
     this.traffic = null;
+    this.stukaSiren = null;
     this.landing = null;
     for (const node of [this.mixBus, this.phoneHighpass, this.compressor, this.limiter]) {
       safeDisconnect(node);

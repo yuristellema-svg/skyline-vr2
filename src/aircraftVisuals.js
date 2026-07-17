@@ -461,6 +461,7 @@ export class AircraftVisualSystem {
     cameraMode = 'first',
     cockpitPosition = null,
     cockpitQuaternion = null,
+    powerState = null,
   ) {
     const safeDt = Math.max(0, Math.min(0.1, dt || 0));
     this.elapsed += safeDt;
@@ -501,16 +502,83 @@ export class AircraftVisualSystem {
       }
     }
 
-    const speed = Math.max(0, Number(renderPose?.speed) || 0);
-    const propeller = this.externalModel?.userData?.propeller;
+    const speed =
+      Math.max(
+        0,
+        Number(renderPose?.speed) || 0,
+      );
+
+    const throttle =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          Number(
+            powerState?.throttle,
+          ) || 0,
+        ),
+      );
+
+    const engineOn =
+      powerState
+        ? Boolean(
+            powerState.engineOn,
+          )
+        : this.profile.id !==
+          'glider';
+
+    const propeller =
+      this.externalModel
+        ?.userData
+        ?.propeller;
+
     if (propeller) {
-      propeller.rotation.z += safeDt * (18 + Math.min(112, speed * 0.50));
+      const poweredRate =
+        10 +
+        throttle * 112 +
+        Math.min(
+          16,
+          speed * 0.10,
+        );
+
+      const windmillRate =
+        Math.min(
+          10,
+          speed * 0.075,
+        );
+
+      propeller.rotation.z +=
+        safeDt *
+        (
+          engineOn
+            ? poweredRate
+            : windmillRate
+        );
     }
 
-    const propellerBlur = this.externalModel?.userData?.propellerBlur;
+    const propellerBlur =
+      this.externalModel
+        ?.userData
+        ?.propellerBlur ||
+      propeller
+        ?.userData
+        ?.blurDisk;
+
     if (propellerBlur?.material) {
-      const blurAmount = Math.max(0, Math.min(1, (speed - 18) / 95));
-      propellerBlur.material.opacity = blurAmount * 0.18;
+      const blurAmount =
+        engineOn
+          ? Math.max(
+              0,
+              Math.min(
+                1,
+                throttle * 1.18,
+              ),
+            )
+          : 0;
+
+      propellerBlur.material.opacity =
+        blurAmount *
+        0.18;
     }
 
     const instruments = this.cockpitModel?.userData?.instruments || [];

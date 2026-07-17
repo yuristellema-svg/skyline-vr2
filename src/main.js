@@ -24,6 +24,8 @@ import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
 import { LandingSystem } from './expansion/landingSystem.js';
 import { NearWorldSystem } from './expansion/nearWorldSystem.js';
+import { RunwayGuidanceSystem } from './expansion/runwayGuidance.js';
+import { CockpitPowerFeedback } from './expansion/cockpitPowerFeedback.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -83,6 +85,17 @@ const landingSystem = new LandingSystem(
   scene,
   world.sampleHeight,
 );
+
+const runwayGuidance =
+  new RunwayGuidanceSystem(
+    scene,
+    landingSystem,
+  );
+
+const cockpitPowerFeedback =
+  new CockpitPowerFeedback(
+    scene,
+  );
 
 const nearWorld = new NearWorldSystem(
   scene,
@@ -822,8 +835,29 @@ function resumeFromMenu() {
 
   phase = 'flying';
 
-  // SKYLINE_RESUME_FORCE_LIVE
-  ensureLiveFlight(false);
+  /*
+   * A stationary landed aircraft is valid.
+   * Do not respawn it merely because speed is zero.
+   */
+  if (landingSystem.grounded) {
+    renderPoseInterpolator.reset(
+      flight,
+      'landed-menu-resume',
+    );
+
+    sharedRenderPose =
+      renderPoseInterpolator
+        .sampleCurrent(
+          renderPose,
+        );
+
+    cameraRig.reset(
+      sharedRenderPose,
+    );
+  } else {
+    ensureLiveFlight(false);
+  }
+
   accumulator = 0;
 
   lastFrame =
@@ -1351,7 +1385,27 @@ function frame(milliseconds) {
     cameraRig.mode,
     cameraRig.basePosition,
     cameraRig.baseQuaternion,
+    powerControl.state,
   );
+
+  cockpitPowerFeedback.update({
+    visible:
+      cameraRig.mode ===
+        'cockpit' &&
+      phase !== 'boot',
+
+    position:
+      cameraRig.basePosition,
+
+    quaternion:
+      cameraRig.baseQuaternion,
+
+    powerState:
+      powerControl.state,
+
+    aircraftId:
+      aircraftVisuals.profile.id,
+  });
   worldPolish.beginPerformanceFrame?.(
     frameDt,
     {
@@ -1379,6 +1433,7 @@ function frame(milliseconds) {
 
   nearWorld.update(frameDt, flight);
   landingSystem.update(frameDt, flight);
+  runwayGuidance.update(flight);
 
   const worldFocus =
     phase === 'crashed'
