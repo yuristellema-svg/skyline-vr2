@@ -138,17 +138,48 @@ export class FlightModel {
             event?.detail?.id,
           );
 
-        this.aircraftProfile =
-          profile;
-
-        this.aircraftProfileId =
-          profile.id;
+        this.aircraftProfile = profile;
+        this.aircraftProfileId = profile.id;
       };
+
+    this._onPower = event => {
+      const detail = event?.detail || {};
+      if (
+        detail.aircraftId &&
+        detail.aircraftId !== this.aircraftProfileId
+      ) {
+        return;
+      }
+      this.targetThrottle =
+        clamp(Number(detail.throttle) || 0, 0, 1);
+      this.engineOn = Boolean(detail.engineOn);
+      this.airbrake =
+        clamp(Number(detail.airbrake) || 0, 0, 1);
+      this.powerLabel =
+        String(detail.label || this.powerLabel);
+    };
+
+    this._onBrake = event => {
+      this.brake =
+        clamp(Number(event?.detail?.amount) || 0, 0, 1);
+    };
 
     globalThis.window
       ?.addEventListener?.(
         'skyline:aircraft-changed',
         this._onAircraftProfile,
+      );
+
+    globalThis.window
+      ?.addEventListener?.(
+        'skyline:power-changed',
+        this._onPower,
+      );
+
+    globalThis.window
+      ?.addEventListener?.(
+        'skyline:brake-changed',
+        this._onBrake,
       );
 
     this.position =
@@ -172,6 +203,25 @@ export class FlightModel {
     this.stallAmount = 0;
     this.gLoad = 1;
     this.viewYaw = 0;
+
+    this.throttle =
+      this.aircraftProfile.enginePower > 0
+        ? 0.67
+        : 0;
+    this.targetThrottle = this.throttle;
+    this.engineOn =
+      this.aircraftProfile.enginePower > 0;
+    this.airbrake = 0;
+    this.brake = 0;
+    this.powerLabel =
+      this.engineOn ? 'MIDDLE' : 'CLOSED';
+    this.onGround = false;
+    this.groundZoneId = '';
+    this.landingState = 'airborne';
+    this.engineAcceleration = 0;
+    this.airbrakeAcceleration = 0;
+    this._boostAccelerationRemaining = 0;
+    this._boostTimeRemaining = 0;
 
     this.boostCharge = 0;
     this.boostRemaining = 0;
@@ -304,6 +354,13 @@ export class FlightModel {
 
     this._disableBoost();
 
+    this.onGround = false;
+    this.groundZoneId = '';
+    this.landingState = 'airborne';
+    this.throttle = this.targetThrottle;
+    this.engineAcceleration = 0;
+    this.airbrakeAcceleration = 0;
+
     this.gravityAcceleration = 0;
     this.dragAcceleration = 0;
     this.assistanceAcceleration = 0;
@@ -332,6 +389,13 @@ export class FlightModel {
 
     this.elapsed += dt;
 
+    this.throttle = damp(
+      this.throttle,
+      this.engineOn ? this.targetThrottle : 0,
+      this.aircraftProfile.engineResponse,
+      dt,
+    );
+
     this.viewYaw =
       Number.isFinite(
         controls.viewYaw,
@@ -339,7 +403,7 @@ export class FlightModel {
         ? controls.viewYaw
         : 0;
 
-    this._disableBoost();
+    this._updateBoost(dt);
 
     this._previousVelocity.copy(
       this.velocity,
@@ -457,6 +521,12 @@ export class FlightModel {
     this.assistanceAcceleration =
       acceleration.energyBias;
 
+    this.engineAcceleration =
+      acceleration.engineThrust;
+
+    this.airbrakeAcceleration =
+      acceleration.airbrakeDrag;
+
     this.turnDragAcceleration =
       acceleration.turnDrag;
 
@@ -470,7 +540,8 @@ export class FlightModel {
     this.overspeedDragAcceleration =
       acceleration.overspeedDrag;
 
-    this.boostAcceleration = 0;
+    this.boostAcceleration =
+      acceleration.boost;
 
     this.velocity
       .copy(
@@ -500,6 +571,31 @@ export class FlightModel {
 
   }
 
+  applyBoostImpulse(deltaSpeed = 16, duration = 0.9) {
+    const safeDuration = Math.max(0.2, Number(duration) || 0.9);
+    this._boostAccelerationRemaining =
+      Math.max(
+        this._boostAccelerationRemaining,
+        Math.max(0, Number(deltaSpeed) || 0) / safeDuration,
+      );
+    this._boostTimeRemaining =
+      Math.max(this._boostTimeRemaining, safeDuration);
+    this.boostJustTriggered = true;
+  }
+
+  _updateBoost(dt) {
+    this.boostJustTriggered = false;
+    if (this._boostTimeRemaining <= 0) {
+      this._boostAccelerationRemaining = 0;
+      return;
+    }
+    this._boostTimeRemaining =
+      Math.max(0, this._boostTimeRemaining - dt);
+    if (this._boostTimeRemaining <= 0) {
+      this._boostAccelerationRemaining = 0;
+    }
+  }
+
   _disableBoost() {
     this.boostCharge = 0;
     this.boostRemaining = 0;
@@ -507,6 +603,9 @@ export class FlightModel {
     this.boostDrainRemaining = 0;
     this.boostChargeCondition = false;
     this.boostJustTriggered = false;
+    this._boostAccelerationRemaining = 0;
+    this._boostTimeRemaining = 0;
+    this.boostAcceleration = 0;
   }
 
   _updateAxes() {
@@ -1125,24 +1224,19 @@ export class FlightModel {
       );
 
     const gravityMultiplier =
-      this.pathAngle < 0
-        ? THREE.MathUtils.lerp(
-            1,
-
-            TUNING
-              .diveGravityMultiplier,
-
-            diveFactor,
-          )
-        : THREE.MathUtils.lerp(
-            1,
-
-            TUNING
-              .climbGravityMultiplier,
-
-            climbFactor *
-              climbEnergy,
-          );
+      profile.enginePower <= 0
+        ? 1
+        : this.pathAngle < 0
+          ? THREE.MathUtils.lerp(
+              1,
+              profile.gravityScaleDive,
+              diveFactor,
+            )
+          : THREE.MathUtils.lerp(
+              1,
+              profile.gravityScaleClimb,
+              climbFactor * climbEnergy,
+            );
 
     const gravity =
       -physics.gravity *
@@ -1241,6 +1335,35 @@ export class FlightModel {
         )
       );
 
+    const powerFade =
+      1 -
+      smoothstep(
+        profile.cruiseSpeed,
+        profile.maximumLevelSpeed,
+        this.speed,
+      );
+
+    const engineThrust =
+      this.engineOn
+        ? profile.enginePower *
+          this.throttle *
+          (0.08 + powerFade * 0.92)
+        : 0;
+
+    const airbrakeDrag =
+      profile.airbrakeDrag *
+      this.airbrake *
+      smoothstep(5, 70, this.speed);
+
+    const minimumEnergyLoss =
+      profile.minimumEnergyLoss *
+      smoothstep(2, 35, this.speed);
+
+    const boost =
+      this._boostTimeRemaining > 0
+        ? this._boostAccelerationRemaining
+        : 0;
+
     this.overspeedRatio =
       overspeed /
       Math.max(
@@ -1255,14 +1378,22 @@ export class FlightModel {
       misalignmentDrag,
       overspeedDrag,
       energyBias,
+      engineThrust,
+      airbrakeDrag,
+      minimumEnergyLoss,
+      boost,
 
       total:
         gravity +
-        energyBias -
+        energyBias +
+        engineThrust +
+        boost -
         straightDrag -
         turnDrag -
         misalignmentDrag -
-        overspeedDrag,
+        overspeedDrag -
+        airbrakeDrag -
+        minimumEnergyLoss,
     };
   }
 

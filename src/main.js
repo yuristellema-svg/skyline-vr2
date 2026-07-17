@@ -20,6 +20,10 @@ import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseIn
 import {
   createLazyWorkerWorld,
 } from './workerRuntime/lazyWorldRuntime.js';
+import { PowerControlSystem } from './expansion/powerControl.js';
+import { PowerStrip } from './expansion/powerStrip.js';
+import { LandingSystem } from './expansion/landingSystem.js';
+import { NearWorldSystem } from './expansion/nearWorldSystem.js';
 
 const canvas = document.querySelector('#game');
 const startPanel = document.querySelector('#start-panel');
@@ -65,6 +69,25 @@ const vrMenuBeacon =
 
 const aircraftVisuals = new AircraftVisualSystem(scene);
 aircraftVisuals.attach(stereo.camera);
+
+const powerControl = new PowerControlSystem(
+  flight.aircraftProfileId,
+);
+
+const powerStrip = new PowerStrip(
+  stereo.uiScene,
+  powerControl,
+);
+
+const landingSystem = new LandingSystem(
+  scene,
+  world.sampleHeight,
+);
+
+const nearWorld = new NearWorldSystem(
+  scene,
+  CONFIG.world.spawn,
+);
 
 const worldPolish = new WorldPolishSystem(
   scene,
@@ -532,6 +555,9 @@ function startSession(phone) {
 
   effects.beginSession();
 
+  nearWorld.setPhoneMode(phone);
+  powerControl.reset();
+  landingSystem.reset();
   resetFlight();
 
   // SKYLINE_V42_CLEAN_START_VIEW
@@ -800,6 +826,7 @@ function openMenu(
   menu.effectsName =
     effects.intensityName;
 
+  powerStrip.close();
   cameraRig.beginMenuPose();
 
   menu.open(
@@ -902,6 +929,8 @@ function beginRespawn(
 }
 
 function finishRespawn() {
+  landingSystem.reset();
+  powerControl.reset();
   resetFlight();
   input.recenter();
   menu.close();
@@ -1154,9 +1183,32 @@ function frame(milliseconds) {
       steps <
         CONFIG.physics.maxSubSteps
     ) {
-      flight.step(
+      const powerState = powerControl.state;
+      const flightControls =
+        powerControl.controlsFor(input.controls);
+
+      if (landingSystem.grounded) {
+        landingSystem.stepGround(
+          CONFIG.physics.fixedStep,
+          flight,
+          powerState,
+        );
+      } else {
+        flight.step(
+          CONFIG.physics.fixedStep,
+          flightControls,
+        );
+      }
+
+      const landingResult =
+        landingSystem.afterFlightStep(
+          flight,
+          powerState,
+        );
+
+      nearWorld.fixedStepUpdate(
         CONFIG.physics.fixedStep,
-        input.controls
+        flight,
       );
 
       renderPoseInterpolator.captureFixedStep(flight);
@@ -1178,15 +1230,18 @@ function frame(milliseconds) {
         phase,
       );
 
+            const collisionHit =
+        !landingResult.suppressCollision &&
+        collision.check(flight.position);
+
       if (
-        collision.check(
-          flight.position
-        )
+        landingResult.crashReason ||
+        collisionHit
       ) {
         beginRespawn(
+          landingResult.crashReason ||
           collision.lastReason
         );
-
         break;
       }
     }
@@ -1276,6 +1331,19 @@ function frame(milliseconds) {
 
   updateLeftGazeMenu(frameDt);
 
+  powerStrip.update(
+    frameDt,
+    {
+      active:
+        phoneMode &&
+        phase === 'flying' &&
+        !menu.isOpen,
+      camera: stereo.camera,
+      basePosition: cameraRig.basePosition,
+      baseQuaternion: cameraRig.baseQuaternion,
+    },
+  );
+
   if (
     menuNeedsReanchor &&
     menu.isOpen
@@ -1343,6 +1411,9 @@ function frame(milliseconds) {
     phase,
   );
 
+  nearWorld.update(frameDt, flight);
+  landingSystem.update(frameDt, flight);
+
   const worldFocus =
     phase === 'crashed'
       ? CONFIG.world.spawn
@@ -1371,8 +1442,11 @@ function frame(milliseconds) {
 
   stereo.setReticle(
     flight.boostCharge,
-    phoneMode && menu.isOpen
-      ? menu.dwellProgress
+    phoneMode
+      ? Math.max(
+          menu.isOpen ? menu.dwellProgress : 0,
+          powerStrip.progress,
+        )
       : 0,
     phase !== 'boot' &&
       (!menu.isOpen || phoneMode)
@@ -1439,7 +1513,18 @@ window.addEventListener(
   }
 );
 
+window.skylineExpansionDiagnostics = () => ({
+  power: powerControl.state,
+  landing: {
+    state: landingSystem.state,
+    zone: landingSystem.zone?.id || null,
+  },
+  world: nearWorld.getStatus(),
+});
+
 configureInstallHint();
+powerControl.reset();
+landingSystem.reset();
 resetFlight();
 
 cameraRig.update(

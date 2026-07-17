@@ -36,7 +36,7 @@ export class MonoHud {
             <div class="analog-gauge analog-gauge--small"><small>HDG</small><strong data-hud="heading">000</strong><em>DEG</em></div>
             <div class="analog-gauge analog-gauge--small"><small>LOAD</small><strong data-hud="load">1.0</strong><em>G</em></div>
           </div>
-          <div class="analog-hud__footer"><span>V/S <b data-hud="vertical">+000</b></span><span>VIEW <b data-hud="camera">FIRST</b></span><span data-hud="boost"></span></div>
+          <div class="analog-hud__footer"><span>V/S <b data-hud="vertical">+000</b></span><span>VIEW <b data-hud="camera">FIRST</b></span><span>PWR <b data-hud="power">MIDDLE</b></span><span data-hud="boost"></span></div>
         </div>
       </section>`;
 
@@ -111,10 +111,16 @@ export class MonoHud {
     this.nodes.vertical.textContent = `${vertical >= 0 ? '+' : '−'}${String(Math.round(Math.abs(vertical))).padStart(3, '0')}`;
     this.nodes.camera.textContent = String(cameraMode || 'first').toUpperCase();
     this.nodes.aircraft.textContent = this.aircraftName;
+    this.nodes.power.textContent =
+      String(flight?.powerLabel || 'MIDDLE').toUpperCase();
 
     let state = 'CRUISE';
 
-    if (
+    if (flight?.landingState === 'stopped') {
+      state = 'LANDED';
+    } else if (flight?.landingState === 'rollout') {
+      state = 'ROLLOUT';
+    } else if (
       structural > 0.72
     ) {
       state =

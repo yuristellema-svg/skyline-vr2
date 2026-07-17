@@ -48,9 +48,33 @@ export function computeAircraftEngineTargets(profileValue, flight, phase = 'flyi
   const extreme = smoothstep(175, 920, speed);
   const load = computeEngineLoad(flight);
   const stall = stallAmountOf(flight);
-  const rpmHz = profile.baseHz + speedAmount * profile.speedHz + load * profile.speedHz * 0.16;
+  const throttle = Math.max(
+    0,
+    Math.min(
+      1,
+      flight?.engineOn === false
+        ? 0
+        : Number(flight?.throttle) || 0,
+    ),
+  );
+  const rpmAmount = Math.max(
+    0,
+    Math.min(1, throttle * 0.82 + speedAmount * 0.18),
+  );
+  const rpmHz =
+    profile.baseHz * (0.72 + rpmAmount * 0.42) +
+    rpmAmount * profile.speedHz +
+    load * profile.speedHz * 0.18;
   const engineLevel = profile.engineEnabled
-    ? active * clamp(0.105 + speedAmount * 0.105 + load * profile.loadDepth * 0.19, 0, 0.31)
+    ? active * Math.max(
+        0,
+        Math.min(
+          0.33,
+          throttle > 0
+            ? 0.055 + throttle * 0.17 + load * profile.loadDepth * 0.18
+            : 0,
+        ),
+      )
     : 0;
 
   return {
@@ -61,6 +85,7 @@ export function computeAircraftEngineTargets(profileValue, flight, phase = 'flyi
     extreme,
     load,
     stall,
+    throttle,
     rpmHz,
     engineLevel,
     subFrequency: Math.max(1, rpmHz * profile.subRatio),
