@@ -1,13 +1,13 @@
 import { DEG, clamp, wrapPi } from './navContracts.js';
 
 export const MENU_BEACON_CONFIG = Object.freeze({
-  yaw: -50 * DEG,
+  yaw: -62 * DEG,
   pitch: 0,
-  distance: 1.55,
-  dwellSeconds: 1.35,
-  targetHalfAngle: 7.5 * DEG,
-  exitHalfAngle: 9.5 * DEG,
-  rearmHalfAngle: 12 * DEG,
+  distance: 1.72,
+  dwellSeconds: 1.55,
+  targetHalfAngle: 5 * DEG,
+  exitHalfAngle: 7 * DEG,
+  rearmHalfAngle: 14 * DEG,
   decayPerSecond: 4.5,
 });
 

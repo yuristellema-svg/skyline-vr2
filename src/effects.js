@@ -96,6 +96,23 @@ export class EffectsSystem {
     this.sessionElapsed = 0;
     this.camera = null;
 
+    this.streakWorldPosition =
+      new THREE.Vector3();
+
+    this.streakDirection =
+      new THREE.Vector3(
+        0,
+        0,
+        -1,
+      );
+
+    this.streakForward =
+      new THREE.Vector3(
+        0,
+        0,
+        -1,
+      );
+
     const count = Math.min(180, Math.max(48, CONFIG.effects?.streakCount || 120));
     this.streakDepth = CONFIG.effects?.streakDepth || 65;
     this.streakRadius = CONFIG.effects?.streakRadius || 10;
@@ -110,9 +127,17 @@ export class EffectsSystem {
       fog: false,
     });
     this.streaks = new THREE.LineSegments(this.streakGeometry, this.streakMaterial);
-    this.streaks.name = 'camera-local-speed-streaks';
+    this.streaks.name = 'world-velocity-speed-streaks';
     this.streaks.frustumCulled = false;
     this.streaks.renderOrder = 3;
+
+    /*
+     * Keep airflow in world space.
+     * Looking around the cockpit must not rotate it.
+     */
+    this.scene.add(
+      this.streaks,
+    );
 
     this.skyDecor = new SkyDecorSystem(scene);
   }
@@ -139,12 +164,45 @@ export class EffectsSystem {
     return this.intensityName;
   }
 
-  _attachToCamera(camera) {
-    if (!camera || this.camera === camera) return;
-    if (this.streaks.parent) this.streaks.parent.remove(this.streaks);
-    this.camera = camera;
-    camera.add(this.streaks);
-    this.streaks.position.set(0, 0, 0);
+  _alignStreaks(
+    flight,
+    camera,
+  ) {
+    if (!camera) {
+      return;
+    }
+
+    /*
+     * Centre the volume around the pilot, but orient
+     * it using aircraft velocity rather than head view.
+     */
+    camera.getWorldPosition(
+      this.streakWorldPosition,
+    );
+
+    this.scene.worldToLocal(
+      this.streakWorldPosition,
+    );
+
+    this.streaks.position.copy(
+      this.streakWorldPosition,
+    );
+
+    if (
+      flight?.velocity?.isVector3 &&
+      flight.velocity.lengthSq() >
+        0.0001
+    ) {
+      this.streakDirection
+        .copy(flight.velocity)
+        .normalize();
+
+      this.streaks.quaternion
+        .setFromUnitVectors(
+          this.streakForward,
+          this.streakDirection,
+        );
+    }
   }
 
   _updateStreaks(dt, speed, amount) {
@@ -181,7 +239,10 @@ export class EffectsSystem {
     const safeDt = clamp(dt || 0, 0, 0.1);
     this.elapsed += safeDt;
     this.sessionElapsed += safeDt;
-    this._attachToCamera(camera);
+    this._alignStreaks(
+      flight,
+      camera,
+    );
 
     const level = INTENSITY_LEVELS[this.intensityIndex];
     const speed = flightSpeed(flight);
@@ -193,9 +254,9 @@ export class EffectsSystem {
       clamp(
         (
           load -
-          4.6
+          5.2
         ) /
-          5.8,
+          4.8,
         0,
         1,
       );
@@ -204,9 +265,9 @@ export class EffectsSystem {
       clamp(
         (
           -load -
-          1.25
+          2.0
         ) /
-          2.8,
+          3.0,
         0,
         1,
       );
@@ -250,8 +311,8 @@ export class EffectsSystem {
 
     const redoutTarget =
       smoothstep(
-        0.32,
-        1.15,
+        0.68,
+        1.55,
         this.negativeGExposure,
       );
 
@@ -308,9 +369,25 @@ export class EffectsSystem {
       CONFIG.effects?.gVignetteFull ?? 7,
       load,
     );
-    const negativeG = load < (CONFIG.effects?.negativeGTintStart ?? -0.35)
-      ? clamp(Math.abs(load) / 2.2, 0, 1)
-      : 0;
+    const negativeGStart =
+      CONFIG.effects
+        ?.negativeGTintStart ??
+      -2.0;
+
+    const negativeG =
+      load < negativeGStart
+        ? clamp(
+            (
+              -load -
+              Math.abs(
+                negativeGStart,
+              )
+            ) /
+              2.8,
+            0,
+            1,
+          )
+        : 0;
 
     this.vignette = damp(
       this.vignette,
@@ -329,12 +406,15 @@ export class EffectsSystem {
       7,
       safeDt,
     );
-    const stallWarningTint = stall * stall * 0.11;
+    const stallWarningTint =
+      stall *
+      stall *
+      0.035;
     this.redTint = damp(
       this.redTint,
       (
-        negativeG * 0.12 +
-        this.redout * 0.78 +
+        negativeG * 0.045 +
+        this.redout * 0.70 +
         stallWarningTint
       ) *
         level.multiplier,

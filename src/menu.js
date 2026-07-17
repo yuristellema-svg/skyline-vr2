@@ -368,8 +368,12 @@ export class GazeMenu {
     let result;
     if (id === 'resume') result = this.actions.resume?.();
     else if (id === 'recenter') {
-      this.input?.recenter?.();
-      result = this.actions.recenter?.();
+      /*
+       * Runtime performs a delayed LOOK STRAIGHT
+       * calibration after the menu closes.
+       */
+      result =
+        this.actions.recenter?.();
     } else if (id === 'camera') {
       result = this.actions.camera?.();
       if (result) this.cameraName = String(result).toUpperCase();

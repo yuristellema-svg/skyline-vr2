@@ -1,0 +1,2061 @@
+{
+  "format": "skyline-world-manifest",
+  "version": 3,
+  "contentHash": "f2d009d8a0eff1d93a83a9524985631d1f91ef836797a6335c551fe6eef3fcb3",
+  "recipeSha256": "a2f9e11821f18e15573bd08078e7d31d5aa4c9f48062585e3a8354f4da357828",
+  "generator": {
+    "name": "Skyline deterministic offline worldgen",
+    "version": "3.0.0",
+    "dependencies": []
+  },
+  "world": {
+    "sizeMeters": 8192,
+    "bounds": {
+      "minX": -4096,
+      "minZ": -4096,
+      "maxX": 4096,
+      "maxZ": 4096
+    },
+    "heightRangeMeters": [
+      8.4,
+      485.4
+    ],
+    "chunkSizeMeters": 256,
+    "chunksPerSide": 32,
+    "chunksTotal": 1024,
+    "packSizeMeters": 1024,
+    "packsPerSide": 8,
+    "packsTotal": 64
+  },
+  "encoding": {
+    "byteOrder": "little-endian",
+    "height": {
+      "storage": "Uint16",
+      "resolutionMeters": 2,
+      "samplesPerPackSide": 513,
+      "offsetMeters": -128,
+      "scaleMeters": 0.1,
+      "decode": "meters = offsetMeters + uint16 * scaleMeters"
+    },
+    "splat": {
+      "storage": "Uint8",
+      "resolutionMeters": 4,
+      "samplesPerPackSide": 257,
+      "decode": "primary = byte & 7; secondary = (byte >> 3) & 7; blend = (byte >> 6) / 3",
+      "palette": [
+        {
+          "id": 0,
+          "key": "meadow",
+          "color": "#6f8f4c"
+        },
+        {
+          "id": 1,
+          "key": "conifer_forest",
+          "color": "#274d3b"
+        },
+        {
+          "id": 2,
+          "key": "broadleaf_forest",
+          "color": "#426a3d"
+        },
+        {
+          "id": 3,
+          "key": "alpine_rock",
+          "color": "#8f918b"
+        },
+        {
+          "id": 4,
+          "key": "ochre_canyon",
+          "color": "#9a6041"
+        },
+        {
+          "id": 5,
+          "key": "riparian_wetland",
+          "color": "#4d795f"
+        },
+        {
+          "id": 6,
+          "key": "urban",
+          "color": "#686d70"
+        },
+        {
+          "id": 7,
+          "key": "water",
+          "color": "#2e7189"
+        }
+      ]
+    },
+    "props": {
+      "recordBytes": 12,
+      "format": "x:u16,z:u16,yaw:u16,scale:u16,type:u8,variant:u8,tint:u8,flags:u8",
+      "positionDecode": "world = packMin + uint16 / 65535 * packSizeMeters; y = sampled terrain height",
+      "yawDecode": "radians = uint16 / 65536 * TAU",
+      "scaleDecode": "scale = uint16 / 1000",
+      "flagBits": {
+        "nearWater": 1,
+        "steepGround": 2
+      },
+      "catalog": [
+        {
+          "id": 0,
+          "key": "pine",
+          "class": "tree",
+          "scale": [
+            0.72,
+            1.45
+          ]
+        },
+        {
+          "id": 1,
+          "key": "cedar",
+          "class": "tree",
+          "scale": [
+            0.7,
+            1.35
+          ]
+        },
+        {
+          "id": 2,
+          "key": "broadleaf",
+          "class": "tree",
+          "scale": [
+            0.65,
+            1.3
+          ]
+        },
+        {
+          "id": 3,
+          "key": "rock",
+          "class": "rock",
+          "scale": [
+            0.45,
+            2.4
+          ]
+        },
+        {
+          "id": 4,
+          "key": "scrub",
+          "class": "scrub",
+          "scale": [
+            0.5,
+            1.55
+          ]
+        },
+        {
+          "id": 5,
+          "key": "post",
+          "class": "structure",
+          "scale": [
+            0.8,
+            1.2
+          ]
+        }
+      ]
+    },
+    "packHeader": {
+      "magic": "SVW3",
+      "bytes": 48,
+      "chunkIndexBytes": 16,
+      "flags": {
+        "littleEndian": 1,
+        "packedBiome": 2,
+        "propYFromTerrain": 4
+      }
+    }
+  },
+  "streaming": {
+    "fullLodThroughMeters": 768,
+    "halfLodThroughMeters": 1536,
+    "quarterLodBeyondMeters": 1536,
+    "loadRadiusMeters": 1536,
+    "unloadRadiusMeters": 2048,
+    "floatingOriginThresholdMeters": 2048
+  },
+  "features": {
+    "url": "features.json",
+    "byteLength": 6026,
+    "sha256": "a1c56524a2d198d89c0c032faa9a230bd0c3f1eb911d8aa05d4d4d6c459e2888",
+    "bridgeCount": 5,
+    "landmarkCount": 8
+  },
+  "summary": {
+    "packBytes": 40326280,
+    "propCount": 199478,
+    "propCounts": {
+      "pine": 42241,
+      "cedar": 21198,
+      "broadleaf": 20385,
+      "rock": 50967,
+      "scrub": 63943,
+      "post": 744
+    },
+    "propCountsByBiome": {
+      "meadow": 34043,
+      "conifer_forest": 67246,
+      "broadleaf_forest": 23994,
+      "alpine_rock": 27572,
+      "ochre_canyon": 38125,
+      "riparian_wetland": 6668,
+      "urban": 1830,
+      "water": 0
+    }
+  },
+  "packs": [
+    {
+      "id": "r0_0",
+      "url": "packs/r00_00.wpk",
+      "region": [
+        0,
+        0
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": -4096,
+        "maxX": -3072,
+        "maxZ": -3072
+      },
+      "byteLength": 634720,
+      "sha256": "5ba3233da7e79c663fc64863864ecb68bc68fa7439cfb62e356473127fb4f620",
+      "heightRangeMeters": [
+        19.4,
+        93
+      ],
+      "propCount": 3502,
+      "propCounts": {
+        "pine": 1289,
+        "cedar": 457,
+        "broadleaf": 103,
+        "rock": 423,
+        "scrub": 1230,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_0",
+      "url": "packs/r01_00.wpk",
+      "region": [
+        1,
+        0
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": -4096,
+        "maxX": -2048,
+        "maxZ": -3072
+      },
+      "byteLength": 648472,
+      "sha256": "17d24eaf21b3dc641da3dac951cf7e5957399420ae2c779ee48cdcd7fe71e60b",
+      "heightRangeMeters": [
+        25.8,
+        74
+      ],
+      "propCount": 4648,
+      "propCounts": {
+        "pine": 2346,
+        "cedar": 868,
+        "broadleaf": 24,
+        "rock": 424,
+        "scrub": 986,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_0",
+      "url": "packs/r02_00.wpk",
+      "region": [
+        2,
+        0
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": -4096,
+        "maxX": -1024,
+        "maxZ": -3072
+      },
+      "byteLength": 643408,
+      "sha256": "1f83581a7da7ca287da4dc3b9cf65931907272258e5eb0051fb4ac5d80e6cc3f",
+      "heightRangeMeters": [
+        43.1,
+        128.5
+      ],
+      "propCount": 4226,
+      "propCounts": {
+        "pine": 1924,
+        "cedar": 752,
+        "broadleaf": 59,
+        "rock": 410,
+        "scrub": 1081,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_0",
+      "url": "packs/r03_00.wpk",
+      "region": [
+        3,
+        0
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": -4096,
+        "maxX": 0,
+        "maxZ": -3072
+      },
+      "byteLength": 622468,
+      "sha256": "91e4e837354bc2005b4ef7f3587566bd408d50bd84540130c7ac48d96d2d19dc",
+      "heightRangeMeters": [
+        86.7,
+        155.6
+      ],
+      "propCount": 2481,
+      "propCounts": {
+        "pine": 396,
+        "cedar": 97,
+        "broadleaf": 174,
+        "rock": 367,
+        "scrub": 1447,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_0",
+      "url": "packs/r04_00.wpk",
+      "region": [
+        4,
+        0
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": -4096,
+        "maxX": 1024,
+        "maxZ": -3072
+      },
+      "byteLength": 619096,
+      "sha256": "ad7d92d55cbbbc6d4e0ed6f4c98a6d04d42789c7282df9f88b8fe2188d6af490",
+      "heightRangeMeters": [
+        66.4,
+        160.7
+      ],
+      "propCount": 2200,
+      "propCounts": {
+        "pine": 137,
+        "cedar": 0,
+        "broadleaf": 237,
+        "rock": 358,
+        "scrub": 1468,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_0",
+      "url": "packs/r05_00.wpk",
+      "region": [
+        5,
+        0
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": -4096,
+        "maxX": 2048,
+        "maxZ": -3072
+      },
+      "byteLength": 618700,
+      "sha256": "c282eba38c2663e68bca1a21f90642afd20ec371962a5e16e386e92fb87724b5",
+      "heightRangeMeters": [
+        17.1,
+        126.3
+      ],
+      "propCount": 2167,
+      "propCounts": {
+        "pine": 152,
+        "cedar": 0,
+        "broadleaf": 229,
+        "rock": 380,
+        "scrub": 1406,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_0",
+      "url": "packs/r06_00.wpk",
+      "region": [
+        6,
+        0
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": -4096,
+        "maxX": 3072,
+        "maxZ": -3072
+      },
+      "byteLength": 619132,
+      "sha256": "06006d343bd11d0246bdef53793aac32d3383534683c3a11d1e68ddac359d5c4",
+      "heightRangeMeters": [
+        13.8,
+        178.7
+      ],
+      "propCount": 2203,
+      "propCounts": {
+        "pine": 147,
+        "cedar": 11,
+        "broadleaf": 278,
+        "rock": 348,
+        "scrub": 1419,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_0",
+      "url": "packs/r07_00.wpk",
+      "region": [
+        7,
+        0
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": -4096,
+        "maxX": 4096,
+        "maxZ": -3072
+      },
+      "byteLength": 622792,
+      "sha256": "1c307df0e564bd06c522b007d52dc5e77194a3489bf8926ddaa7a405df635fa1",
+      "heightRangeMeters": [
+        8.4,
+        179.7
+      ],
+      "propCount": 2508,
+      "propCounts": {
+        "pine": 74,
+        "cedar": 191,
+        "broadleaf": 650,
+        "rock": 362,
+        "scrub": 1231,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_1",
+      "url": "packs/r00_01.wpk",
+      "region": [
+        0,
+        1
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": -3072,
+        "maxX": -3072,
+        "maxZ": -2048
+      },
+      "byteLength": 652756,
+      "sha256": "dce750317ea95042e21747ad3c0fa89a37f0e9447847165c8fcd8c5eff7d8d38",
+      "heightRangeMeters": [
+        46,
+        124.7
+      ],
+      "propCount": 5005,
+      "propCounts": {
+        "pine": 2620,
+        "cedar": 958,
+        "broadleaf": 0,
+        "rock": 448,
+        "scrub": 979,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_1",
+      "url": "packs/r01_01.wpk",
+      "region": [
+        1,
+        1
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": -3072,
+        "maxX": -2048,
+        "maxZ": -2048
+      },
+      "byteLength": 652816,
+      "sha256": "062d2811fe9559b193db33adb8b8a038abf980362c3fdff607782d993a127066",
+      "heightRangeMeters": [
+        27.2,
+        103.9
+      ],
+      "propCount": 5010,
+      "propCounts": {
+        "pine": 2569,
+        "cedar": 1016,
+        "broadleaf": 0,
+        "rock": 440,
+        "scrub": 985,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_1",
+      "url": "packs/r02_01.wpk",
+      "region": [
+        2,
+        1
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": -3072,
+        "maxX": -1024,
+        "maxZ": -2048
+      },
+      "byteLength": 652564,
+      "sha256": "35f4def598733b27b4893f792778943f874a1b2abe7bcdc730ed905c6245c1be",
+      "heightRangeMeters": [
+        41.8,
+        106.9
+      ],
+      "propCount": 4989,
+      "propCounts": {
+        "pine": 2589,
+        "cedar": 1002,
+        "broadleaf": 0,
+        "rock": 465,
+        "scrub": 933,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_1",
+      "url": "packs/r03_01.wpk",
+      "region": [
+        3,
+        1
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": -3072,
+        "maxX": 0,
+        "maxZ": -2048
+      },
+      "byteLength": 640372,
+      "sha256": "3ae8a2f3cccd6ea1608cd78864f083b312df788a22ed9e35220ba311d89a14cf",
+      "heightRangeMeters": [
+        89.1,
+        151.7
+      ],
+      "propCount": 3973,
+      "propCounts": {
+        "pine": 1668,
+        "cedar": 657,
+        "broadleaf": 82,
+        "rock": 441,
+        "scrub": 1125,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_1",
+      "url": "packs/r04_01.wpk",
+      "region": [
+        4,
+        1
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": -3072,
+        "maxX": 1024,
+        "maxZ": -2048
+      },
+      "byteLength": 618448,
+      "sha256": "0e5e893b1b0d26cf07576d67758cb39a124403b8028600d76f4f83e01fab3f82",
+      "heightRangeMeters": [
+        88.9,
+        162.4
+      ],
+      "propCount": 2146,
+      "propCounts": {
+        "pine": 147,
+        "cedar": 0,
+        "broadleaf": 224,
+        "rock": 359,
+        "scrub": 1416,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_1",
+      "url": "packs/r05_01.wpk",
+      "region": [
+        5,
+        1
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": -3072,
+        "maxX": 2048,
+        "maxZ": -2048
+      },
+      "byteLength": 620140,
+      "sha256": "8e47d6881d71a3ded864560db1d06f1ac13e5194925665fbcd87147b263c5451",
+      "heightRangeMeters": [
+        22.3,
+        144.9
+      ],
+      "propCount": 2287,
+      "propCounts": {
+        "pine": 161,
+        "cedar": 25,
+        "broadleaf": 225,
+        "rock": 465,
+        "scrub": 1411,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_1",
+      "url": "packs/r06_01.wpk",
+      "region": [
+        6,
+        1
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": -3072,
+        "maxX": 3072,
+        "maxZ": -2048
+      },
+      "byteLength": 618460,
+      "sha256": "bd52127590176cd6ea9641904882c27ea811f8efca95627f0b8aa5baceadce3d",
+      "heightRangeMeters": [
+        14.1,
+        262.3
+      ],
+      "propCount": 2147,
+      "propCounts": {
+        "pine": 62,
+        "cedar": 139,
+        "broadleaf": 214,
+        "rock": 842,
+        "scrub": 890,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_1",
+      "url": "packs/r07_01.wpk",
+      "region": [
+        7,
+        1
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": -3072,
+        "maxX": 4096,
+        "maxZ": -2048
+      },
+      "byteLength": 624436,
+      "sha256": "69d52f61e44f2c2cbc2758d38a2603b548f78cabe77c7aa6510a246bcc5803a9",
+      "heightRangeMeters": [
+        17.6,
+        274
+      ],
+      "propCount": 2645,
+      "propCounts": {
+        "pine": 118,
+        "cedar": 133,
+        "broadleaf": 106,
+        "rock": 1120,
+        "scrub": 1168,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_2",
+      "url": "packs/r00_02.wpk",
+      "region": [
+        0,
+        2
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": -2048,
+        "maxX": -3072,
+        "maxZ": -1024
+      },
+      "byteLength": 652336,
+      "sha256": "3b40dc636b6423af41eca561e897c78ad184aac7d1818f044d22415b8c567460",
+      "heightRangeMeters": [
+        67.3,
+        121.3
+      ],
+      "propCount": 4970,
+      "propCounts": {
+        "pine": 2535,
+        "cedar": 1038,
+        "broadleaf": 0,
+        "rock": 473,
+        "scrub": 924,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_2",
+      "url": "packs/r01_02.wpk",
+      "region": [
+        1,
+        2
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": -2048,
+        "maxX": -2048,
+        "maxZ": -1024
+      },
+      "byteLength": 652780,
+      "sha256": "e884defd4055c51193e47d20a47d5a0c6be955064824c4bd87d9db678d6d26f2",
+      "heightRangeMeters": [
+        57,
+        117.5
+      ],
+      "propCount": 5007,
+      "propCounts": {
+        "pine": 2599,
+        "cedar": 1004,
+        "broadleaf": 0,
+        "rock": 449,
+        "scrub": 955,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_2",
+      "url": "packs/r02_02.wpk",
+      "region": [
+        2,
+        2
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": -2048,
+        "maxX": -1024,
+        "maxZ": -1024
+      },
+      "byteLength": 653212,
+      "sha256": "a05b2ce4390b3744df268aabf167b063703ab4ecc3766166338cf78cc69a1434",
+      "heightRangeMeters": [
+        45.7,
+        103
+      ],
+      "propCount": 5043,
+      "propCounts": {
+        "pine": 2591,
+        "cedar": 1029,
+        "broadleaf": 0,
+        "rock": 449,
+        "scrub": 974,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_2",
+      "url": "packs/r03_02.wpk",
+      "region": [
+        3,
+        2
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": -2048,
+        "maxX": 0,
+        "maxZ": -1024
+      },
+      "byteLength": 638920,
+      "sha256": "c553ae8e48d016569602df779fbd6c733d8b0ea91c0e468e42598145d6ba2f0e",
+      "heightRangeMeters": [
+        62.1,
+        137.1
+      ],
+      "propCount": 3852,
+      "propCounts": {
+        "pine": 1528,
+        "cedar": 601,
+        "broadleaf": 108,
+        "rock": 445,
+        "scrub": 1170,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_2",
+      "url": "packs/r04_02.wpk",
+      "region": [
+        4,
+        2
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": -2048,
+        "maxX": 1024,
+        "maxZ": -1024
+      },
+      "byteLength": 617068,
+      "sha256": "2b174d61cff7bf598dfac1fae2fe7bb477aed9d3abf40eab50df9d6fa28e1475",
+      "heightRangeMeters": [
+        32,
+        156.2
+      ],
+      "propCount": 2031,
+      "propCounts": {
+        "pine": 102,
+        "cedar": 0,
+        "broadleaf": 252,
+        "rock": 314,
+        "scrub": 1162,
+        "post": 201
+      }
+    },
+    {
+      "id": "r5_2",
+      "url": "packs/r05_02.wpk",
+      "region": [
+        5,
+        2
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": -2048,
+        "maxX": 2048,
+        "maxZ": -1024
+      },
+      "byteLength": 621412,
+      "sha256": "4769cda43ebdfd6607159cfbff08ea9766f229b44cd9e2a492f7c51bfc1be452",
+      "heightRangeMeters": [
+        20.1,
+        95.6
+      ],
+      "propCount": 2393,
+      "propCounts": {
+        "pine": 87,
+        "cedar": 189,
+        "broadleaf": 464,
+        "rock": 622,
+        "scrub": 974,
+        "post": 57
+      }
+    },
+    {
+      "id": "r6_2",
+      "url": "packs/r06_02.wpk",
+      "region": [
+        6,
+        2
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": -2048,
+        "maxX": 3072,
+        "maxZ": -1024
+      },
+      "byteLength": 628192,
+      "sha256": "5af9e1caced0288876e3755df50a30645e958045660e717c576c80daf1973798",
+      "heightRangeMeters": [
+        19.7,
+        320.4
+      ],
+      "propCount": 2958,
+      "propCounts": {
+        "pine": 106,
+        "cedar": 246,
+        "broadleaf": 33,
+        "rock": 1656,
+        "scrub": 917,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_2",
+      "url": "packs/r07_02.wpk",
+      "region": [
+        7,
+        2
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": -2048,
+        "maxX": 4096,
+        "maxZ": -1024
+      },
+      "byteLength": 627424,
+      "sha256": "408f3307852e77fac30a2e48c740fe73d996596fa2aa4b15fced59c139b842bc",
+      "heightRangeMeters": [
+        121.8,
+        333.5
+      ],
+      "propCount": 2894,
+      "propCounts": {
+        "pine": 120,
+        "cedar": 237,
+        "broadleaf": 0,
+        "rock": 1585,
+        "scrub": 952,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_3",
+      "url": "packs/r00_03.wpk",
+      "region": [
+        0,
+        3
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": -1024,
+        "maxX": -3072,
+        "maxZ": 0
+      },
+      "byteLength": 652192,
+      "sha256": "2ded85cded591f3941ca2f7ff10daf2e0e1778b41c2d8ffaa707cbcd28ea7bd6",
+      "heightRangeMeters": [
+        37.8,
+        106.2
+      ],
+      "propCount": 4958,
+      "propCounts": {
+        "pine": 2531,
+        "cedar": 974,
+        "broadleaf": 2,
+        "rock": 462,
+        "scrub": 989,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_3",
+      "url": "packs/r01_03.wpk",
+      "region": [
+        1,
+        3
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": -1024,
+        "maxX": -2048,
+        "maxZ": 0
+      },
+      "byteLength": 652528,
+      "sha256": "db740d6bccadb13e5bb8ba36cf9d9fcb685570858d32971145281d2dbf0a68ac",
+      "heightRangeMeters": [
+        53.1,
+        94.3
+      ],
+      "propCount": 4986,
+      "propCounts": {
+        "pine": 2579,
+        "cedar": 1035,
+        "broadleaf": 0,
+        "rock": 471,
+        "scrub": 901,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_3",
+      "url": "packs/r02_03.wpk",
+      "region": [
+        2,
+        3
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": -1024,
+        "maxX": -1024,
+        "maxZ": 0
+      },
+      "byteLength": 652480,
+      "sha256": "69817789b7d2c42d1e0e189c3eb7efa6be5e408aa7d2737e9f50f959238b7d45",
+      "heightRangeMeters": [
+        42.7,
+        86.7
+      ],
+      "propCount": 4982,
+      "propCounts": {
+        "pine": 2571,
+        "cedar": 1001,
+        "broadleaf": 2,
+        "rock": 438,
+        "scrub": 970,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_3",
+      "url": "packs/r03_03.wpk",
+      "region": [
+        3,
+        3
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": -1024,
+        "maxX": 0,
+        "maxZ": 0
+      },
+      "byteLength": 629020,
+      "sha256": "99effb5d1f9d28821edd3c532728655faf4790cd9e30e615696351a85a6a93f8",
+      "heightRangeMeters": [
+        31.2,
+        108.6
+      ],
+      "propCount": 3027,
+      "propCounts": {
+        "pine": 801,
+        "cedar": 288,
+        "broadleaf": 222,
+        "rock": 416,
+        "scrub": 1300,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_3",
+      "url": "packs/r04_03.wpk",
+      "region": [
+        4,
+        3
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": -1024,
+        "maxX": 1024,
+        "maxZ": 0
+      },
+      "byteLength": 614044,
+      "sha256": "76f7c5dc3e1e1f67f633f0715de43c88c8393b1aaa0cabe99d3816b06b2a5112",
+      "heightRangeMeters": [
+        26.3,
+        95.2
+      ],
+      "propCount": 1779,
+      "propCounts": {
+        "pine": 49,
+        "cedar": 52,
+        "broadleaf": 392,
+        "rock": 244,
+        "scrub": 832,
+        "post": 210
+      }
+    },
+    {
+      "id": "r5_3",
+      "url": "packs/r05_03.wpk",
+      "region": [
+        5,
+        3
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": -1024,
+        "maxX": 2048,
+        "maxZ": 0
+      },
+      "byteLength": 620320,
+      "sha256": "a38a25e3b8fa1cde1b9809e34fedda717d4a3d50ade91b83b13d47f0786ab49e",
+      "heightRangeMeters": [
+        25.9,
+        197.2
+      ],
+      "propCount": 2302,
+      "propCounts": {
+        "pine": 62,
+        "cedar": 133,
+        "broadleaf": 157,
+        "rock": 949,
+        "scrub": 725,
+        "post": 276
+      }
+    },
+    {
+      "id": "r6_3",
+      "url": "packs/r06_03.wpk",
+      "region": [
+        6,
+        3
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": -1024,
+        "maxX": 3072,
+        "maxZ": 0
+      },
+      "byteLength": 628552,
+      "sha256": "e57f3f35085c3823371614cceaaedf6fbe70e2f7faccb88d06aa97c71e143440",
+      "heightRangeMeters": [
+        95.6,
+        308.7
+      ],
+      "propCount": 2988,
+      "propCounts": {
+        "pine": 149,
+        "cedar": 250,
+        "broadleaf": 0,
+        "rock": 1655,
+        "scrub": 934,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_3",
+      "url": "packs/r07_03.wpk",
+      "region": [
+        7,
+        3
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": -1024,
+        "maxX": 4096,
+        "maxZ": 0
+      },
+      "byteLength": 627376,
+      "sha256": "16a15836747c1b4c8f8e247bbeb664ec41eb6be0c5063eda4a0c7830e01ce312",
+      "heightRangeMeters": [
+        129.2,
+        319.5
+      ],
+      "propCount": 2890,
+      "propCounts": {
+        "pine": 118,
+        "cedar": 251,
+        "broadleaf": 0,
+        "rock": 1590,
+        "scrub": 931,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_4",
+      "url": "packs/r00_04.wpk",
+      "region": [
+        0,
+        4
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": 0,
+        "maxX": -3072,
+        "maxZ": 1024
+      },
+      "byteLength": 647584,
+      "sha256": "c52f2fc5650f8fed70484b3642f84a7b2b222e5829a180452e154481ba8bef15",
+      "heightRangeMeters": [
+        47.7,
+        117.3
+      ],
+      "propCount": 4574,
+      "propCounts": {
+        "pine": 426,
+        "cedar": 523,
+        "broadleaf": 2088,
+        "rock": 428,
+        "scrub": 1109,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_4",
+      "url": "packs/r01_04.wpk",
+      "region": [
+        1,
+        4
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": 0,
+        "maxX": -2048,
+        "maxZ": 1024
+      },
+      "byteLength": 651076,
+      "sha256": "55fbc5fcb65274acf3b1cf66ab7a56c274b62273f70840f84d83ee303badeeb5",
+      "heightRangeMeters": [
+        47.1,
+        127.3
+      ],
+      "propCount": 4865,
+      "propCounts": {
+        "pine": 1079,
+        "cedar": 702,
+        "broadleaf": 1551,
+        "rock": 489,
+        "scrub": 1044,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_4",
+      "url": "packs/r02_04.wpk",
+      "region": [
+        2,
+        4
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": 0,
+        "maxX": -1024,
+        "maxZ": 1024
+      },
+      "byteLength": 627496,
+      "sha256": "f323a33f83a68ca1816066f71c9b4b6d7ee41829fa18d006ad374c7809f95bb9",
+      "heightRangeMeters": [
+        37.8,
+        109.9
+      ],
+      "propCount": 2900,
+      "propCounts": {
+        "pine": 720,
+        "cedar": 247,
+        "broadleaf": 250,
+        "rock": 384,
+        "scrub": 1299,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_4",
+      "url": "packs/r03_04.wpk",
+      "region": [
+        3,
+        4
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": 0,
+        "maxX": 0,
+        "maxZ": 1024
+      },
+      "byteLength": 618028,
+      "sha256": "dac1271960ebe7aa629a593228ff33f1ef2732cf7168619b4db7054f7151dca0",
+      "heightRangeMeters": [
+        32,
+        128.9
+      ],
+      "propCount": 2111,
+      "propCounts": {
+        "pine": 90,
+        "cedar": 84,
+        "broadleaf": 450,
+        "rock": 306,
+        "scrub": 1181,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_4",
+      "url": "packs/r04_04.wpk",
+      "region": [
+        4,
+        4
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": 0,
+        "maxX": 1024,
+        "maxZ": 1024
+      },
+      "byteLength": 618652,
+      "sha256": "6b0b4198f0ec1f13fcd0e322d9edceab67071446cce59baf7b4b6d67664c88ff",
+      "heightRangeMeters": [
+        52.2,
+        141.6
+      ],
+      "propCount": 2163,
+      "propCounts": {
+        "pine": 159,
+        "cedar": 0,
+        "broadleaf": 199,
+        "rock": 378,
+        "scrub": 1427,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_4",
+      "url": "packs/r05_04.wpk",
+      "region": [
+        5,
+        4
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": 0,
+        "maxX": 2048,
+        "maxZ": 1024
+      },
+      "byteLength": 625084,
+      "sha256": "90e3de89aa8016f86fdf1634aa07212575b64e1a7c68dbb1286abe57f97e4593",
+      "heightRangeMeters": [
+        59.3,
+        265
+      ],
+      "propCount": 2699,
+      "propCounts": {
+        "pine": 119,
+        "cedar": 160,
+        "broadleaf": 64,
+        "rock": 1234,
+        "scrub": 1122,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_4",
+      "url": "packs/r06_04.wpk",
+      "region": [
+        6,
+        4
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": 0,
+        "maxX": 3072,
+        "maxZ": 1024
+      },
+      "byteLength": 627664,
+      "sha256": "cbce57d96f54cf3ddb61c10017450cfc29691e09cfd8c1dcdfd54110f169f273",
+      "heightRangeMeters": [
+        66.8,
+        313.6
+      ],
+      "propCount": 2914,
+      "propCounts": {
+        "pine": 108,
+        "cedar": 230,
+        "broadleaf": 0,
+        "rock": 1591,
+        "scrub": 985,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_4",
+      "url": "packs/r07_04.wpk",
+      "region": [
+        7,
+        4
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": 0,
+        "maxX": 4096,
+        "maxZ": 1024
+      },
+      "byteLength": 628504,
+      "sha256": "583575492f6deb82de0712edfe63fd42c3c17cf03b1f9f0553cd35010939ca08",
+      "heightRangeMeters": [
+        114.8,
+        282.4
+      ],
+      "propCount": 2984,
+      "propCounts": {
+        "pine": 136,
+        "cedar": 225,
+        "broadleaf": 0,
+        "rock": 1613,
+        "scrub": 1010,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_5",
+      "url": "packs/r00_05.wpk",
+      "region": [
+        0,
+        5
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": 1024,
+        "maxX": -3072,
+        "maxZ": 2048
+      },
+      "byteLength": 650668,
+      "sha256": "7172fdfc2e463c94bceb7b7094f4daf81ca7ad22565d793ecc58ea7bb79b2dc3",
+      "heightRangeMeters": [
+        28.9,
+        119.6
+      ],
+      "propCount": 4831,
+      "propCounts": {
+        "pine": 0,
+        "cedar": 531,
+        "broadleaf": 2819,
+        "rock": 426,
+        "scrub": 1055,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_5",
+      "url": "packs/r01_05.wpk",
+      "region": [
+        1,
+        5
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": 1024,
+        "maxX": -2048,
+        "maxZ": 2048
+      },
+      "byteLength": 632116,
+      "sha256": "287f3abd5dae14ca4e0672b90e8bc48e90dd212d883a6fbf5e76cc04cb713345",
+      "heightRangeMeters": [
+        25.7,
+        131.5
+      ],
+      "propCount": 3285,
+      "propCounts": {
+        "pine": 0,
+        "cedar": 383,
+        "broadleaf": 1834,
+        "rock": 284,
+        "scrub": 784,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_5",
+      "url": "packs/r02_05.wpk",
+      "region": [
+        2,
+        5
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": 1024,
+        "maxX": -1024,
+        "maxZ": 2048
+      },
+      "byteLength": 625660,
+      "sha256": "31cd442a7a7e1d5a58e4492cace8b38b9792c4d8b835929929745cd145761cc6",
+      "heightRangeMeters": [
+        31.1,
+        282.1
+      ],
+      "propCount": 2747,
+      "propCounts": {
+        "pine": 11,
+        "cedar": 327,
+        "broadleaf": 1343,
+        "rock": 280,
+        "scrub": 786,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_5",
+      "url": "packs/r03_05.wpk",
+      "region": [
+        3,
+        5
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": 1024,
+        "maxX": 0,
+        "maxZ": 2048
+      },
+      "byteLength": 624100,
+      "sha256": "7e6bd8fcd66e4c838f8c8fd744d315b6c86e293ce1723c2106e14e4fd6be7f8d",
+      "heightRangeMeters": [
+        37.5,
+        389
+      ],
+      "propCount": 2617,
+      "propCounts": {
+        "pine": 129,
+        "cedar": 122,
+        "broadleaf": 595,
+        "rock": 514,
+        "scrub": 1257,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_5",
+      "url": "packs/r04_05.wpk",
+      "region": [
+        4,
+        5
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": 1024,
+        "maxX": 1024,
+        "maxZ": 2048
+      },
+      "byteLength": 618568,
+      "sha256": "a75f0e67a8e45988dfaefbac3f6306d51f61ee25a536ebfae29a720df93c320c",
+      "heightRangeMeters": [
+        72.1,
+        378.4
+      ],
+      "propCount": 2156,
+      "propCounts": {
+        "pine": 139,
+        "cedar": 11,
+        "broadleaf": 173,
+        "rock": 488,
+        "scrub": 1345,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_5",
+      "url": "packs/r05_05.wpk",
+      "region": [
+        5,
+        5
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": 1024,
+        "maxX": 2048,
+        "maxZ": 2048
+      },
+      "byteLength": 625912,
+      "sha256": "7c0b831a30bf38af28551de226a687eb11e6ee938b457e5a62e2fa44231e7e6b",
+      "heightRangeMeters": [
+        72.5,
+        248.3
+      ],
+      "propCount": 2768,
+      "propCounts": {
+        "pine": 107,
+        "cedar": 182,
+        "broadleaf": 51,
+        "rock": 1356,
+        "scrub": 1072,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_5",
+      "url": "packs/r06_05.wpk",
+      "region": [
+        6,
+        5
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": 1024,
+        "maxX": 3072,
+        "maxZ": 2048
+      },
+      "byteLength": 627892,
+      "sha256": "47b1baeac77151b88ada39edf1801d7106ffe496d3735edc1b8a8526ad51ad2c",
+      "heightRangeMeters": [
+        29.5,
+        270.1
+      ],
+      "propCount": 2933,
+      "propCounts": {
+        "pine": 98,
+        "cedar": 236,
+        "broadleaf": 0,
+        "rock": 1584,
+        "scrub": 1015,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_5",
+      "url": "packs/r07_05.wpk",
+      "region": [
+        7,
+        5
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": 1024,
+        "maxX": 4096,
+        "maxZ": 2048
+      },
+      "byteLength": 628240,
+      "sha256": "055073c90f3073db78f085763538cfbd7c2e91732bf04caff271ad7305382dd6",
+      "heightRangeMeters": [
+        129.4,
+        233
+      ],
+      "propCount": 2962,
+      "propCounts": {
+        "pine": 116,
+        "cedar": 234,
+        "broadleaf": 0,
+        "rock": 1610,
+        "scrub": 1002,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_6",
+      "url": "packs/r00_06.wpk",
+      "region": [
+        0,
+        6
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": 2048,
+        "maxX": -3072,
+        "maxZ": 3072
+      },
+      "byteLength": 643228,
+      "sha256": "0d88f1ef02fa1bc6f60ceaa419833737d1e5f5ebab915e1b8dd4bb315b38fda8",
+      "heightRangeMeters": [
+        30,
+        252.5
+      ],
+      "propCount": 4211,
+      "propCounts": {
+        "pine": 41,
+        "cedar": 436,
+        "broadleaf": 2181,
+        "rock": 576,
+        "scrub": 977,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_6",
+      "url": "packs/r01_06.wpk",
+      "region": [
+        1,
+        6
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": 2048,
+        "maxX": -2048,
+        "maxZ": 3072
+      },
+      "byteLength": 614452,
+      "sha256": "7aec4d4583b4b009cd4a0568009f78b3112526abe528859da9a8705c34e85bea",
+      "heightRangeMeters": [
+        31,
+        254.4
+      ],
+      "propCount": 1813,
+      "propCounts": {
+        "pine": 19,
+        "cedar": 196,
+        "broadleaf": 802,
+        "rock": 305,
+        "scrub": 491,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_6",
+      "url": "packs/r02_06.wpk",
+      "region": [
+        2,
+        6
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": 2048,
+        "maxX": -1024,
+        "maxZ": 3072
+      },
+      "byteLength": 621376,
+      "sha256": "236af46e9027c22a1932bf5e568238f44f803a8bbe720326c1275da9c2f9e39e",
+      "heightRangeMeters": [
+        31,
+        305.3
+      ],
+      "propCount": 2390,
+      "propCounts": {
+        "pine": 25,
+        "cedar": 217,
+        "broadleaf": 1117,
+        "rock": 365,
+        "scrub": 666,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_6",
+      "url": "packs/r03_06.wpk",
+      "region": [
+        3,
+        6
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": 2048,
+        "maxX": 0,
+        "maxZ": 3072
+      },
+      "byteLength": 625708,
+      "sha256": "79df78edd1f174b5b06fa90cb10601b6aa410addfba61aefb7a2478fdfa55024",
+      "heightRangeMeters": [
+        213.8,
+        473
+      ],
+      "propCount": 2751,
+      "propCounts": {
+        "pine": 277,
+        "cedar": 154,
+        "broadleaf": 407,
+        "rock": 1198,
+        "scrub": 715,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_6",
+      "url": "packs/r04_06.wpk",
+      "region": [
+        4,
+        6
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": 2048,
+        "maxX": 1024,
+        "maxZ": 3072
+      },
+      "byteLength": 621868,
+      "sha256": "322fda5b244f212d2066e806cc046b16f568ca1d663e3195cadf666adebd9d97",
+      "heightRangeMeters": [
+        216.5,
+        485.4
+      ],
+      "propCount": 2431,
+      "propCounts": {
+        "pine": 355,
+        "cedar": 94,
+        "broadleaf": 5,
+        "rock": 1256,
+        "scrub": 721,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_6",
+      "url": "packs/r05_06.wpk",
+      "region": [
+        5,
+        6
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": 2048,
+        "maxX": 2048,
+        "maxZ": 3072
+      },
+      "byteLength": 625780,
+      "sha256": "308e05dbd027a40568ca77134397c22487aa147728b523b8d4db1e95231aaaf1",
+      "heightRangeMeters": [
+        105.5,
+        456.4
+      ],
+      "propCount": 2757,
+      "propCounts": {
+        "pine": 178,
+        "cedar": 163,
+        "broadleaf": 3,
+        "rock": 1514,
+        "scrub": 899,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_6",
+      "url": "packs/r06_06.wpk",
+      "region": [
+        6,
+        6
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": 2048,
+        "maxX": 3072,
+        "maxZ": 3072
+      },
+      "byteLength": 625900,
+      "sha256": "34f8d2bc2ad614637dab7a60159478768792f3092dd936c8c69b35d47684136b",
+      "heightRangeMeters": [
+        85.1,
+        460.5
+      ],
+      "propCount": 2767,
+      "propCounts": {
+        "pine": 189,
+        "cedar": 172,
+        "broadleaf": 0,
+        "rock": 1530,
+        "scrub": 876,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_6",
+      "url": "packs/r07_06.wpk",
+      "region": [
+        7,
+        6
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": 2048,
+        "maxX": 4096,
+        "maxZ": 3072
+      },
+      "byteLength": 623284,
+      "sha256": "b64b868be52a1a31d5bd36eb506f4c3b12b45567b33108341c22ade0d53f80aa",
+      "heightRangeMeters": [
+        146.5,
+        394
+      ],
+      "propCount": 2549,
+      "propCounts": {
+        "pine": 287,
+        "cedar": 147,
+        "broadleaf": 0,
+        "rock": 1334,
+        "scrub": 781,
+        "post": 0
+      }
+    },
+    {
+      "id": "r0_7",
+      "url": "packs/r00_07.wpk",
+      "region": [
+        0,
+        7
+      ],
+      "bounds": {
+        "minX": -4096,
+        "minZ": 3072,
+        "maxX": -3072,
+        "maxZ": 4096
+      },
+      "byteLength": 616972,
+      "sha256": "d76fafc5224745ac021f8d3b44c833f1e0d3b455bd99ec4965f15ccb1e3a673c",
+      "heightRangeMeters": [
+        50,
+        273.5
+      ],
+      "propCount": 2023,
+      "propCounts": {
+        "pine": 240,
+        "cedar": 75,
+        "broadleaf": 42,
+        "rock": 1085,
+        "scrub": 581,
+        "post": 0
+      }
+    },
+    {
+      "id": "r1_7",
+      "url": "packs/r01_07.wpk",
+      "region": [
+        1,
+        7
+      ],
+      "bounds": {
+        "minX": -3072,
+        "minZ": 3072,
+        "maxX": -2048,
+        "maxZ": 4096
+      },
+      "byteLength": 623284,
+      "sha256": "66d2be031a2da45550588d5eb5129be3f4cc83ff52d08b60bc2d6058a62f6e7f",
+      "heightRangeMeters": [
+        169.8,
+        275.7
+      ],
+      "propCount": 2549,
+      "propCounts": {
+        "pine": 350,
+        "cedar": 124,
+        "broadleaf": 135,
+        "rock": 1247,
+        "scrub": 693,
+        "post": 0
+      }
+    },
+    {
+      "id": "r2_7",
+      "url": "packs/r02_07.wpk",
+      "region": [
+        2,
+        7
+      ],
+      "bounds": {
+        "minX": -2048,
+        "minZ": 3072,
+        "maxX": -1024,
+        "maxZ": 4096
+      },
+      "byteLength": 622540,
+      "sha256": "2249a5db571fcb89372c1da24cbcb4c249f5980f9606c4a50dff1915e156c14a",
+      "heightRangeMeters": [
+        183.8,
+        300.2
+      ],
+      "propCount": 2487,
+      "propCounts": {
+        "pine": 331,
+        "cedar": 128,
+        "broadleaf": 39,
+        "rock": 1251,
+        "scrub": 738,
+        "post": 0
+      }
+    },
+    {
+      "id": "r3_7",
+      "url": "packs/r03_07.wpk",
+      "region": [
+        3,
+        7
+      ],
+      "bounds": {
+        "minX": -1024,
+        "minZ": 3072,
+        "maxX": 0,
+        "maxZ": 4096
+      },
+      "byteLength": 622156,
+      "sha256": "c0f8a19ddff543d050dcc7ff1d5c9f53a3da904080cf54d355b77848b33e98ac",
+      "heightRangeMeters": [
+        209.5,
+        319.2
+      ],
+      "propCount": 2455,
+      "propCounts": {
+        "pine": 362,
+        "cedar": 99,
+        "broadleaf": 0,
+        "rock": 1274,
+        "scrub": 720,
+        "post": 0
+      }
+    },
+    {
+      "id": "r4_7",
+      "url": "packs/r04_07.wpk",
+      "region": [
+        4,
+        7
+      ],
+      "bounds": {
+        "minX": 0,
+        "minZ": 3072,
+        "maxX": 1024,
+        "maxZ": 4096
+      },
+      "byteLength": 621160,
+      "sha256": "9e17e8a8b7451d55028674e2d4a1d952cf82c08b5400ae51a621639c6b6f1bf0",
+      "heightRangeMeters": [
+        176.5,
+        424.2
+      ],
+      "propCount": 2372,
+      "propCounts": {
+        "pine": 303,
+        "cedar": 106,
+        "broadleaf": 0,
+        "rock": 1259,
+        "scrub": 704,
+        "post": 0
+      }
+    },
+    {
+      "id": "r5_7",
+      "url": "packs/r05_07.wpk",
+      "region": [
+        5,
+        7
+      ],
+      "bounds": {
+        "minX": 1024,
+        "minZ": 3072,
+        "maxX": 2048,
+        "maxZ": 4096
+      },
+      "byteLength": 621400,
+      "sha256": "19d3f0bd076908d62b0e77235315f3449c0e005f785d305c49e5885645bf0c3a",
+      "heightRangeMeters": [
+        183.6,
+        469
+      ],
+      "propCount": 2392,
+      "propCounts": {
+        "pine": 275,
+        "cedar": 86,
+        "broadleaf": 0,
+        "rock": 1310,
+        "scrub": 721,
+        "post": 0
+      }
+    },
+    {
+      "id": "r6_7",
+      "url": "packs/r06_07.wpk",
+      "region": [
+        6,
+        7
+      ],
+      "bounds": {
+        "minX": 2048,
+        "minZ": 3072,
+        "maxX": 3072,
+        "maxZ": 4096
+      },
+      "byteLength": 622300,
+      "sha256": "1d85d25a89f6a290e82549d58a4e56c377aef2ea424b5922cf9f66bbce155a51",
+      "heightRangeMeters": [
+        279.8,
+        460.6
+      ],
+      "propCount": 2467,
+      "propCounts": {
+        "pine": 341,
+        "cedar": 109,
+        "broadleaf": 0,
+        "rock": 1323,
+        "scrub": 694,
+        "post": 0
+      }
+    },
+    {
+      "id": "r7_7",
+      "url": "packs/r07_07.wpk",
+      "region": [
+        7,
+        7
+      ],
+      "bounds": {
+        "minX": 3072,
+        "minZ": 3072,
+        "maxX": 4096,
+        "maxZ": 4096
+      },
+      "byteLength": 620992,
+      "sha256": "9a510dba648e756a7797900dc43e4f426a325ef80d592ebe03bec06066a0f9aa",
+      "heightRangeMeters": [
+        184.1,
+        398.2
+      ],
+      "propCount": 2358,
+      "propCounts": {
+        "pine": 304,
+        "cedar": 61,
+        "broadleaf": 0,
+        "rock": 1305,
+        "scrub": 688,
+        "post": 0
+      }
+    }
+  ]
+}

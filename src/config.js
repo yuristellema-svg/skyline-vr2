@@ -170,14 +170,14 @@ export const CONFIG = Object.freeze({
 
     boostIntensity: 1,
 
-    gVignetteStart: 4.6,
-    gVignetteFull: 8.4,
+    gVignetteStart: 5.2,
+    gVignetteFull: 9.2,
 
     maxViewSqueeze: 0.035,
     maxVrShake: 0.42 * DEG,
     stallBuffetAngle: 18 * DEG,
 
-    negativeGTintStart: -1.25,
+    negativeGTintStart: -2.0,
     promptDepth: 5000,
   }),
 

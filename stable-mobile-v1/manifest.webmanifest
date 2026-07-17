@@ -1,0 +1,28 @@
+{
+  "name": "Skyline VR",
+  "short_name": "Skyline VR",
+  "description": "Open-world arcade flight for desktop and mobile stereo VR.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "landscape",
+  "background_color": "#07131c",
+  "theme_color": "#07131c",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

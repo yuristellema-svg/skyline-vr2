@@ -1,0 +1,51 @@
+{
+  "contentHash": "f2d009d8a0eff1d93a83a9524985631d1f91ef836797a6335c551fe6eef3fcb3",
+  "recipeSha256": "a2f9e11821f18e15573bd08078e7d31d5aa4c9f48062585e3a8354f4da357828",
+  "world": {
+    "sizeMeters": 8192,
+    "bounds": {
+      "minX": -4096,
+      "minZ": -4096,
+      "maxX": 4096,
+      "maxZ": 4096
+    },
+    "heightRangeMeters": [
+      8.4,
+      485.4
+    ],
+    "chunkSizeMeters": 256,
+    "chunksPerSide": 32,
+    "chunksTotal": 1024,
+    "packSizeMeters": 1024,
+    "packsPerSide": 8,
+    "packsTotal": 64
+  },
+  "summary": {
+    "packBytes": 40326280,
+    "propCount": 199478,
+    "propCounts": {
+      "pine": 42241,
+      "cedar": 21198,
+      "broadleaf": 20385,
+      "rock": 50967,
+      "scrub": 63943,
+      "post": 744
+    },
+    "propCountsByBiome": {
+      "meadow": 34043,
+      "conifer_forest": 67246,
+      "broadleaf_forest": 23994,
+      "alpine_rock": 27572,
+      "ochre_canyon": 38125,
+      "riparian_wetland": 6668,
+      "urban": 1830,
+      "water": 0
+    }
+  },
+  "files": {
+    "manifestBytes": 42360,
+    "featuresBytes": 6026,
+    "packBytes": 40326280,
+    "totalBytes": 40374666
+  }
+}

@@ -149,24 +149,38 @@ export class WindAudioSystem {
       };
   }
 
-  async _discardContextForRetry() {
+  _discardContextForRetryNow() {
+    const oldContext =
+      this.context;
+
     try {
       this._disposeGraph();
     } catch {}
 
-    try {
-      if (
-        this.context &&
-        this.context.state !==
-          'closed'
-      ) {
-        await this.context
-          .close?.();
-      }
-    } catch {}
-
     this.context = null;
     this.ready = false;
+    this.disabled = false;
+    this.failedReason = '';
+
+    /*
+     * Do not await close here. On iPhone, creating and
+     * resuming the replacement context must still occur
+     * inside the original tap call stack.
+     */
+    try {
+      if (
+        oldContext &&
+        oldContext.state !==
+          'closed'
+      ) {
+        const closing =
+          oldContext.close?.();
+
+        closing?.catch?.(
+          () => {},
+        );
+      }
+    } catch {}
   }
 
   async unlockFromGesture(
@@ -188,13 +202,13 @@ export class WindAudioSystem {
         state === 'closed' ||
         state === 'interrupted'
       ) {
-        await this
-          ._discardContextForRetry();
-
-        this.disabled = false;
-        this.failedReason = '';
+        this._discardContextForRetryNow();
       }
 
+      /*
+       * These calls happen synchronously before the
+       * first await, preserving Safari's user gesture.
+       */
       if (!this.context) {
         this.context =
           this.contextFactory?.();
@@ -208,15 +222,21 @@ export class WindAudioSystem {
         this._buildGraph();
       }
 
-      if (
+      const resumePromise =
         this.context.state !==
-        'running'
-      ) {
-        await this.context
-          .resume?.();
-      }
+          'running'
+          ? this.context.resume?.()
+          : null;
 
       this._playUnlockTone();
+
+      if (
+        resumePromise &&
+        typeof resumePromise.then ===
+          'function'
+      ) {
+        await resumePromise;
+      }
 
       if (
         this.context.state !==

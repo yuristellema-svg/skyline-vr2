@@ -185,13 +185,7 @@ const menu = new GazeMenu(
     },
 
     recenter: () => {
-      menuNeedsReanchor =
-        menu.isOpen;
-
-      showTransient(
-        'RECENTERED',
-        1.2
-      );
+      return beginHeadRecalibration();
     },
 
     camera: () => {
@@ -221,6 +215,56 @@ const menu = new GazeMenu(
     },
   }
 );
+
+function beginHeadRecalibration() {
+  if (!phoneMode) {
+    input.recenter();
+
+    showTransient(
+      'RECENTERED',
+      1.2,
+    );
+
+    return 'RECENTERED';
+  }
+
+  /*
+   * The user selected RESET HEAD while looking
+   * sideways at a menu card. Close everything and
+   * allow three seconds to face naturally forward.
+   */
+  menu.close();
+  cameraRig.endMenuPose();
+  powerStrip.close();
+
+  menuNeedsReanchor = false;
+
+  transientMessage = '';
+  transientUntil = 0;
+
+  input.calibrated = false;
+
+  phase = 'calibrating';
+
+  phaseStarted =
+    performance.now() / 1000;
+
+  accumulator = 0;
+  lastFrame = phaseStarted;
+
+  cameraRig.reset(
+    renderPoseInterpolator
+      .sampleCurrent(
+        renderPose,
+      ),
+  );
+
+  setEyeMessage(
+    'LOOK STRAIGHT\n3',
+  );
+
+  return 'LOOK STRAIGHT';
+}
 
 function setStartStatus(
   message,
