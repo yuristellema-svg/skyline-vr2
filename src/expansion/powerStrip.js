@@ -1,10 +1,10 @@
 import * as THREE from '../../vendor/three.module.min.js';
 
 const DEG = Math.PI / 180;
-const BEACON_YAW = 50 * DEG;
+const BEACON_YAW = 46 * DEG;
 const DISTANCE = 1.62;
 const BEACON_DWELL = 1.1;
-const OPTION_DWELL = 0.72;
+const OPTION_DWELL = 0.80;
 const OPEN_TIMEOUT = 5;
 
 function clamp(value, min, max) {
@@ -176,7 +176,16 @@ export class PowerStrip {
     for (const sprite of this.optionSprites) sprite.visible = false;
   }
 
-  update(dt, { active, camera, basePosition, baseQuaternion }) {
+  update(
+    dt,
+    {
+      active,
+      camera,
+      basePosition,
+      baseQuaternion,
+      grounded = false,
+    },
+  ) {
     const safeDt = clamp(Number(dt) || 0, 0, 0.1);
     this.cooldown = Math.max(0, this.cooldown - safeDt);
 
@@ -205,10 +214,24 @@ export class PowerStrip {
         ? this.beaconElapsed + safeDt
         : Math.max(0, this.beaconElapsed - safeDt * 2.2);
       this.progress = clamp(this.beaconElapsed / BEACON_DWELL, 0, 1);
-      draw(this.beacon, 'POWER', hovered, this.progress, true);
+      const beaconLabel =
+        this.powerControl.isGlider
+          ? `SPOILERS ${this.powerControl.state.label}`
+          : `PWR ${this.powerControl.state.label}`;
+
+      draw(
+        this.beacon,
+        beaconLabel,
+        hovered,
+        this.progress,
+        true,
+      );
       if (this.beaconElapsed >= BEACON_DWELL) {
         this.open = true;
-        this.anchorYaw = gaze.yaw;
+        this.anchorYaw =
+          this.powerControl.isGlider
+            ? 14 * DEG
+            : 12 * DEG;
         this.openElapsed = 0;
         this.beaconElapsed = 0;
         this.progress = 0;
@@ -226,7 +249,10 @@ export class PowerStrip {
     }
 
     const count = this.optionSprites.length;
-    const spacing = count === 3 ? 15 * DEG : 13 * DEG;
+    const spacing =
+      count === 3
+        ? 17 * DEG
+        : 14 * DEG;
     const start = this.anchorYaw - spacing * (count - 1) / 2;
     let candidate = -1;
     let best = Infinity;
@@ -262,11 +288,30 @@ export class PowerStrip {
         basePosition,
         baseQuaternion,
       );
+      const option =
+        this.powerControl.options[index];
+
+      const label =
+        grounded &&
+        !this.powerControl.isGlider &&
+        option.id === 'off'
+          ? 'OFF / BRAKE'
+          : option.label;
+
+      const selected =
+        index === candidate ||
+        (
+          candidate < 0 &&
+          index === this.powerControl.index
+        );
+
       draw(
         sprite,
-        this.powerControl.options[index].label,
-        index === candidate,
-        index === candidate ? this.progress : 0,
+        label,
+        selected,
+        index === candidate
+          ? this.progress
+          : 0,
       );
     }
 

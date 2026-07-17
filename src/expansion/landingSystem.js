@@ -29,32 +29,44 @@ export function evaluateTouchdown({
   inside,
 }) {
   if (!inside) {
-    return Object.freeze({ quality: 'outside', valid: false, marginal: false });
+    return Object.freeze({
+      quality: 'outside',
+      valid: false,
+      marginal: false,
+    });
   }
 
   const powerSafe =
-    profile.enginePower <= 0 || throttle <= 0.35;
+    profile.enginePower <= 0 ||
+    throttle <= 0.40;
 
   const valid =
     powerSafe &&
-    speed <= profile.touchdownSpeed &&
-    sinkRate <= profile.touchdownSink &&
-    bankDegrees <= profile.touchdownBank &&
-    headingErrorDegrees <= profile.touchdownHeading;
+    speed <= profile.touchdownSpeed * 1.08 &&
+    sinkRate <= profile.touchdownSink * 1.15 &&
+    bankDegrees <= profile.touchdownBank * 1.25 &&
+    headingErrorDegrees <= profile.touchdownHeading * 1.25;
 
   if (valid) {
-    return Object.freeze({ quality: 'good', valid: true, marginal: false });
+    return Object.freeze({
+      quality: 'good',
+      valid: true,
+      marginal: false,
+    });
   }
 
   const marginal =
     throttle <= 0.67 &&
-    speed <= profile.touchdownSpeed * 1.18 &&
-    sinkRate <= profile.touchdownSink * 1.55 &&
-    bankDegrees <= profile.touchdownBank * 1.6 &&
-    headingErrorDegrees <= profile.touchdownHeading * 1.6;
+    speed <= profile.touchdownSpeed * 1.34 &&
+    sinkRate <= profile.touchdownSink * 1.85 &&
+    bankDegrees <= profile.touchdownBank * 2.0 &&
+    headingErrorDegrees <= profile.touchdownHeading * 2.0;
 
   return Object.freeze({
-    quality: marginal ? 'bounce' : 'hard',
+    quality:
+      marginal
+        ? 'bounce'
+        : 'hard',
     valid: false,
     marginal,
   });
@@ -79,8 +91,8 @@ export class LandingSystem {
         x: 520,
         z: 380,
         heading: 0,
-        length: 720,
-        width: 58,
+        length: 900,
+        width: 76,
         surface: 'paved',
       }),
       makeZone(sampleHeight, {
@@ -89,8 +101,8 @@ export class LandingSystem {
         x: -920,
         z: -260,
         heading: -18 * DEG,
-        length: 470,
-        width: 46,
+        length: 600,
+        width: 62,
         surface: 'grass',
       }),
     ]);
@@ -298,7 +310,7 @@ export class LandingSystem {
     const profile = flight.aircraftProfile;
     const automaticBrake =
       !powerState.engineOn && profile.enginePower > 0
-        ? 0.42
+        ? 0.68
         : 0;
     const brake = Math.max(powerState.brake || 0, automaticBrake);
     const engine = powerState.engineOn
@@ -348,7 +360,7 @@ export class LandingSystem {
       return;
     }
 
-    if (flight.speed <= 1.5) {
+    if (flight.speed <= 1.0) {
       flight.speed = 0;
       flight.velocity.set(0, 0, 0);
       if (this.state !== 'stopped') {

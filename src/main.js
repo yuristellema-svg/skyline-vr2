@@ -581,22 +581,7 @@ function startSession(phone) {
 
   if (phone) {
     void acquireWakeLock();
-  } else {
-    showTransient(
-      'CENTER MOUSE / W/S/A/D ALSO WORK',
-      3
-    );
   }
-
-  const visibleWorld =
-    nearWorld.getStatus();
-
-  showTransient(
-    `WORLD · ${visibleWorld.visibleBirds} BIRDS · ` +
-    `${visibleWorld.visibleAI} AI · ` +
-    `${visibleWorld.visibleSailplanes} GLIDER`,
-    3
-  );
 }
 
 async function waitForLandscape() {
@@ -1214,7 +1199,7 @@ function frame(milliseconds) {
         phase,
       );
 
-            const collisionHit =
+      const collisionHit =
         !landingResult.suppressCollision &&
         collision.check(flight.position);
 
@@ -1323,8 +1308,12 @@ function frame(milliseconds) {
         phase === 'flying' &&
         !menu.isOpen,
       camera: stereo.camera,
-      basePosition: cameraRig.basePosition,
-      baseQuaternion: cameraRig.baseQuaternion,
+      basePosition:
+        cameraRig.basePosition,
+      baseQuaternion:
+        cameraRig.baseQuaternion,
+      grounded:
+        landingSystem.grounded,
     },
   );
 
