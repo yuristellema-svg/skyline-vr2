@@ -8,6 +8,23 @@ import {
   createA6MZeroCockpit,
 } from './aircraft/a6mZeroCockpit.js';
 
+import {
+  createScoutExternal as createWorkerScoutExternal,
+} from './workerAirframe/scoutExternalClean.js';
+
+import {
+  createScoutCockpit as createWorkerScoutCockpit,
+} from './workerAirframe/scoutCockpitClean.js';
+
+import {
+  createGliderExternal as createWorkerGliderExternal,
+} from './workerAirframe/gliderExternalClean.js';
+
+import {
+  createGliderCockpit as createWorkerGliderCockpit,
+} from './workerAirframe/gliderCockpitClean.js';
+
+
 const STORAGE_KEY = 'skyline-aircraft-profile-v4';
 const FORWARD = new THREE.Vector3(0, 0, -1);
 
@@ -303,13 +320,15 @@ function createCockpit(profileId) {
 const COCKPIT_BUILDERS_V52 = Object.freeze({
   zero: createA6MZeroCockpit,
   stuka: createJu87StukaCockpit,
+  scout: createWorkerScoutCockpit,
+  glider: createWorkerGliderCockpit,
 });
 
 const EXTERNAL_BUILDERS = Object.freeze({
   zero: createA6MZeroExternal,
   stuka: createJu87StukaExternal,
-  scout: createScoutExternal,
-  glider: createGliderExternal,
+  scout: createWorkerScoutExternal,
+  glider: createWorkerGliderExternal,
 });
 
 function storedIndex() {
