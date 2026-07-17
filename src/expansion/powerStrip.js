@@ -1,9 +1,9 @@
 import * as THREE from '../../vendor/three.module.min.js';
 
 const DEG = Math.PI / 180;
-const BEACON_YAW = 62 * DEG;
-const DISTANCE = 1.72;
-const BEACON_DWELL = 1.4;
+const BEACON_YAW = 46 * DEG;
+const DISTANCE = 1.62;
+const BEACON_DWELL = 1.1;
 const OPTION_DWELL = 0.80;
 const OPEN_TIMEOUT = 5;
 
@@ -207,8 +207,8 @@ export class PowerStrip {
         baseQuaternion,
       );
       const hovered =
-        Math.abs(gaze.yaw - BEACON_YAW) <= 4.5 * DEG &&
-        Math.abs(gaze.pitch) <= 10 * DEG &&
+        Math.abs(gaze.yaw - BEACON_YAW) <= 6 * DEG &&
+        Math.abs(gaze.pitch) <= 13 * DEG &&
         this.cooldown <= 0;
       this.beaconElapsed = hovered
         ? this.beaconElapsed + safeDt

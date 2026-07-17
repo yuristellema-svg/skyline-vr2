@@ -254,7 +254,7 @@ export class EffectsSystem {
       clamp(
         (
           load -
-          5.2
+          5.6
         ) /
           4.8,
         0,
@@ -265,7 +265,7 @@ export class EffectsSystem {
       clamp(
         (
           -load -
-          2.0
+          2.3
         ) /
           3.0,
         0,
@@ -311,8 +311,8 @@ export class EffectsSystem {
 
     const redoutTarget =
       smoothstep(
-        0.68,
-        1.55,
+        0.85,
+        1.75,
         this.negativeGExposure,
       );
 
@@ -409,12 +409,12 @@ export class EffectsSystem {
     const stallWarningTint =
       stall *
       stall *
-      0.035;
+      0.020;
     this.redTint = damp(
       this.redTint,
       (
-        negativeG * 0.045 +
-        this.redout * 0.70 +
+        negativeG * 0.030 +
+        this.redout * 0.60 +
         stallWarningTint
       ) *
         level.multiplier,

@@ -88,6 +88,23 @@ const TUNING = Object.freeze({
   coordinatedTurnMaximumBank: 65 * Math.PI / 180,
   coordinatedTurnMaximumRate: 30 * Math.PI / 180,
 
+  /*
+   * Safety recovery for extreme nose/velocity separation.
+   * The aircraft may slip, but it must never continue
+   * travelling backward relative to its nose.
+   */
+  largeSlipRecoveryStart:
+    32 * Math.PI / 180,
+
+  largeSlipRecoveryFull:
+    78 * Math.PI / 180,
+
+  largeSlipRecoveryRate:
+    115 * Math.PI / 180,
+
+  maximumMisalignmentAngle:
+    88 * Math.PI / 180,
+
   // Angular input remains responsive, but no longer snaps instantly at speed.
   highSpeedAngularResponseScale: 0.38,
   highSpeedAngularReleaseScale: 2.1,
@@ -100,7 +117,7 @@ const TUNING = Object.freeze({
   lowSpeedStallFull: 2,
   lowSpeedStallAmount: 0.72,
   stalledLiftFraction: 0.5,
-  stalledSteeringFraction: 0.26,
+  stalledSteeringFraction: 0.58,
 
   zeroSnapSpeed: 0.65,
   recoveryTriggerSpeed: 5,
@@ -714,12 +731,16 @@ export class FlightModel {
         this._misalignmentAngle,
       );
 
+    /*
+     * This guard applies at every speed. Previously,
+     * low-speed stalls allowed the nose to rotate far
+     * beyond the actual direction of travel.
+     */
     rateScale *=
       THREE.MathUtils.lerp(
         1,
-        0.30,
-        highSpeedBlend *
-          pathLagGuard,
+        0.22,
+        pathLagGuard,
       );
 
     const angularResponse =
@@ -1103,10 +1124,19 @@ export class FlightModel {
       this._alignmentAxis.lengthSq() <
       EPSILON
     ) {
+      /*
+       * At an almost exact reversal the normal cross
+       * product has no direction. Prefer the aircraft-up
+       * axis so recovery turns horizontally instead of
+       * throwing the velocity vertically.
+       */
       this._alignmentAxis
-        .crossVectors(
-          this._nose,
-          WORLD_UP,
+        .copy(this._craftUp)
+        .addScaledVector(
+          this._velocityDirection,
+          -this._craftUp.dot(
+            this._velocityDirection,
+          ),
         );
 
       if (
@@ -1114,9 +1144,23 @@ export class FlightModel {
         EPSILON
       ) {
         this._alignmentAxis
+          .copy(this._craftRight)
+          .addScaledVector(
+            this._velocityDirection,
+            -this._craftRight.dot(
+              this._velocityDirection,
+            ),
+          );
+      }
+
+      if (
+        this._alignmentAxis.lengthSq() <
+        EPSILON
+      ) {
+        this._alignmentAxis
           .crossVectors(
-            this._nose,
-            WORLD_RIGHT,
+            this._velocityDirection,
+            WORLD_UP,
           );
       }
     }
@@ -1155,19 +1199,58 @@ export class FlightModel {
         ),
       );
 
-    const alignmentRate =
+    const aerodynamicRate =
       Math.min(
         liftRate,
         gLimitedRate,
       ) *
       stallSteeringScale;
 
+    const largeSlipAmount =
+      smoothstep(
+        TUNING.largeSlipRecoveryStart,
+        TUNING.largeSlipRecoveryFull,
+        angle,
+      );
+
+    const emergencyRate =
+      TUNING.largeSlipRecoveryRate *
+      largeSlipAmount *
+      THREE.MathUtils.lerp(
+        1,
+        1.30,
+        clamp(
+          this.stallAmount,
+          0,
+          1,
+        ),
+      );
+
+    const alignmentRate =
+      Math.max(
+        aerodynamicRate,
+        emergencyRate,
+      );
+
+    /*
+     * Absolute guard against negative forward motion.
+     * Normal handling uses the gradual recovery above.
+     */
+    const backflowCorrection =
+      Math.max(
+        0,
+        angle -
+          TUNING.maximumMisalignmentAngle,
+      );
+
     const alignmentStep =
       Math.min(
         angle,
 
-        alignmentRate *
-          dt,
+        Math.max(
+          alignmentRate * dt,
+          backflowCorrection,
+        ),
       );
 
     this._alignmentQuaternion

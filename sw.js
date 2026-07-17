@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-mobile-vr-recovery-v2-20260717';
+const SHELL_CACHE = 'skyline-stall-hotfix-v1-20260717';
 
 const SHELL_FILES = [
   './',
