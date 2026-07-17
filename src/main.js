@@ -15,14 +15,6 @@ import { initialViewMode } from './workerNav/phoneViewModes.js';
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
 import { WorldPolishSystem } from './worldPolish.js';
-import {
-  createWorkerSoundBridge,
-} from './workerSound/runtimeBridge.js';
-
-import {
-  createWorkerWorldBridge,
-} from './workerWorld/runtimeBridge.js';
-
 import { AircraftVisualSystem } from './aircraftVisuals.js';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 
@@ -78,47 +70,11 @@ const worldPolish = new WorldPolishSystem(
       world.sampleHeight,
     atmosphere: true,
     audio: true,
-    routes: false,
-    wildlife: false,
+    routes: true,
+    wildlife: true,
     contrails: true,
-    city: false,
-    aiTraffic: false,
   },
 );
-
-const workerWorld =
-  createWorkerWorldBridge(
-    scene,
-    {
-      camera:
-        stereo.camera,
-
-      collision,
-
-      sampleHeight:
-        world.sampleHeight,
-
-      eventTarget:
-        window,
-
-      quality:
-        'balanced',
-    }
-  );
-
-const workerSound =
-  createWorkerSoundBridge({
-    scene,
-
-    camera:
-      stereo.camera,
-
-    eventTarget:
-      window,
-
-    world:
-      workerWorld,
-  });
 
 let phase = 'boot';
 let phoneMode = false;
@@ -1179,22 +1135,6 @@ function frame(milliseconds) {
         phase,
       );
 
-      workerWorld.fixedStepUpdate(
-        CONFIG.physics.fixedStep,
-        flight,
-        phase,
-      );
-
-      workerSound.fixedStepUpdate(
-        CONFIG.physics.fixedStep,
-        {
-          flight,
-          phase,
-          camera:
-            stereo.camera,
-        }
-      );
-
       if (
         collision.check(
           flight.position
@@ -1311,35 +1251,6 @@ function frame(milliseconds) {
     cameraRig.basePosition,
     cameraRig.baseQuaternion,
   );
-  workerWorld.update(
-    frameDt,
-    {
-      flight,
-      renderPose:
-        sharedRenderPose,
-      camera:
-        stereo.camera,
-      phase,
-      collision,
-      world,
-    }
-  );
-
-  workerSound.update(
-    frameDt,
-    {
-      flight,
-      renderPose:
-        sharedRenderPose,
-      camera:
-        stereo.camera,
-      phase,
-      trafficSources:
-        workerWorld
-          .getAudioSources(),
-    }
-  );
-
   worldPolish.beginPerformanceFrame?.(
     frameDt,
     {
