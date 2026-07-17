@@ -25,6 +25,6 @@ http.createServer((request, response) => {
   }
   response.writeHead(200, { 'Content-Type': types.get(path.extname(resolved)) || 'application/octet-stream' });
   fs.createReadStream(resolved).pipe(response);
-}).listen(port, '127.0.0.1', () => {
-  console.log(`Skyline VR Iteration 3: http://127.0.0.1:${port}/`);
+}).listen(port, '0.0.0.0', () => {
+  console.log(`Skyline VR Iteration 3: http://0.0.0.0:${port}/`);
 });
