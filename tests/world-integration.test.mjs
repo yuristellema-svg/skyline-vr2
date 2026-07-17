@@ -74,6 +74,7 @@ function assertFeatureCollisionCoverage(collision) {
 
 const ACCEPTED_WORLD_DRAW_CALLS = 431;
 const ACCEPTED_PROP_TRIANGLES = 459996;
+const ACCEPTED_PROP_TRIANGLE_BUDGET = 460000;
 
 function assertWorldBudgets(world) {
   const propReport = world.props.getBudgetReport();
@@ -91,7 +92,15 @@ function assertWorldBudgets(world) {
       ACCEPTED_PROP_TRIANGLES,
     `${propReport.estimatedTriangles} prop triangles exceeds accepted baseline ${ACCEPTED_PROP_TRIANGLES}`,
   );
-  assert.equal(propReport.triangleBudget, ACCEPTED_PROP_TRIANGLES);
+  assert.equal(
+    propReport.triangleBudget,
+    ACCEPTED_PROP_TRIANGLE_BUDGET,
+  );
+
+  assert.ok(
+    propReport.estimatedTriangles <=
+      propReport.triangleBudget,
+  );
   assert.ok(
     Math.abs(
       world.stats.propTriangles -

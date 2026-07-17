@@ -22,19 +22,23 @@ test('manifest and iPhone assets are valid', () => {
   assert.equal(manifest.display, 'fullscreen');
   assert.equal(manifest.orientation, 'landscape');
 
-  const touch = manifest.icons.find(
-    icon =>
-      icon.sizes === '180x180' &&
-      icon.type === 'image/png',
+  assert.ok(
+    manifest.icons.some(
+      icon =>
+        icon.src === './icon.svg' &&
+        icon.type === 'image/svg+xml',
+    ),
   );
 
-  assert.ok(touch);
   assert.ok(
     fs.existsSync(
-      path.join(
-        root,
-        touch.src.replace('./', ''),
-      ),
+      path.join(root, 'icon.svg'),
+    ),
+  );
+
+  assert.ok(
+    fs.existsSync(
+      path.join(root, 'apple-touch-icon.png'),
     ),
   );
 });
