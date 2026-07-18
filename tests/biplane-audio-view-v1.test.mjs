@@ -37,12 +37,12 @@ test('updated aircraft and audio modules are cache-busted', () => {
   const worldPolish = source('src/worldPolish.js');
   const wind = source('src/windAudio.js');
 
-  assert.match(main, /aircraftVisuals\.js\?v=biplane-mobile-audio-controls-v2/);
-  assert.match(main, /worldPolish\.js\?v=biplane-mobile-audio-controls-v2/);
-  assert.match(main, /radioBeacon\.js\?v=biplane-mobile-audio-controls-v2/);
-  assert.match(worldPolish, /windAudio\.js\?v=biplane-mobile-audio-controls-v2/);
-  assert.match(wind, /zeroRadioAudio\.js\?v=biplane-mobile-audio-controls-v2/);
-  assert.match(wind, /stukaDiveSiren\.js\?v=biplane-mobile-audio-controls-v2/);
+  assert.match(main, /aircraftVisuals\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(main, /worldPolish\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(main, /radioBeacon\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(worldPolish, /windAudio\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(wind, /zeroRadioAudio\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(wind, /stukaDiveSiren\.js\?v=biplane-mobile-audio-controls-v3/);
 });
 
 test('phone camera switches recenter only view yaw', () => {
@@ -57,12 +57,41 @@ test('phone camera switches recenter only view yaw', () => {
 
 test('radio control is tiny, right-side, and Zero cockpit only', () => {
   const beacon = source('src/expansion/radioBeacon.js');
-  assert.match(beacon, /RADIO_YAW = 40 \* DEG/);
-  assert.match(beacon, /sprite\.scale\.set\(0\.16, 0\.16, 1\)/);
+  assert.match(beacon, /RADIO_YAW = 68 \* DEG/);
+  assert.match(beacon, /sprite\.scale\.set\(0\.13, 0\.13, 1\)/);
   assert.match(beacon, /this\.aircraftId === 'zero'/);
   assert.match(beacon, /this\.cameraMode === 'cockpit'/);
   assert.match(beacon, /skyline:view-changed/);
   assert.doesNotMatch(beacon, /RADIO \$\{/);
+});
+
+test('mobile audio unlock is attached directly to touch gestures', () => {
+  const main = source('src/main.js');
+
+  assert.match(
+    main,
+    /const directAudioUnlock/,
+  );
+
+  assert.match(
+    main,
+    /phoneStart[\s\S]*desktopStart[\s\S]*pointerdown[\s\S]*touchend/,
+  );
+
+  assert.match(
+    main,
+    /visibilitychange/,
+  );
+
+  assert.match(
+    main,
+    /pageshow/,
+  );
+
+  assert.match(
+    main,
+    /completePhoneAudioGesture[\s\S]*requestAudioFromGesture\(\s*false/,
+  );
 });
 
 test('mobile audio samples do not load in AudioContext constructors', () => {
@@ -88,8 +117,8 @@ test('Stuka sample and FULL effects remain enabled', () => {
 test('deployment cache keys and audio assets are updated', () => {
   const index = source('index.html');
   const sw = source('sw.js');
-  assert.match(index, /biplane-mobile-audio-controls-v2/);
-  assert.match(sw, /skyline-biplane-mobile-audio-controls-v2-20260718/);
+  assert.match(index, /biplane-mobile-audio-controls-v3/);
+  assert.match(sw, /skyline-biplane-mobile-audio-controls-v3-20260718/);
   assert.match(sw, /zero-radio\.mp3/);
   assert.match(sw, /stuka-siren\.mp3/);
 });

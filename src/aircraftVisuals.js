@@ -10,11 +10,11 @@ import {
 
 import {
   createBiplaneExternal,
-} from './aircraft/biplaneExternal.js?v=biplane-mobile-audio-controls-v2';
+} from './aircraft/biplaneExternal.js?v=biplane-mobile-audio-controls-v3';
 
 import {
   createBiplaneCockpit,
-} from './aircraft/biplaneCockpit.js?v=biplane-mobile-audio-controls-v2';
+} from './aircraft/biplaneCockpit.js?v=biplane-mobile-audio-controls-v3';
 
 import {
   createScoutExternal as createWorkerScoutExternal,

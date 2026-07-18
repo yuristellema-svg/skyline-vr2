@@ -14,15 +14,15 @@ import { initialViewMode } from './workerNav/phoneViewModes.js';
 // SKYLINE_WORKER_NAV_V1_MAIN
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
-import { WorldPolishSystem } from './worldPolish.js?v=biplane-mobile-audio-controls-v2';
-import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-mobile-audio-controls-v2';
+import { WorldPolishSystem } from './worldPolish.js?v=biplane-mobile-audio-controls-v3';
+import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-mobile-audio-controls-v3';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 import {
   createLazyWorkerWorld,
 } from './workerRuntime/lazyWorldRuntime.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
-import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-mobile-audio-controls-v2';
+import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-mobile-audio-controls-v3';
 import { LandingSystem } from './expansion/landingSystem.js';
 import { NearWorldSystem } from './expansion/nearWorldSystem.js';
 import { RunwayGuidanceSystem } from './expansion/runwayGuidance.js';
@@ -372,7 +372,7 @@ async function completePhoneAudioGesture() {
 
   const unlocked =
     await requestAudioFromGesture(
-      true,
+      false,
     );
 
   if (
@@ -405,6 +405,57 @@ async function completePhoneAudioGesture() {
 
   resolve?.(true);
 }
+
+/*
+ * iPhone Safari must receive AudioContext creation/resume
+ * directly inside the physical tap event, before permission
+ * dialogs or other awaited work can interrupt the gesture.
+ */
+const directAudioUnlock = () => {
+  void requestAudioFromGesture(false);
+};
+
+for (const button of [
+  phoneStart,
+  desktopStart,
+]) {
+  button.addEventListener(
+    'pointerdown',
+    directAudioUnlock,
+    {
+      capture: true,
+      passive: true,
+    },
+  );
+
+  button.addEventListener(
+    'touchend',
+    directAudioUnlock,
+    {
+      capture: true,
+      passive: true,
+    },
+  );
+}
+
+document.addEventListener(
+  'visibilitychange',
+  () => {
+    if (
+      document.visibilityState ===
+      'visible'
+    ) {
+      void requestAudioFromGesture(false);
+    }
+  },
+);
+
+window.addEventListener(
+  'pageshow',
+  () => {
+    void requestAudioFromGesture(false);
+  },
+);
 
 for (
   const type of [

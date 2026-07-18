@@ -1,7 +1,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 
 const DEG = Math.PI / 180;
-const RADIO_YAW = 40 * DEG;
+const RADIO_YAW = 68 * DEG;
 const DISTANCE = 1.68;
 const DWELL = 1.0;
 
@@ -31,7 +31,7 @@ function makeSprite() {
   });
 
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(0.16, 0.16, 1);
+  sprite.scale.set(0.13, 0.13, 1);
   sprite.renderOrder = 10020;
   sprite.userData.canvas = canvas;
   sprite.userData.context = context;
