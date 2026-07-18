@@ -1876,6 +1876,27 @@ window.addEventListener(
   }
 );
 
+window.skylineWorldCoreDiagnostics =
+  () => ({
+    ready:
+      Boolean(world.stats?.ready),
+    stats:
+      { ...(world.stats || {}) },
+    expansion:
+      world.getWorldDiagnostics?.() || null,
+    manifest:
+      world.getWorldManifest?.() || null,
+    roadCount:
+      world.getRoadCatalog?.().length || 0,
+    airfieldCount:
+      world.getAirfieldCatalog?.().length || 0,
+    landingCount:
+      world.getLandingCatalog?.().length || 0,
+    settlementCount:
+      world.getSettlementCatalog?.()
+        ?.settlements?.length || 0,
+  });
+
 window.skylineLivingAirspaceDiagnostics =
   () =>
     livingAirspace.getStatus();

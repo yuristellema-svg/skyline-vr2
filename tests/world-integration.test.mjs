@@ -72,7 +72,11 @@ function assertFeatureCollisionCoverage(collision) {
   }
 }
 
-const ACCEPTED_WORLD_DRAW_CALLS = 431;
+const LEGACY_WORLD_DRAW_CALLS = 431;
+const ACCEPTED_WORLD_CORE_EXPANSION_DRAW_CALLS = 9;
+const ACCEPTED_WORLD_DRAW_CALLS =
+  LEGACY_WORLD_DRAW_CALLS +
+  ACCEPTED_WORLD_CORE_EXPANSION_DRAW_CALLS;
 const ACCEPTED_PROP_TRIANGLES = 459996;
 const ACCEPTED_PROP_TRIANGLE_BUDGET = 460000;
 
@@ -86,6 +90,11 @@ function assertWorldBudgets(world) {
     world.stats.worldDrawCalls <=
       ACCEPTED_WORLD_DRAW_CALLS,
     `${world.stats.worldDrawCalls} world draws exceeds accepted baseline ${ACCEPTED_WORLD_DRAW_CALLS}`,
+  );
+  assert.ok(
+    world.stats.expansionDrawCalls <=
+      ACCEPTED_WORLD_CORE_EXPANSION_DRAW_CALLS,
+    `${world.stats.expansionDrawCalls} World Core expansion draws exceeds ${ACCEPTED_WORLD_CORE_EXPANSION_DRAW_CALLS}`,
   );
   assert.ok(
     propReport.estimatedTriangles <=

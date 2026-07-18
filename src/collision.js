@@ -73,17 +73,6 @@ export class CollisionSystem {
   check(position) {
     const r = this.radius;
 
-    if (
-      position.y - r <=
-      this.heightSampler(
-        position.x,
-        position.z
-      )
-    ) {
-      this.lastReason = 'Terrain';
-      return true;
-    }
-
     for (
       let i = 0;
       i < this.boxes.length;
@@ -157,6 +146,22 @@ export class CollisionSystem {
         this.lastReason = arch.label;
         return true;
       }
+    }
+
+    /*
+     * Specific authored structures are checked before terrain. This preserves
+     * useful bridge/landmark labels when graded terrain overlaps their solid
+     * volumes, while open arch gaps still fall through to terrain collision.
+     */
+    if (
+      position.y - r <=
+      this.heightSampler(
+        position.x,
+        position.z
+      )
+    ) {
+      this.lastReason = 'Terrain';
+      return true;
     }
 
     this.lastReason = '';
