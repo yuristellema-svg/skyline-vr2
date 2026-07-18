@@ -20,6 +20,9 @@ import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseIn
 import {
   createLazyWorkerWorld,
 } from './workerRuntime/lazyWorldRuntime.js';
+import {
+  createLivingAirspaceSystem,
+} from './livingAirspace/index.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
 import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-zero-radio-v4';
@@ -108,6 +111,15 @@ const nearWorld = new NearWorldSystem(
   CONFIG.world.spawn,
 );
 
+const livingAirspace =
+  createLivingAirspaceSystem({
+    scene,
+    sampleHeight:
+      world.sampleHeight,
+    phone: false,
+    quality: 'auto',
+  });
+
 const worldPolish = new WorldPolishSystem(
   scene,
   {
@@ -115,6 +127,11 @@ const worldPolish = new WorldPolishSystem(
       world.sampleHeight,
     atmosphere: true,
     audio: true,
+    clouds: false,
+    trafficSourceProvider:
+      () =>
+        livingAirspace
+          .getAudioSources?.() ?? [],
 
     /*
      * Worker WORLD owns these systems on this stage.
@@ -814,6 +831,7 @@ function startSession(phone) {
   effects.beginSession();
 
   nearWorld.setPhoneMode(phone);
+  livingAirspace.setPhoneMode(phone);
   powerControl.reset();
   landingSystem.reset();
   resetFlight();
@@ -1518,6 +1536,12 @@ function frame(milliseconds) {
         phase,
       );
 
+      livingAirspace.fixedStepUpdate?.(
+        CONFIG.physics.fixedStep,
+        flight,
+        phase,
+      );
+
       const collisionHit =
         !landingResult.suppressCollision &&
         collision.check(flight.position);
@@ -1735,6 +1759,19 @@ function frame(milliseconds) {
     phase,
   );
 
+  livingAirspace.reportPerformance?.({
+    dt: frameDt,
+    frameMs:
+      frameDt * 1000,
+  });
+
+  livingAirspace.update(
+    frameDt,
+    flight,
+    stereo.camera,
+    phase,
+  );
+
   nearWorld.update(frameDt, flight);
   landingSystem.update(frameDt, flight);
   runwayGuidance.update(flight);
@@ -1837,6 +1874,23 @@ window.addEventListener(
 
     void acquireWakeLock();
   }
+);
+
+window.skylineLivingAirspaceDiagnostics =
+  () =>
+    livingAirspace.getStatus();
+
+window.skylineLivingAirspaceAudioSources =
+  () =>
+    livingAirspace.getAudioSources();
+
+window.addEventListener(
+  'pagehide',
+  event => {
+    if (!event.persisted) {
+      livingAirspace.dispose?.();
+    }
+  },
 );
 
 window.skylineExpansionDiagnostics = () => ({

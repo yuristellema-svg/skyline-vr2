@@ -22,6 +22,11 @@ export class WorldPolishSystem {
     this.sampleHeight =
       sampleHeight;
 
+    this.trafficSourceProvider =
+      typeof options.trafficSourceProvider === 'function'
+        ? options.trafficSourceProvider
+        : null;
+
     // Disable the older optional-world audio engine so only one Web Audio
     // graph can exist. All other optional-world systems remain unchanged.
     this.optionalWorld =
@@ -149,11 +154,18 @@ export class WorldPolishSystem {
       );
 
     try {
+      const providedTrafficSources =
+        this.trafficSourceProvider?.();
+
       const trafficSources =
-        this.optionalWorld
-          .registry
-          ?.get?.('AI aircraft')
-          ?.getAudioSources?.() ?? [];
+        Array.isArray(providedTrafficSources)
+          ? providedTrafficSources
+          : (
+              this.optionalWorld
+                .registry
+                ?.get?.('AI aircraft')
+                ?.getAudioSources?.() ?? []
+            );
 
       this.audio?.update(
         dt,
