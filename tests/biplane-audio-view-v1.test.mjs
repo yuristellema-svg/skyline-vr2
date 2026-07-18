@@ -37,12 +37,12 @@ test('updated aircraft and audio modules are cache-busted', () => {
   const worldPolish = source('src/worldPolish.js');
   const wind = source('src/windAudio.js');
 
-  assert.match(main, /aircraftVisuals\.js\?v=biplane-mobile-audio-controls-v3/);
-  assert.match(main, /worldPolish\.js\?v=biplane-mobile-audio-controls-v3/);
-  assert.match(main, /radioBeacon\.js\?v=biplane-mobile-audio-controls-v3/);
-  assert.match(worldPolish, /windAudio\.js\?v=biplane-mobile-audio-controls-v3/);
-  assert.match(wind, /zeroRadioAudio\.js\?v=biplane-mobile-audio-controls-v3/);
-  assert.match(wind, /stukaDiveSiren\.js\?v=biplane-mobile-audio-controls-v3/);
+  assert.match(main, /aircraftVisuals\.js\?v=biplane-zero-radio-v4/);
+  assert.match(main, /worldPolish\.js\?v=biplane-zero-radio-v4/);
+  assert.match(main, /radioBeacon\.js\?v=biplane-zero-radio-v4/);
+  assert.match(worldPolish, /windAudio\.js\?v=biplane-zero-radio-v4/);
+  assert.match(wind, /zeroRadioAudio\.js\?v=biplane-zero-radio-v4/);
+  assert.match(wind, /stukaDiveSiren\.js\?v=biplane-zero-radio-v4/);
 });
 
 test('phone camera switches recenter only view yaw', () => {
@@ -55,12 +55,13 @@ test('phone camera switches recenter only view yaw', () => {
   );
 });
 
-test('radio control is tiny, right-side, and Zero cockpit only', () => {
+test('radio control is tiny, right-side, and Zero cockpit or third only', () => {
   const beacon = source('src/expansion/radioBeacon.js');
   assert.match(beacon, /RADIO_YAW = 68 \* DEG/);
   assert.match(beacon, /sprite\.scale\.set\(0\.13, 0\.13, 1\)/);
   assert.match(beacon, /this\.aircraftId === 'zero'/);
   assert.match(beacon, /this\.cameraMode === 'cockpit'/);
+  assert.match(beacon, /this\.cameraMode === 'third'/);
   assert.match(beacon, /skyline:view-changed/);
   assert.doesNotMatch(beacon, /RADIO \$\{/);
 });
@@ -105,6 +106,36 @@ test('mobile audio samples do not load in AudioContext constructors', () => {
   assert.match(siren, /profile === 'stuka'/);
 });
 
+test('phone second tap forces a clean audio rebuild', () => {
+  const main = source('src/main.js');
+
+  assert.match(
+    main,
+    /completePhoneAudioGesture[\s\S]*requestAudioFromGesture\(\s*true/,
+  );
+
+  assert.match(
+    main,
+    /if \(awaitingPhoneAudioGesture\)[\s\S]*return/,
+  );
+});
+
+test('Zero radio preloads, pauses for menu, and resumes from its offset', () => {
+  const wind = source('src/windAudio.js');
+  const radio = source('src/audio/zeroRadioAudio.js');
+
+  assert.match(
+    wind,
+    /this\.ready = true[\s\S]*zeroRadio[\s\S]*preload/,
+  );
+
+  assert.match(radio, /cache: 'no-store'/);
+  assert.match(radio, /source\.start\(0, offset\)/);
+  assert.match(radio, /this\.playbackOffset/);
+  assert.match(radio, /phase === 'flying'/);
+  assert.match(radio, /this\._pauseSource/);
+});
+
 test('Stuka sample and FULL effects remain enabled', () => {
   const siren = source('src/audio/stukaDiveSiren.js');
   const engine = source('src/audio/aircraftEngineAudio.js');
@@ -117,8 +148,8 @@ test('Stuka sample and FULL effects remain enabled', () => {
 test('deployment cache keys and audio assets are updated', () => {
   const index = source('index.html');
   const sw = source('sw.js');
-  assert.match(index, /biplane-mobile-audio-controls-v3/);
-  assert.match(sw, /skyline-biplane-mobile-audio-controls-v3-20260718/);
+  assert.match(index, /biplane-zero-radio-v4/);
+  assert.match(sw, /skyline-biplane-zero-radio-v4-20260718/);
   assert.match(sw, /zero-radio\.mp3/);
   assert.match(sw, /stuka-siren\.mp3/);
 });

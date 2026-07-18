@@ -141,7 +141,13 @@ export class RadioBeacon {
   }
 
   isAvailable() {
-    return this.aircraftId === 'zero' && this.cameraMode === 'cockpit';
+    return (
+      this.aircraftId === 'zero' &&
+      (
+        this.cameraMode === 'cockpit' ||
+        this.cameraMode === 'third'
+      )
+    );
   }
 
   close() {

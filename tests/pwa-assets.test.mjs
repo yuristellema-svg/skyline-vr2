@@ -80,7 +80,7 @@ test('service worker contains the current runtime and new assets', () => {
 
   assert.match(
     sw,
-    /skyline-biplane-mobile-audio-controls-v3-20260718/,
+    /skyline-biplane-zero-radio-v4-20260718/,
   );
 });
 

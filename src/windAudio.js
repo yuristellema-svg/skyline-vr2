@@ -3,8 +3,8 @@ import { AirflowAudio } from './audio/airflowAudio.js';
 import { BoostAudio } from './audio/boostAudio.js';
 import { FlightWarningAudio } from './audio/flightWarningAudio.js';
 import { PositionalTrafficAudio } from './audio/positionalTrafficAudio.js';
-import { StukaDiveSiren } from './audio/stukaDiveSiren.js?v=biplane-mobile-audio-controls-v3';
-import { ZeroRadioAudio } from './audio/zeroRadioAudio.js?v=biplane-mobile-audio-controls-v3';
+import { StukaDiveSiren } from './audio/stukaDiveSiren.js?v=biplane-zero-radio-v4';
+import { ZeroRadioAudio } from './audio/zeroRadioAudio.js?v=biplane-zero-radio-v4';
 import { LandingAudio } from './expansion/landingAudio.js';
 import {
   safeDisconnect,
@@ -257,6 +257,9 @@ export class WindAudioSystem {
       this.ready = true;
       this.disabled = false;
       this.failedReason = '';
+
+      void this.zeroRadio
+        ?.preload?.(false);
 
       return true;
     } catch (error) {
