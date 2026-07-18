@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skyline-vr.local/schemas/settlement-placement-v2.schema.json",
+  "title": "Skyline VR2 settlement placement catalog",
+  "description": "Authoritative road-, shoreline- and terrain-linked input consumed by src/settlements. Coordinates are horizontal world metres [x,z]; terrain height is supplied separately by sampleHeight(x,z).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["version", "worldId", "waterLevel", "roads", "shorelines", "exclusions", "settlements", "landmarks"],
+  "properties": {
+    "version": { "const": 2 },
+    "worldId": { "type": "string", "minLength": 1 },
+    "waterLevel": { "type": "number" },
+    "roads": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/road" }
+    },
+    "shorelines": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/shoreline" }
+    },
+    "exclusions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exclusion" }
+    },
+    "settlements": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/settlement" }
+    },
+    "landmarks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/landmark" }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "polyline": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/point" }
+    },
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/point" }
+    },
+    "road": {
+      "type": "object",
+      "required": ["id", "width", "points"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "class": { "type": "string" },
+        "points": { "$ref": "#/$defs/polyline" }
+      }
+    },
+    "shoreline": {
+      "type": "object",
+      "required": ["id", "waterSide", "points"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "waterSide": { "enum": [-1, 1] },
+        "points": { "$ref": "#/$defs/polyline" }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "required": ["id", "reason", "footprint"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "footprint": { "$ref": "#/$defs/polygon" }
+      }
+    },
+    "district": {
+      "type": "object",
+      "required": ["id", "kind", "footprint"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["downtown", "civic", "old-quarter", "residential", "mixed-use", "market", "industrial", "warehouse", "docklands", "rural"]
+        },
+        "footprint": { "$ref": "#/$defs/polygon" },
+        "roadRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "familyWeights": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "settlement": {
+      "type": "object",
+      "required": ["id", "name", "kind", "seed", "footprint", "roadRefs"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["city", "suburb", "town", "village", "industrial", "farm", "harbour"] },
+        "seed": { "type": ["string", "number"] },
+        "footprint": { "$ref": "#/$defs/polygon" },
+        "roadRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "density": { "type": "number", "exclusiveMinimum": 0 },
+        "heightScale": { "type": "number", "exclusiveMinimum": 0 },
+        "maxParcels": { "type": "integer", "minimum": 1 },
+        "maxRows": { "type": "integer", "minimum": 1 },
+        "maxTerrainDelta": { "type": "number", "minimum": 0 },
+        "maxFoundationDepth": { "type": "number", "exclusiveMinimum": 0 },
+        "parcelPadding": { "type": "number", "minimum": 0 },
+        "districts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/district" }
+        },
+        "shorelineRef": { "type": "string", "minLength": 1 },
+        "shorelineSpan": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "number", "minimum": 0, "maximum": 1 }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "pierCount": { "type": "integer", "minimum": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "harbour" } }, "required": ["kind"] },
+          "then": { "required": ["shorelineRef", "shorelineSpan"] }
+        }
+      ]
+    },
+    "landmark": {
+      "type": "object",
+      "required": ["id", "name", "kind", "anchor", "height"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["radio_tower", "antenna_mast", "aviation_beacon", "water_tower", "church_spire", "control_tower", "silo", "harbour_crane", "smokestack", "lighthouse"]
+        },
+        "anchor": { "$ref": "#/$defs/point" },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "yaw": { "type": "number" },
+        "roadRef": { "type": "string", "minLength": 1 },
+        "shorelineRef": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

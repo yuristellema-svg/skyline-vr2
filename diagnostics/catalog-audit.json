@@ -1,0 +1,18 @@
+{
+  "deterministicWorldId": "skyline-settlements-v1-isolated-reference",
+  "settlementCount": 11,
+  "districtCount": 15,
+  "landmarkCount": 9,
+  "roadLinkedParcels": true,
+  "terrainSampledFoundations": 234,
+  "wholeBuildingEmission": false,
+  "explicitEmissiveRoles": [
+    "actual-signal-lamp",
+    "actual-window"
+  ],
+  "privateAnimationLoops": 0,
+  "sceneWideMaterialScans": 0,
+  "createsRoads": false,
+  "createsTerrain": false,
+  "createsWater": false
+}

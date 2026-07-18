@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+<rect width="100%" height="100%" fill="#f3f1eb"/>
+<text x="60" y="55" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#263238">Settlement quality budget diagnostic</text>
+<text x="60" y="82" font-family="system-ui,sans-serif" font-size="14" fill="#57656a">Same locations; progressively fewer windows and micro-details</text>
+<text x="60" y="175" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#2f3a3d">LOW</text>
+<rect x="210" y="150" width="332.6" height="42" rx="5" fill="#d4d7d2"/>
+<rect x="210" y="150" width="251.6" height="42" rx="5" fill="#697b7e"/>
+<text x="476.6" y="177" font-family="system-ui,sans-serif" font-size="15" fill="#263238">1906 / 2520 instances</text>
+<text x="210" y="224" font-family="system-ui,sans-serif" font-size="14" fill="#526168">20 draw calls · 29,722 estimated triangles · 820 windows</text>
+<text x="60" y="340" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#2f3a3d">MEDIUM</text>
+<rect x="210" y="315" width="568.9" height="42" rx="5" fill="#d4d7d2"/>
+<rect x="210" y="315" width="387.4" height="42" rx="5" fill="#697b7e"/>
+<text x="612.4" y="342" font-family="system-ui,sans-serif" font-size="15" fill="#263238">2935 / 4310 instances</text>
+<text x="210" y="389" font-family="system-ui,sans-serif" font-size="14" fill="#526168">46 draw calls · 46,270 estimated triangles · 1680 windows</text>
+<text x="60" y="505" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#2f3a3d">HIGH</text>
+<rect x="210" y="480" width="850.0" height="42" rx="5" fill="#d4d7d2"/>
+<rect x="210" y="480" width="478.9" height="42" rx="5" fill="#697b7e"/>
+<text x="703.9" y="507" font-family="system-ui,sans-serif" font-size="15" fill="#263238">3628 / 6440 instances</text>
+<text x="210" y="554" font-family="system-ui,sans-serif" font-size="14" fill="#526168">63 draw calls · 55,522 estimated triangles · 2222 windows</text>
+</svg>

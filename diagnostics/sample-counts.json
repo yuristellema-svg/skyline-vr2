@@ -1,0 +1,243 @@
+{
+  "generatedFrom": "SAMPLE_WORLD_MANIFEST + deterministic sampleHeight",
+  "summary": {
+    "worldId": "skyline-settlements-v1-isolated-reference",
+    "settlements": 11,
+    "landmarks": 9,
+    "parcels": 234,
+    "descriptors": 3628,
+    "collisions": 749,
+    "cells": 38,
+    "counts": {
+      "foundations": 242,
+      "structures": 463,
+      "roofs": 386,
+      "windows": 2222,
+      "details": 280,
+      "landmarks": 35
+    },
+    "tiers": {
+      "high": {
+        "total": 3628,
+        "counts": {
+          "foundations": 242,
+          "structures": 463,
+          "roofs": 386,
+          "windows": 2222,
+          "details": 280,
+          "landmarks": 35
+        },
+        "triangleEstimate": 55522
+      },
+      "medium": {
+        "total": 2935,
+        "counts": {
+          "foundations": 242,
+          "structures": 463,
+          "roofs": 386,
+          "windows": 1680,
+          "details": 135,
+          "landmarks": 29
+        },
+        "triangleEstimate": 46270
+      },
+      "low": {
+        "total": 1906,
+        "counts": {
+          "foundations": 242,
+          "structures": 428,
+          "roofs": 386,
+          "windows": 820,
+          "details": 5,
+          "landmarks": 25
+        },
+        "triangleEstimate": 29722
+      }
+    }
+  },
+  "parcelCounts": {
+    "aster-core": 62,
+    "aster-north": 30,
+    "aster-east": 31,
+    "forge-district": 10,
+    "port-aster": 24,
+    "birch-town": 12,
+    "cedar-town": 10,
+    "stone-village": 12,
+    "ridge-hamlet": 11,
+    "west-farms": 16,
+    "east-farms": 16
+  },
+  "parcelFamilyCounts": {
+    "podium_tower": 5,
+    "skyline_tower": 20,
+    "civic_hall": 9,
+    "courtyard_block": 3,
+    "urban_midrise": 10,
+    "old_town_block": 31,
+    "rowhouse": 34,
+    "market_block": 20,
+    "detached_house": 36,
+    "factory_hall": 5,
+    "warehouse": 7,
+    "tank_cluster": 11,
+    "dock_warehouse": 11,
+    "farmhouse": 14,
+    "barn": 18
+  },
+  "districtParcelCounts": {
+    "aster-downtown": 25,
+    "aster-civic": 13,
+    "aster-riverside": 20,
+    "aster-old-quarter": 4,
+    "north-residential": 22,
+    "north-mixed": 8,
+    "east-residential": 18,
+    "east-edge": 13,
+    "forge-heavy": 10,
+    "port-docklands": 24,
+    "birch-market": 12,
+    "cedar-market": 10,
+    "stone-village:default": 12,
+    "ridge-hamlet:default": 11,
+    "west-rural": 16,
+    "east-rural": 16
+  },
+  "roleCounts": {
+    "chimney": 121,
+    "terrain-conforming-foundation": 234,
+    "old-town-building": 76,
+    "gable-roof": 272,
+    "actual-window": 1157,
+    "dark-window": 1065,
+    "urban-midrise": 10,
+    "roof-cap": 41,
+    "stepped-wing": 7,
+    "civic-clock-tower": 9,
+    "civic-hall": 9,
+    "civic-roof": 9,
+    "civic-spire": 9,
+    "courtyard-cross-wing": 6,
+    "courtyard-wing": 6,
+    "rowhouse": 103,
+    "roof-antenna": 20,
+    "urban-podium": 25,
+    "rooftop-equipment": 25,
+    "skyline-tower": 20,
+    "podium-tower": 5,
+    "market-awning": 20,
+    "market-building": 57,
+    "detached_house": 36,
+    "lattice-crossbar": 10,
+    "lattice-tower-leg": 6,
+    "actual-signal-lamp": 5,
+    "water-tower-leg": 2,
+    "water-tower-tank": 1,
+    "lighthouse": 1,
+    "barn": 18,
+    "barn-roof": 18,
+    "farm-silo": 18,
+    "farmhouse": 14,
+    "farmhouse-roof": 14,
+    "factory-hall": 5,
+    "sawtooth-roof": 5,
+    "factory-stack": 6,
+    "warehouse": 7,
+    "industrial-roof": 18,
+    "pipe-rack": 11,
+    "storage-tank": 33,
+    "smokestack": 1,
+    "dock-warehouse": 11,
+    "loading-canopy": 11,
+    "harbour-crane": 3,
+    "harbour-pier": 6,
+    "harbour-pylon": 48,
+    "harbour-seawall": 8,
+    "aviation-beacon-tower": 1,
+    "beacon-platform": 1,
+    "harbour-crane-landmark": 1,
+    "church-spire": 1,
+    "church-tower": 1,
+    "landmark-silo": 1
+  },
+  "tiers": {
+    "high": {
+      "total": 3628,
+      "counts": {
+        "foundations": 242,
+        "structures": 463,
+        "roofs": 386,
+        "windows": 2222,
+        "details": 280,
+        "landmarks": 35
+      },
+      "triangleEstimate": 55522,
+      "estimatedDrawCalls": 63,
+      "budget": {
+        "foundations": 520,
+        "structures": 1180,
+        "roofs": 780,
+        "windows": 2800,
+        "details": 980,
+        "landmarks": 180,
+        "maxInstances": 6440,
+        "maxEstimatedTriangles": 920000,
+        "targetDrawCalls": 68,
+        "detailDistance": 1700,
+        "microDetailDistance": 1050
+      }
+    },
+    "medium": {
+      "total": 2935,
+      "counts": {
+        "foundations": 242,
+        "structures": 463,
+        "roofs": 386,
+        "windows": 1680,
+        "details": 135,
+        "landmarks": 29
+      },
+      "triangleEstimate": 46270,
+      "estimatedDrawCalls": 46,
+      "budget": {
+        "foundations": 420,
+        "structures": 900,
+        "roofs": 560,
+        "windows": 1680,
+        "details": 590,
+        "landmarks": 160,
+        "maxInstances": 4310,
+        "maxEstimatedTriangles": 590000,
+        "targetDrawCalls": 50,
+        "detailDistance": 1200,
+        "microDetailDistance": 760
+      }
+    },
+    "low": {
+      "total": 1906,
+      "counts": {
+        "foundations": 242,
+        "structures": 428,
+        "roofs": 386,
+        "windows": 820,
+        "details": 5,
+        "landmarks": 25
+      },
+      "triangleEstimate": 29722,
+      "estimatedDrawCalls": 20,
+      "budget": {
+        "foundations": 300,
+        "structures": 650,
+        "roofs": 430,
+        "windows": 820,
+        "details": 290,
+        "landmarks": 140,
+        "maxInstances": 2520,
+        "maxEstimatedTriangles": 330000,
+        "targetDrawCalls": 34,
+        "detailDistance": 820,
+        "microDetailDistance": 470
+      }
+    }
+  }
+}
