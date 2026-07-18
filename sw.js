@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'skyline-biplane-mobile-audio-controls-v3-20260718';
+const SHELL_CACHE = 'skyline-world-detail-v25-skyline-biplane-mobile-audio-controls-v3-20260718-3f4c1f1d8459';
 
 const SHELL_FILES = [
   './',
@@ -65,6 +65,18 @@ const SHELL_FILES = [
   './src/aircraft/biplaneVisualShared.js',
   './assets/audio/zero-radio.mp3',
   './assets/audio/stuka-siren.mp3',
+  './src/worldDetail/authoredReference.js',
+  './src/worldDetail/budget.js',
+  './src/worldDetail/constants.js',
+  './src/worldDetail/index.js',
+  './src/worldDetail/layout.js',
+  './src/worldDetail/materialPolicy.js',
+  './src/worldDetail/math.js',
+  './src/worldDetail/resourcePool.js',
+  './src/worldDetail/runtimeMetrics.js',
+  './src/worldDetail/safeRegistry.js',
+  './src/worldDetail/threeRuntime.js',
+  './src/worldDetail/worldDetailSystem.js',
   './vendor/three.module.min.js',
 ];
 

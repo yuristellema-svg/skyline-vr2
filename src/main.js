@@ -14,6 +14,9 @@ import { initialViewMode } from './workerNav/phoneViewModes.js';
 // SKYLINE_WORKER_NAV_V1_MAIN
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
+import {
+  createWorldDetailSystem,
+} from './worldDetail/index.js';
 import { WorldPolishSystem } from './worldPolish.js?v=biplane-mobile-audio-controls-v3';
 import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-mobile-audio-controls-v3';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
@@ -56,6 +59,29 @@ const collision = new CollisionSystem();
 const world = createWorld(scene, collision);
 
 collision.setHeightSampler(world.sampleHeight);
+
+// SKYLINE_WORLD_DETAIL_V25_INTEGRATION
+let worldDetail = null;
+
+function ensureWorldDetail(phone) {
+  if (worldDetail) {
+    worldDetail.setPhoneMode(phone);
+    return worldDetail;
+  }
+
+  worldDetail =
+    createWorldDetailSystem({
+      scene,
+      sampleHeight:
+        world.sampleHeight,
+      spawn:
+        CONFIG.world.spawn,
+      quality: 'auto',
+      phone,
+    });
+
+  return worldDetail;
+}
 
 const cameraRig = new CameraRig(
   scene,
@@ -810,6 +836,7 @@ function startSession(phone) {
   effects.beginSession();
 
   nearWorld.setPhoneMode(phone);
+  ensureWorldDetail(phone);
   powerControl.reset();
   landingSystem.reset();
   resetFlight();
@@ -1514,6 +1541,12 @@ function frame(milliseconds) {
         phase,
       );
 
+      worldDetail?.fixedStepUpdate(
+        CONFIG.physics.fixedStep,
+        flight,
+        phase,
+      );
+
       const collisionHit =
         !landingResult.suppressCollision &&
         collision.check(flight.position);
@@ -1731,6 +1764,13 @@ function frame(milliseconds) {
     phase,
   );
 
+  worldDetail?.update(
+    frameDt,
+    flight,
+    stereo.camera,
+    phase,
+  );
+
   nearWorld.update(frameDt, flight);
   landingSystem.update(frameDt, flight);
   runwayGuidance.update(flight);
@@ -1847,6 +1887,31 @@ window.skylineExpansionDiagnostics = () => ({
       .getStatus()
       ?.audio,
 });
+
+window.skylineWorldDetailDiagnostics =
+  () =>
+    worldDetail?.getStatus?.() ??
+    {
+      active: false,
+      state: 'not-created',
+      version: '2.5.0',
+    };
+
+window.skylineWorldDetailCollisionDescriptors =
+  () =>
+    worldDetail
+      ?.getCollisionDescriptors?.() ??
+    [];
+
+window.addEventListener(
+  'pagehide',
+  event => {
+    if (!event.persisted) {
+      worldDetail?.dispose?.();
+      worldDetail = null;
+    }
+  },
+);
 
 configureInstallHint();
 powerControl.reset();
