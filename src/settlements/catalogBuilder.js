@@ -11,6 +11,7 @@ import { buildLandmarkDescriptors } from './landmarks.js';
 import { createRng, hashString, stableSort } from './math.js';
 import { indexManifest, resolveSettlementManifest } from './manifest.js';
 import { planSettlementParcels } from './planner.js';
+import { buildPublicSpaceDescriptors, createSignatureParcels } from './urbanDesign.js';
 import { buildSpatialCatalog } from './spatial.js';
 import { buildRenderPlan } from './renderPlan.js';
 
@@ -119,9 +120,12 @@ export function buildSettlementCatalog({
   const parcelsBySettlement = {};
 
   for (const settlement of indexed.manifest.settlements) {
-    const parcels = planSettlementParcels({ settlement, indexed, sampleHeight, seed, options });
+    const planned = planSettlementParcels({ settlement, indexed, sampleHeight, seed, options });
+    const signatures = createSignatureParcels({ settlement, indexed, sampleHeight, options });
+    const parcels = Object.freeze([...signatures, ...planned]);
     parcelsBySettlement[settlement.id] = parcels;
     const random = createRng(hashString(`${settlement.seed}:architecture`, seed));
+    allDescriptors.push(...buildPublicSpaceDescriptors(settlement, sampleHeight));
     for (const parcel of parcels) allDescriptors.push(...buildParcelDescriptors(parcel, random));
     allDescriptors.push(...buildHarbourDescriptors({ settlement, indexed, sampleHeight, random }));
   }

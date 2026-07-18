@@ -1,272 +1,61 @@
-SKYLINE SETTLEMENTS V1 — EXPANDED VALIDATION
+SKYLINE SETTLEMENTS V1 — VISUAL AND URBAN-DESIGN PASS
 
-Baseline target:
+Branch target:
+  skyline-settlements-v1
+
+Previous remote head inspected:
+  97dac3e2d4469b5e50649bce617e66a3510b38dc
+
+Original required baseline:
   d3e48499e90affe4dcf01fda1fdfa882fbaef8bd
 
-Artifact-workspace validation:
-  - production JavaScript: 2,854 lines under src/settlements/
-  - syntax checks: PASS for all production, test and diagnostic modules
-  - settlement suite: 31 passed, 0 failed
-  - stress matrix: 3 terrain samplers × 4 deterministic seeds × 3 quality tiers
-  - deterministic diagnostics: byte-identical across repeated generation
-  - forbidden private loops/timers/scene traversal: none detected
+Validation:
+  production JavaScript under src/settlements: 3,479 lines
+  syntax checks: PASS for production, preview, diagnostics and tests
+  settlement suite: 39 passed, 0 failed
+  stress matrix: 3 terrain samplers × 4 deterministic seeds × 3 quality tiers
+  repeated diagnostics: byte-identical JSON and SVG output
+  forbidden runtime imports: none
+  private animation loops/timers: none
+  scene traversal/recolouring: none
+  src/main.js modified: no
+  src/world/world.js modified: no
+  gh-pages modified: no
 
-Reference catalog metrics:
-{
-  "worldId": "skyline-settlements-v1-isolated-reference",
-  "settlements": 11,
-  "landmarks": 9,
-  "parcels": 234,
-  "descriptors": 3628,
-  "collisions": 749,
-  "cells": 38,
-  "counts": {
-    "foundations": 242,
-    "structures": 463,
-    "roofs": 386,
-    "windows": 2222,
-    "details": 280,
-    "landmarks": 35
-  },
-  "tiers": {
-    "high": {
-      "total": 3628,
-      "counts": {
-        "foundations": 242,
-        "structures": 463,
-        "roofs": 386,
-        "windows": 2222,
-        "details": 280,
-        "landmarks": 35
-      },
-      "triangleEstimate": 55522
-    },
-    "medium": {
-      "total": 2935,
-      "counts": {
-        "foundations": 242,
-        "structures": 463,
-        "roofs": 386,
-        "windows": 1680,
-        "details": 135,
-        "landmarks": 29
-      },
-      "triangleEstimate": 46270
-    },
-    "low": {
-      "total": 1906,
-      "counts": {
-        "foundations": 242,
-        "structures": 428,
-        "roofs": 386,
-        "windows": 820,
-        "details": 5,
-        "landmarks": 25
-      },
-      "triangleEstimate": 29722
-    }
-  }
-}
+Reference catalog:
+  settlements: 11
+  districts: 16
+  landmarks: 9
+  parcels: 82
+  public-space surfaces: 18
+  high descriptors: 934
+  medium descriptors: 791
+  phone descriptors: 576
+  collision boxes: 305
+  spatial cells: 35
 
-Final settlement test output:
+Phone tier:
+  instances: 576
+  estimated triangles: 11,362
+  estimated draw calls: 42
+  foundations: 92
+  structures: 178
+  roofs: 144
+  public spaces: 18
 
-TAP version 13
-# Subtest: main city has recognizable district-specific architecture
-ok 1 - main city has recognizable district-specific architecture
-  ---
-  duration_ms: 1.113354
-  type: 'test'
-  ...
-# Subtest: the reusable kit contains distinct urban, residential, industrial, harbour and farm families
-ok 2 - the reusable kit contains distinct urban, residential, industrial, harbour and farm families
-  ---
-  duration_ms: 0.190806
-  type: 'test'
-  ...
-# Subtest: only explicit individual windows and signal lamps emit
-ok 3 - only explicit individual windows and signal lamps emit
-  ---
-  duration_ms: 1.146159
-  type: 'test'
-  ...
-# Subtest: rooftops and aerial silhouettes are represented as actual geometry parts
-ok 4 - rooftops and aerial silhouettes are represented as actual geometry parts
-  ---
-  duration_ms: 0.174094
-  type: 'test'
-  ...
-# Subtest: quality budgets remain safe across terrain samplers and deterministic seeds
-ok 5 - quality budgets remain safe across terrain samplers and deterministic seeds
-  ---
-  duration_ms: 1425.703493
-  type: 'test'
-  ...
-# Subtest: low tier obeys hard instance, category and triangle budgets
-ok 6 - low tier obeys hard instance, category and triangle budgets
-  ---
-  duration_ms: 0.745738
-  type: 'test'
-  ...
-# Subtest: medium tier obeys hard instance, category and triangle budgets
-ok 7 - medium tier obeys hard instance, category and triangle budgets
-  ---
-  duration_ms: 0.156468
-  type: 'test'
-  ...
-# Subtest: high tier obeys hard instance, category and triangle budgets
-ok 8 - high tier obeys hard instance, category and triangle budgets
-  ---
-  duration_ms: 0.134737
-  type: 'test'
-  ...
-# Subtest: quality tiers are nested subsets rather than alternate worlds
-ok 9 - quality tiers are nested subsets rather than alternate worlds
-  ---
-  duration_ms: 2.36078
-  type: 'test'
-  ...
-# Subtest: phone quality preserves every settlement and all major shells
-ok 10 - phone quality preserves every settlement and all major shells
-  ---
-  duration_ms: 1.063522
-  type: 'test'
-  ...
-# Subtest: collision catalog contains finite authored boxes only for collidable pieces
-ok 11 - collision catalog contains finite authored boxes only for collidable pieces
-  ---
-  duration_ms: 2.772483
-  type: 'test'
-  ...
-# Subtest: spatial catalog covers the same settlement sites and supports shorter phone visibility
-ok 12 - spatial catalog covers the same settlement sites and supports shorter phone visibility
-  ---
-  duration_ms: 0.317283
-  type: 'test'
-  ...
-# Subtest: direct and nested settlement placement catalogs are accepted
-ok 13 - direct and nested settlement placement catalogs are accepted
-  ---
-  duration_ms: 2.458814
-  type: 'test'
-  ...
-# Subtest: legacy world features are rejected with actionable missing inputs instead of invented coordinates
-ok 14 - legacy world features are rejected with actionable missing inputs instead of invented coordinates
-  ---
-  duration_ms: 0.575384
-  type: 'test'
-  ...
-# Subtest: baseline compatibility report names missing world-core inputs without invented coordinates
-ok 15 - baseline compatibility report names missing world-core inputs without invented coordinates
-  ---
-  duration_ms: 6.750575
-  type: 'test'
-  ...
-# Subtest: harbour modules retain exact shoreline and road linkage
-ok 16 - harbour modules retain exact shoreline and road linkage
-  ---
-  duration_ms: 1.616418
-  type: 'test'
-  ...
-# Subtest: landmarks are composed silhouettes and every exact site survives phone quality
-ok 17 - landmarks are composed silhouettes and every exact site survives phone quality
-  ---
-  duration_ms: 0.257401
-  type: 'test'
-  ...
-# Subtest: reference manifest is a complete externally anchored version-2 catalog
-ok 18 - reference manifest is a complete externally anchored version-2 catalog
-  ---
-  duration_ms: 2.818494
-  type: 'test'
-  ...
-# Subtest: settlements cannot omit authoritative roads or footprints
-ok 19 - settlements cannot omit authoritative roads or footprints
-  ---
-  duration_ms: 1.339646
-  type: 'test'
-  ...
-# Subtest: harbour placement cannot exist without supplied shoreline linkage
-ok 20 - harbour placement cannot exist without supplied shoreline linkage
-  ---
-  duration_ms: 0.568068
-  type: 'test'
-  ...
-# Subtest: district polygons and landmark anchors are explicit
-ok 21 - district polygons and landmark anchors are explicit
-  ---
-  duration_ms: 2.011586
-  type: 'test'
-  ...
-# Subtest: parcel planning is deterministic including foundations and family choices
-ok 22 - parcel planning is deterministic including foundations and family choices
-  ---
-  duration_ms: 545.437255
-  type: 'test'
-  ...
-# Subtest: every parcel is tied to an authoritative road and aligned to it
-ok 23 - every parcel is tied to an authoritative road and aligned to it
-  ---
-  duration_ms: 69.404615
-  type: 'test'
-  ...
-# Subtest: accepted parcel footprints do not overlap or enter exclusion polygons
-ok 24 - accepted parcel footprints do not overlap or enter exclusion polygons
-  ---
-  duration_ms: 61.926432
-  type: 'test'
-  ...
-# Subtest: foundations conform to the full sampled footprint rather than center height only
-ok 25 - foundations conform to the full sampled footprint rather than center height only
-  ---
-  duration_ms: 50.716119
-  type: 'test'
-  ...
-# Subtest: machine-readable placement schema documents the authoritative integration contract
-ok 26 - machine-readable placement schema documents the authoritative integration contract
-  ---
-  duration_ms: 4.929664
-  type: 'test'
-  ...
-# Subtest: shoreline direction is mandatory rather than guessed
-ok 27 - shoreline direction is mandatory rather than guessed
-  ---
-  duration_ms: 1.18791
-  type: 'test'
-  ...
-# Subtest: package owns no private animation loop, timers or scene traversal recolouring
-ok 28 - package owns no private animation loop, timers or scene traversal recolouring
-  ---
-  duration_ms: 1.193098
-  type: 'test'
-  ...
-# Subtest: package does not import or modify forbidden runtime systems
-ok 29 - package does not import or modify forbidden runtime systems
-  ---
-  duration_ms: 0.895481
-  type: 'test'
-  ...
-# Subtest: public API exposes the complete requested lifecycle
-ok 30 - public API exposes the complete requested lifecycle
-  ---
-  duration_ms: 8.345251
-  type: 'test'
-  ...
-# Subtest: renderer structurally separates explicit light materials from facade materials
-ok 31 - renderer structurally separates explicit light materials from facade materials
-  ---
-  duration_ms: 1.589595
-  type: 'test'
-  ...
-1..31
-# tests 31
-# suites 0
-# pass 31
+Actual preview proof:
+  renderer: THREE.WebGLRenderer
+  production geometry/materials/instancing: yes
+  screenshot size: 1440 × 810
+  phone/high main city: captured
+  low flight approach: captured
+  skyline profile: captured
+  civic/old-quarter comparison: captured
+  harbour approach: captured
+  town/village views: captured
+  day/sunset/night: captured
+  before/after comparison: generated
+# tests 39
+# pass 39
 # fail 0
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 1597.646917
-
-Baseline repository suite:
-  The installer runs `npm test` from the exact baseline worktree before commit/push.
-  It was not re-run inside this artifact-only sandbox because a complete repository checkout was not available and outbound git clone was blocked.
+# duration_ms 1038.674443

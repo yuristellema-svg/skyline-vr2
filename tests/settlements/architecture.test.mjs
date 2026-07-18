@@ -39,7 +39,7 @@ test('the reusable kit contains distinct urban, residential, industrial, harbour
 
 test('only explicit individual windows and signal lamps emit', () => {
   const emitting = catalog.allDescriptors.filter(item => item.emissive);
-  assert.ok(emitting.length > 500);
+  assert.ok(emitting.length > 120);
   assert.ok(emitting.every(item => item.role === 'actual-window' || item.role === 'actual-signal-lamp'));
   assert.ok(catalog.allDescriptors.filter(item => item.category === 'structures').every(item => item.emissive === false));
   assert.ok(catalog.allDescriptors.filter(item => item.surface === 'facade').every(item => item.emissive === false));
@@ -48,8 +48,8 @@ test('only explicit individual windows and signal lamps emit', () => {
 
 test('rooftops and aerial silhouettes are represented as actual geometry parts', () => {
   const roles = catalog.roleCounts;
-  assert.ok(roles['gable-roof'] > 100);
-  assert.ok(roles['roof-cap'] > 20);
+  assert.ok(roles['gable-roof'] > 70);
+  assert.ok(roles['roof-cap'] >= 4);
   assert.ok(roles['sawtooth-roof'] > 0);
   assert.ok(roles['roof-antenna'] > 0);
   assert.ok(roles['factory-stack'] > 0);

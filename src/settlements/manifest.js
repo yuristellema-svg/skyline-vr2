@@ -1,9 +1,11 @@
 import {
   DISTRICT_KINDS,
   LANDMARK_KINDS,
+  PUBLIC_SPACE_KINDS,
   SETTLEMENT_KINDS,
 } from './constants.js';
-import { pointInPolygon, polygonCentroid } from './math.js';
+import { FAMILY_PROFILES } from './families.js';
+import { orientedCorners, pointInPolygon, polygonCentroid } from './math.js';
 
 function invariant(condition, message) {
   if (!condition) throw new TypeError(`Settlement manifest: ${message}`);
@@ -25,6 +27,16 @@ function validatePolygon(polygon, label) {
   invariant(polygon.every(isPoint), `${label} has invalid polygon points`);
 }
 
+function validateHeightProfile(profile, label) {
+  if (profile === undefined) return;
+  invariant(profile && typeof profile === 'object', `${label} heightProfile must be an object`);
+  invariant(isPoint(profile.anchor), `${label} heightProfile requires exact anchor`);
+  invariant(Number.isFinite(profile.radius) && profile.radius > 0, `${label} heightProfile radius must be positive`);
+  invariant(Number.isFinite(profile.minScale) && profile.minScale > 0, `${label} heightProfile minScale must be positive`);
+  invariant(Number.isFinite(profile.maxScale) && profile.maxScale >= profile.minScale, `${label} heightProfile maxScale must be >= minScale`);
+  if (profile.exponent !== undefined) invariant(Number.isFinite(profile.exponent) && profile.exponent > 0, `${label} heightProfile exponent must be positive`);
+}
+
 function validateDistrict(district, settlement) {
   invariant(typeof district.id === 'string' && district.id, `${settlement.id} district requires id`);
   invariant(DISTRICT_KINDS.has(district.kind), `${settlement.id}/${district.id} has unsupported district kind ${district.kind}`);
@@ -34,8 +46,36 @@ function validateDistrict(district, settlement) {
   if (district.roadRefs !== undefined) invariant(Array.isArray(district.roadRefs) && district.roadRefs.length > 0, `${settlement.id}/${district.id} roadRefs must be non-empty`);
   if (district.familyWeights !== undefined) {
     invariant(district.familyWeights && typeof district.familyWeights === 'object', `${settlement.id}/${district.id} familyWeights must be an object`);
-    invariant(Object.values(district.familyWeights).every(value => Number.isFinite(value) && value >= 0), `${settlement.id}/${district.id} familyWeights must be non-negative`);
+    invariant(Object.entries(district.familyWeights).every(([family, value]) => FAMILY_PROFILES[family] && Number.isFinite(value) && value >= 0), `${settlement.id}/${district.id} familyWeights must reference supported families with non-negative values`);
   }
+  if (district.materialKey !== undefined) invariant(typeof district.materialKey === 'string' && district.materialKey, `${settlement.id}/${district.id} materialKey must be a string`);
+  validateHeightProfile(district.heightProfile, `${settlement.id}/${district.id}`);
+}
+
+function validateRect(rect, label, settlement) {
+  invariant(rect && typeof rect.id === 'string' && rect.id, `${label} requires id`);
+  invariant(isPoint(rect.anchor), `${label} requires exact anchor`);
+  invariant(Number.isFinite(rect.width) && rect.width > 0, `${label} width must be positive`);
+  invariant(Number.isFinite(rect.depth) && rect.depth > 0, `${label} depth must be positive`);
+  invariant(rect.yaw === undefined || Number.isFinite(rect.yaw), `${label} yaw must be finite`);
+  const corners = orientedCorners(rect.anchor[0], rect.anchor[1], rect.width, rect.depth, rect.yaw ?? 0);
+  invariant(corners.every(point => pointInPolygon(point, settlement.footprint)), `${label} must be inside ${settlement.id}`);
+}
+
+function validatePublicSpace(space, settlement) {
+  validateRect(space, `${settlement.id} public space`, settlement);
+  invariant(PUBLIC_SPACE_KINDS.has(space.kind), `${settlement.id}/${space.id} unsupported public-space kind ${space.kind}`);
+  if (space.districtId !== undefined) invariant(typeof space.districtId === 'string' && space.districtId, `${settlement.id}/${space.id} districtId must be a string`);
+  if (space.renderSurface !== undefined) invariant(typeof space.renderSurface === 'boolean', `${settlement.id}/${space.id} renderSurface must be boolean`);
+}
+
+function validateSignatureSite(site, settlement) {
+  validateRect(site, `${settlement.id} signature site`, settlement);
+  invariant(FAMILY_PROFILES[site.family], `${settlement.id}/${site.id} unsupported signature family ${site.family}`);
+  invariant(Number.isFinite(site.height) && site.height > 0, `${settlement.id}/${site.id} height must be positive`);
+  invariant(typeof site.districtId === 'string' && site.districtId, `${settlement.id}/${site.id} requires districtId`);
+  if (site.roadRef !== undefined) invariant(typeof site.roadRef === 'string' && site.roadRef, `${settlement.id}/${site.id} roadRef must be a string`);
+  if (site.materialKey !== undefined) invariant(typeof site.materialKey === 'string' && site.materialKey, `${settlement.id}/${site.id} materialKey must be a string`);
 }
 
 export function validateSettlementManifest(input) {
@@ -85,9 +125,10 @@ export function validateSettlementManifest(input) {
     invariant(typeof settlement.seed === 'number' || typeof settlement.seed === 'string', `${settlement.id} requires deterministic seed`);
     invariant(Array.isArray(settlement.roadRefs) && settlement.roadRefs.length > 0, `${settlement.id} requires roadRefs`);
     for (const roadRef of settlement.roadRefs) invariant(roads.has(roadRef), `${settlement.id} references missing road ${roadRef}`);
+
+    const districtIds = new Set();
     if (settlement.districts !== undefined) {
       invariant(Array.isArray(settlement.districts) && settlement.districts.length > 0, `${settlement.id} districts must be non-empty`);
-      const districtIds = new Set();
       for (const district of settlement.districts) {
         validateDistrict(district, settlement);
         invariant(!districtIds.has(district.id), `${settlement.id} duplicate district ${district.id}`);
@@ -95,6 +136,24 @@ export function validateSettlementManifest(input) {
         for (const roadRef of district.roadRefs ?? []) invariant(roads.has(roadRef), `${settlement.id}/${district.id} references missing road ${roadRef}`);
       }
     }
+
+    const localIds = new Set();
+    for (const space of settlement.publicSpaces ?? []) {
+      validatePublicSpace(space, settlement);
+      invariant(!localIds.has(space.id), `${settlement.id} duplicate local design id ${space.id}`);
+      localIds.add(space.id);
+      if (space.districtId) invariant(districtIds.size === 0 || districtIds.has(space.districtId), `${settlement.id}/${space.id} references missing district ${space.districtId}`);
+    }
+    for (const site of settlement.signatureSites ?? []) {
+      validateSignatureSite(site, settlement);
+      invariant(!localIds.has(site.id), `${settlement.id} duplicate local design id ${site.id}`);
+      localIds.add(site.id);
+      invariant(districtIds.size === 0 || districtIds.has(site.districtId), `${settlement.id}/${site.id} references missing district ${site.districtId}`);
+      if (site.roadRef) invariant(roads.has(site.roadRef), `${settlement.id}/${site.id} references missing road ${site.roadRef}`);
+    }
+    validateHeightProfile(settlement.heightProfile, settlement.id);
+    if (settlement.organizingPattern !== undefined) invariant(['grid', 'main-street', 'crossroads', 'green', 'ridge', 'waterfront', 'compound'].includes(settlement.organizingPattern), `${settlement.id} has unsupported organizingPattern`);
+
     if (settlement.kind === 'harbour') {
       invariant(typeof settlement.shorelineRef === 'string', `${settlement.id} requires shorelineRef`);
       invariant(shorelines.has(settlement.shorelineRef), `${settlement.id} references missing shoreline ${settlement.shorelineRef}`);

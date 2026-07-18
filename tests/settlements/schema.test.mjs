@@ -15,6 +15,11 @@ test('machine-readable placement schema documents the authoritative integration 
   assert.deepEqual(schema.$defs.shoreline.properties.waterSide.enum, [-1, 1]);
   assert.ok(schema.$defs.settlement.properties.kind.enum.includes('harbour'));
   assert.ok(schema.$defs.landmark.properties.kind.enum.includes('radio_tower'));
+  assert.ok(schema.$defs.settlement.properties.publicSpaces);
+  assert.ok(schema.$defs.settlement.properties.signatureSites);
+  assert.ok(schema.$defs.settlement.properties.organizingPattern.enum.includes('waterfront'));
+  assert.ok(schema.$defs.district.properties.heightProfile);
+  assert.ok(schema.$defs.signatureSite.properties.family.enum.includes('signature_needle'));
 });
 
 test('shoreline direction is mandatory rather than guessed', () => {

@@ -91,11 +91,52 @@ function createTrussGeometry() {
   ]);
 }
 
+function createTaperedBoxGeometry(topScale = 0.58) {
+  const t = topScale * 0.5;
+  const b = 0.5;
+  const vertices = new Float32Array([
+    -b,-0.5,-b, b,-0.5,-b, b,-0.5,b, -b,-0.5,b,
+    -t,0.5,-t, t,0.5,-t, t,0.5,t, -t,0.5,t,
+  ]);
+  const indices = [
+    0,2,1, 0,3,2, 4,5,6, 4,6,7,
+    0,1,5, 0,5,4, 1,2,6, 1,6,5,
+    2,3,7, 2,7,6, 3,0,4, 3,4,7,
+  ];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createSteppedGeometry() {
+  return customGeometry([
+    { center: [0, -0.34, 0], size: [1, 0.32, 1] },
+    { center: [0, -0.04, 0], size: [0.78, 0.28, 0.78] },
+    { center: [0, 0.24, 0], size: [0.54, 0.28, 0.54] },
+    { center: [0, 0.44, 0], size: [0.28, 0.12, 0.28] },
+  ]);
+}
+
+function createBarrelGeometry() {
+  const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 14, 1, false, 0, Math.PI);
+  geometry.rotateZ(Math.PI * 0.5);
+  return geometry;
+}
+
 function geometryFor(primitive) {
   switch (primitive) {
     case 'gable': return createGableGeometry();
     case 'wedge': return createWedgeGeometry();
     case 'sawtooth': return createSawtoothGeometry();
+    case 'octagon': return new THREE.CylinderGeometry(0.5, 0.5, 1, 8, 1, false);
+    case 'tapered': return createTaperedBoxGeometry(0.42);
+    case 'slab_taper': return createTaperedBoxGeometry(0.70);
+    case 'dome': return new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    case 'barrel': return createBarrelGeometry();
+    case 'stepped': return createSteppedGeometry();
+    case 'gateway': return createTrussGeometry();
     case 'cylinder': return new THREE.CylinderGeometry(0.5, 0.5, 1, 10, 1, false);
     case 'silo': return new THREE.CylinderGeometry(0.5, 0.5, 1, 12, 1, false);
     case 'sphere': return new THREE.SphereGeometry(0.5, 10, 7);
@@ -107,6 +148,25 @@ function geometryFor(primitive) {
     case 'crane': return createCraneGeometry();
     default: return new THREE.BoxGeometry(1, 1, 1);
   }
+}
+
+function installInstanceColorShader(material, cacheKey) {
+  material.onBeforeCompile = shader => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vSettlementColor;`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+vSettlementColor = instanceColor;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vSettlementColor;`)
+      .replace(
+        'vec4 diffuseColor = vec4( diffuse, opacity );',
+        'vec4 diffuseColor = vec4( diffuse * vSettlementColor, opacity );',
+      );
+  };
+  material.customProgramCacheKey = () => cacheKey;
+  return material;
 }
 
 class ResourcePool {
@@ -125,24 +185,23 @@ class ResourcePool {
     if (this.materials.has(key)) return this.materials.get(key);
     let material;
     if (emissive) {
-      material = new THREE.MeshBasicMaterial({
+      material = installInstanceColorShader(new THREE.MeshBasicMaterial({
         color: 0xffffff,
-        vertexColors: true,
         transparent: true,
         opacity: 0,
         depthWrite: false,
         toneMapped: false,
-      });
+        fog: true,
+      }), `settlement-instance-emission-${surface}-v3`);
       material.name = `Settlement explicit emission ${surface}`;
     } else {
-      material = new THREE.MeshLambertMaterial({
+      material = installInstanceColorShader(new THREE.MeshLambertMaterial({
         color: 0xffffff,
-        vertexColors: true,
-        flatShading: ['foundation', 'dock', 'masonry'].includes(surface),
-        emissive: 0x000000,
-        emissiveIntensity: 0,
-      });
-      material.name = `Settlement non-emissive ${surface}`;
+        flatShading: false,
+        fog: true,
+        toneMapped: true,
+      }), `settlement-instance-lit-${surface}-v3`);
+      material.name = `Settlement non-emissive flight-readable ${surface}`;
     }
     material.userData.settlementSurface = surface;
     material.userData.explicitEmission = emissive;
@@ -268,6 +327,9 @@ export class SettlementRenderer {
 
   updateNight(nightFactor, signalPulse = 1) {
     const night = Math.max(0, Math.min(1, nightFactor));
+    for (const material of this.pool.materials.values()) {
+      if (!material.userData.explicitEmission) material.color.setScalar(1 - night * 0.48);
+    }
     for (const material of this.windowMaterials) {
       material.opacity = night;
       material.visible = night > 0.015;

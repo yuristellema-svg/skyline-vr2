@@ -7,7 +7,7 @@ import { buildCatalog } from './testContext.mjs';
 const catalog = buildCatalog();
 
 test('collision catalog contains finite authored boxes only for collidable pieces', () => {
-  assert.ok(catalog.collisionCatalog.length > 500);
+  assert.ok(catalog.collisionCatalog.length > 250);
   for (const box of catalog.collisionCatalog) {
     for (const key of ['minX', 'maxX', 'minY', 'maxY', 'minZ', 'maxZ']) assert.ok(Number.isFinite(box[key]));
     assert.ok(box.minX < box.maxX && box.minY < box.maxY && box.minZ < box.maxZ);

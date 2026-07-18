@@ -1,0 +1,198 @@
+{
+  "renderer": "THREE.WebGLRenderer",
+  "actualProductionModules": true,
+  "previewTerrainSampler": "settlement-preview/preview.js heightAt",
+  "summary": {
+    "worldId": "skyline-settlements-v1-isolated-reference",
+    "settlements": 11,
+    "landmarks": 9,
+    "parcels": 82,
+    "descriptors": 953,
+    "collisions": 302,
+    "cells": 35,
+    "counts": {
+      "publicSpaces": 18,
+      "foundations": 92,
+      "structures": 177,
+      "roofs": 140,
+      "windows": 389,
+      "details": 103,
+      "landmarks": 34
+    },
+    "tiers": {
+      "high": {
+        "total": 953,
+        "counts": {
+          "publicSpaces": 18,
+          "foundations": 92,
+          "structures": 177,
+          "roofs": 140,
+          "windows": 389,
+          "details": 103,
+          "landmarks": 34
+        },
+        "triangleEstimate": 18616
+      },
+      "medium": {
+        "total": 798,
+        "counts": {
+          "publicSpaces": 18,
+          "foundations": 92,
+          "structures": 177,
+          "roofs": 140,
+          "windows": 298,
+          "details": 45,
+          "landmarks": 28
+        },
+        "triangleEstimate": 15820
+      },
+      "low": {
+        "total": 574,
+        "counts": {
+          "publicSpaces": 18,
+          "foundations": 92,
+          "structures": 175,
+          "roofs": 140,
+          "windows": 123,
+          "details": 2,
+          "landmarks": 24
+        },
+        "triangleEstimate": 11200
+      }
+    }
+  },
+  "screenshots": [
+    {
+      "file": "phone-main-city.png",
+      "quality": "low",
+      "light": "day",
+      "view": "downtown",
+      "width": 1440,
+      "height": 810,
+      "instances": 574,
+      "drawCalls": 42,
+      "triangles": 11200
+    },
+    {
+      "file": "high-main-city.png",
+      "quality": "high",
+      "light": "day",
+      "view": "downtown",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "low-flight-approach.png",
+      "quality": "high",
+      "light": "day",
+      "view": "approach",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "skyline-profile.png",
+      "quality": "low",
+      "light": "sunset",
+      "view": "skyline",
+      "width": 1440,
+      "height": 810,
+      "instances": 574,
+      "drawCalls": 42,
+      "triangles": 11200
+    },
+    {
+      "file": "civic-district.png",
+      "quality": "high",
+      "light": "day",
+      "view": "civic",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "old-quarter.png",
+      "quality": "high",
+      "light": "day",
+      "view": "oldquarter",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "harbour-approach.png",
+      "quality": "high",
+      "light": "day",
+      "view": "harbour",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "town-birch.png",
+      "quality": "high",
+      "light": "day",
+      "view": "town",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "village-stonefield.png",
+      "quality": "low",
+      "light": "day",
+      "view": "village",
+      "width": 1440,
+      "height": 810,
+      "instances": 574,
+      "drawCalls": 42,
+      "triangles": 11200
+    },
+    {
+      "file": "night-city.png",
+      "quality": "high",
+      "light": "night",
+      "view": "downtown",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "sunset-aerial.png",
+      "quality": "high",
+      "light": "sunset",
+      "view": "aerial",
+      "width": 1440,
+      "height": 810,
+      "instances": 953,
+      "drawCalls": 67,
+      "triangles": 18616
+    },
+    {
+      "file": "phone-aerial.png",
+      "quality": "low",
+      "light": "day",
+      "view": "aerial",
+      "width": 1440,
+      "height": 810,
+      "instances": 574,
+      "drawCalls": 42,
+      "triangles": 11200
+    }
+  ]
+}

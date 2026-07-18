@@ -3,20 +3,45 @@ import { makeDescriptor } from './descriptor.js';
 import { mixHash, rotate2 } from './math.js';
 
 const PALETTES = Object.freeze({
-  downtown: ['#6e7476', '#7d8282', '#5f686c', '#898884'],
-  civic: ['#858178', '#746f67', '#929087'],
-  'old-quarter': ['#81786e', '#706c65', '#948777', '#756f67'],
-  residential: ['#857e74', '#767b77', '#978d7f', '#6e7774'],
-  'mixed-use': ['#787a77', '#898177', '#6f7676'],
-  market: ['#887d70', '#76726a', '#978a79'],
-  industrial: ['#626a6c', '#72736d', '#565f62', '#7e7a70'],
-  warehouse: ['#646b6d', '#73746e', '#5b6467'],
-  docklands: ['#626c70', '#74756e', '#596368'],
-  rural: ['#777267', '#897b65', '#676d65'],
+  'aster-glass': ['#718b98', '#8399a1', '#5f7782', '#9fadb0'],
+  'aster-civic': ['#d6cbb2', '#c0b49b', '#e0d6c2', '#899087'],
+  'aster-brick': ['#a96f55', '#bd8061', '#925e4c', '#c79773'],
+  'aster-river': ['#8ea09b', '#a9b4a6', '#7f918b', '#bcc0af'],
+  'suburb-light': ['#b9af9d', '#a2aaa1', '#c6bba5', '#939f98'],
+  'town-warm': ['#bd8a66', '#a47259', '#caa87e', '#8b7b6c'],
+  'forge-dark': ['#59666c', '#707a7e', '#827365', '#4c5a60'],
+  'port-blue': ['#6d848e', '#809298', '#60727a', '#939992'],
+  'farm-earth': ['#917a5c', '#a58e68', '#78806b', '#b1976e'],
+  downtown: ['#718b98', '#8399a1', '#5f7782', '#9fadb0'],
+  civic: ['#d6cbb2', '#c0b49b', '#e0d6c2'],
+  'old-quarter': ['#a96f55', '#bd8061', '#925e4c', '#c79773'],
+  residential: ['#b9af9d', '#a2aaa1', '#c6bba5'],
+  'mixed-use': ['#8ea09b', '#a9b4a6', '#7f918b'],
+  market: ['#bd8a66', '#a47259', '#caa87e'],
+  industrial: ['#59666c', '#707a7e', '#827365'],
+  warehouse: ['#48565b', '#61686a', '#5f554a'],
+  docklands: ['#6d848e', '#809298', '#60727a'],
+  rural: ['#917a5c', '#a58e68', '#78806b'],
+});
+
+const ROOF_COLORS = Object.freeze({
+  'aster-glass': '#304650',
+  'aster-civic': '#5f7169',
+  'aster-brick': '#613f35',
+  'aster-river': '#50645f',
+  'suburb-light': '#5f625b',
+  'town-warm': '#68483b',
+  'forge-dark': '#29353a',
+  'port-blue': '#35474f',
+  'farm-earth': '#55493b',
 });
 
 function paletteFor(parcel) {
-  return PALETTES[parcel.districtKind] ?? PALETTES.residential;
+  return PALETTES[parcel.materialKey] ?? PALETTES[parcel.districtKind] ?? PALETTES.residential;
+}
+
+function roofColorFor(parcel) {
+  return ROOF_COLORS[parcel.materialKey] ?? '#465155';
 }
 
 function transformed(parcel, localX, localZ) {
@@ -221,137 +246,131 @@ function addRoofCap(parcel, body, descriptors, {
 
 function urbanTower(parcel, random, descriptors, podium = false) {
   const palette = paletteFor(parcel);
-  const podiumHeight = podium ? Math.min(22, parcel.height * 0.25) : 10;
+  const roofColor = roofColorFor(parcel);
+  const podiumHeight = Math.max(14, Math.min(30, parcel.height * (podium ? 0.23 : 0.16)));
   const podiumBody = part(parcel, 'podium', {
-    role: 'urban-podium',
-    width: parcel.width,
-    height: podiumHeight,
-    depth: parcel.depth,
-    color: palette[1 % palette.length],
-    priority: 92,
-    collidable: true,
-    essential: true,
+    role: 'urban-podium', width: parcel.width, height: podiumHeight, depth: parcel.depth,
+    color: palette[1 % palette.length], priority: 104, collidable: true, essential: true,
   });
   descriptors.push(podiumBody);
 
-  const towerWidth = parcel.width * (podium ? 0.62 : 0.72);
-  const towerDepth = parcel.depth * (podium ? 0.60 : 0.70);
-  const towerHeight = Math.max(36, parcel.height - podiumHeight);
-  const tower = part(parcel, 'tower', {
-    role: podium ? 'podium-tower' : 'skyline-tower',
-    localX: podium ? parcel.width * 0.09 : 0,
-    localZ: podium ? -parcel.depth * 0.07 : 0,
+  const towerWidth = parcel.width * (podium ? 0.62 : 0.68);
+  const towerDepth = parcel.depth * (podium ? 0.58 : 0.64);
+  const towerHeight = Math.max(48, parcel.height - podiumHeight);
+  const tower = part(parcel, 'tower-lower', {
+    role: podium ? 'podium-tower-lower' : 'skyline-tower-lower',
+    localX: podium ? parcel.width * 0.08 : 0,
+    localZ: podium ? -parcel.depth * 0.05 : 0,
     baseY: parcel.foundation.topY + podiumHeight,
-    width: towerWidth,
-    height: towerHeight,
-    depth: towerDepth,
-    color: palette[Math.floor(random() * palette.length)],
-    priority: 110,
-    visibilityBand: 'skyline',
-    collidable: true,
-    essential: true,
+    width: towerWidth, height: towerHeight * 0.62, depth: towerDepth,
+    color: palette[Math.floor(random() * palette.length)], priority: 120,
+    visibilityBand: 'skyline', collidable: true, essential: true,
   });
   descriptors.push(tower);
-  addRoofCap(parcel, tower, descriptors, { height: 1.8, overhang: 0.92, rank: 0 });
+  const upper = part(parcel, 'tower-upper', {
+    primitive: podium ? 'slab_taper' : 'tapered',
+    role: podium ? 'podium-tower-setback' : 'skyline-tower-setback',
+    localX: podium ? parcel.width * 0.08 : 0,
+    localZ: podium ? -parcel.depth * 0.05 : 0,
+    baseY: parcel.foundation.topY + podiumHeight + towerHeight * 0.62,
+    width: towerWidth * 0.76, height: towerHeight * 0.38, depth: towerDepth * 0.76,
+    color: palette[(Math.floor(random() * palette.length) + 2) % palette.length],
+    priority: 124, visibilityBand: 'skyline', collidable: true, essential: true,
+  });
+  descriptors.push(upper);
+  addRoofCap(parcel, upper, descriptors, {
+    primitive: podium ? 'stepped' : 'octagon', height: podium ? 10 : 7,
+    overhang: 0.82, color: roofColor, rank: 0, role: podium ? 'stepped-crown' : 'lantern-crown',
+  });
   descriptors.push(...windowDescriptors(parcel, tower, {
-    floors: Math.floor(towerHeight / 5.2),
-    columns: Math.max(3, Math.floor(towerWidth / 7)),
-    sideColumns: Math.max(2, Math.floor(towerDepth / 8)),
-    startY: 3.3,
-    floorStep: 5.0,
-    fraction: 0.21,
-    rank: 1,
+    floors: Math.floor(tower.scale[1] / 6), columns: Math.max(3, Math.floor(towerWidth / 9)),
+    sideColumns: Math.max(2, Math.floor(towerDepth / 10)), startY: 4.5, floorStep: 5.8,
+    fraction: 0.16, rank: 2,
   }));
-  descriptors.push(part(parcel, 'roof-equipment', {
-    category: 'details', role: 'rooftop-equipment',
-    localX: towerWidth * 0.12, localZ: -towerDepth * 0.1,
-    baseY: parcel.foundation.topY + podiumHeight + towerHeight,
-    width: 5 + random() * 3, height: 3 + random() * 2, depth: 5 + random() * 3,
-    color: '#5d6464', surface: 'metal', qualityRank: 1, priority: 32, visibilityBand: 'near',
+  descriptors.push(part(parcel, 'antenna', {
+    category: 'details', primitive: 'mast', role: 'roof-antenna',
+    baseY: upper.position[1] + upper.scale[1] * 0.5 + (podium ? 10 : 7),
+    localX: podium ? parcel.width * 0.08 : 0, localZ: podium ? -parcel.depth * 0.05 : 0,
+    width: 1.8, height: 18 + random() * 14, depth: 1.8,
+    color: roofColor, surface: 'metal', qualityRank: 1, priority: 58,
+    visibilityBand: 'skyline', essential: true,
   }));
-  if (!podium) {
-    descriptors.push(part(parcel, 'antenna', {
-      category: 'details', primitive: 'mast', role: 'roof-antenna',
-      baseY: parcel.foundation.topY + podiumHeight + towerHeight + 1.8,
-      width: 1.4, height: 14 + random() * 10, depth: 1.4,
-      color: '#4e5555', surface: 'metal', qualityRank: 1, priority: 48, visibilityBand: 'skyline',
-    }));
-  }
 }
 
 function urbanMidrise(parcel, random, descriptors) {
   const palette = paletteFor(parcel);
-  const body = part(parcel, 'body', {
-    role: 'urban-midrise', width: parcel.width, height: parcel.height, depth: parcel.depth,
-    color: palette[Math.floor(random() * palette.length)], priority: 82, collidable: true, essential: true,
+  const roof = roofColorFor(parcel);
+  const baseHeight = parcel.height * 0.66;
+  const body = part(parcel, 'street-wall', {
+    role: 'urban-street-wall', width: parcel.width, height: baseHeight, depth: parcel.depth,
+    color: palette[Math.floor(random() * palette.length)], priority: 92, collidable: true, essential: true,
   });
   descriptors.push(body);
-  if (random() < 0.72) {
-    descriptors.push(part(parcel, 'step-wing', {
-      role: 'stepped-wing', localX: parcel.width * 0.34, localZ: -parcel.depth * 0.08,
-      width: parcel.width * 0.38, height: parcel.height * 0.64, depth: parcel.depth * 0.72,
-      color: palette[(Math.floor(random() * palette.length) + 1) % palette.length],
-      qualityRank: 1, priority: 48, collidable: true, visibilityBand: 'near',
-    }));
-  }
-  addRoofCap(parcel, body, descriptors, { rank: 0 });
+  const setback = part(parcel, 'setback', {
+    role: 'urban-midrise-setback', localX: -parcel.width * 0.08, localZ: -parcel.depth * 0.06,
+    baseY: parcel.foundation.topY + baseHeight,
+    width: parcel.width * 0.70, height: parcel.height - baseHeight, depth: parcel.depth * 0.68,
+    color: palette[(Math.floor(random() * palette.length) + 1) % palette.length],
+    priority: 90, collidable: true, essential: true,
+  });
+  descriptors.push(setback);
+  addRoofCap(parcel, setback, descriptors, { primitive: 'slab_taper', height: 3.4, overhang: 0.94, color: roof, rank: 0 });
   descriptors.push(...windowDescriptors(parcel, body, {
-    floors: Math.floor(parcel.height / 4.9),
-    columns: Math.max(3, Math.floor(parcel.width / 7.2)),
-    sideColumns: Math.max(1, Math.floor(parcel.depth / 9)),
-    rank: 1,
+    floors: Math.floor(baseHeight / 5.4), columns: Math.max(3, Math.floor(parcel.width / 9)),
+    sideColumns: Math.max(1, Math.floor(parcel.depth / 11)), rank: 2, fraction: 0.14,
   }));
 }
 
 function courtyardBlock(parcel, random, descriptors) {
   const palette = paletteFor(parcel);
-  const wingWidth = parcel.width * 0.28;
+  const roof = roofColorFor(parcel);
+  const wingWidth = parcel.width * 0.26;
   const wingDepth = parcel.depth;
   for (const side of [-1, 1]) {
     const wing = part(parcel, `wing-${side}`, {
-      role: 'courtyard-wing', localX: side * parcel.width * 0.34,
+      role: 'courtyard-long-wing', localX: side * parcel.width * 0.36,
       width: wingWidth, height: parcel.height, depth: wingDepth,
-      color: palette[(side > 0 ? 1 : 0) % palette.length], priority: 76,
-      collidable: true, essential: true,
+      color: palette[side > 0 ? 1 : 0], priority: 90, collidable: true, essential: true,
     });
     descriptors.push(wing);
-    addRoofCap(parcel, wing, descriptors, { rank: 0, overhang: 0.96 });
-    descriptors.push(...windowDescriptors(parcel, wing, {
-      floors: Math.floor(parcel.height / 4.8), columns: 2, sideColumns: 2, rank: 1,
-    }));
+    addRoofCap(parcel, wing, descriptors, { primitive: 'barrel', height: 4, rank: 0, color: roof, role: 'courtyard-wing-roof' });
   }
   for (const side of [-1, 1]) {
-    descriptors.push(part(parcel, `cross-wing-${side}`, {
-      role: 'courtyard-cross-wing', localZ: side * parcel.depth * 0.35,
-      width: parcel.width * 0.54, height: parcel.height * 0.82, depth: parcel.depth * 0.26,
-      color: palette[2 % palette.length], qualityRank: 1, priority: 54,
-      collidable: true, visibilityBand: 'near',
-    }));
+    const cross = part(parcel, `cross-wing-${side}`, {
+      role: 'courtyard-cross-wing', localZ: side * parcel.depth * 0.37,
+      width: parcel.width * 0.58, height: parcel.height * 0.78, depth: parcel.depth * 0.22,
+      color: palette[2 % palette.length], qualityRank: 0, priority: 82,
+      collidable: true, visibilityBand: 'district', essential: true,
+    });
+    descriptors.push(cross);
+    addRoofCap(parcel, cross, descriptors, { primitive: 'gable', height: 4.5, rank: 0, color: roof, role: 'courtyard-cross-roof' });
   }
 }
 
 function civicHall(parcel, random, descriptors) {
   const palette = paletteFor(parcel);
+  const roof = roofColorFor(parcel);
   const body = part(parcel, 'hall', {
-    role: 'civic-hall', width: parcel.width, height: parcel.height * 0.72, depth: parcel.depth,
-    color: palette[0], priority: 100, collidable: true, essential: true,
+    role: 'civic-hall', width: parcel.width, height: parcel.height * 0.58, depth: parcel.depth,
+    color: palette[0], priority: 112, collidable: true, essential: true,
   });
   descriptors.push(body);
-  addRoofCap(parcel, body, descriptors, { primitive: 'gable', height: 8, overhang: 1.04, color: '#504d49', rank: 0, role: 'civic-roof' });
-  const towerHeight = parcel.height * 0.78;
-  descriptors.push(part(parcel, 'clock-tower', {
-    role: 'civic-clock-tower', localZ: parcel.depth * 0.36,
+  addRoofCap(parcel, body, descriptors, { primitive: 'gable', height: 10, overhang: 1.04, color: roof, rank: 0, role: 'monumental-civic-roof' });
+  const towerHeight = parcel.height * 0.72;
+  const tower = part(parcel, 'clock-tower', {
+    primitive: 'octagon', role: 'civic-clock-tower', localZ: parcel.depth * 0.28,
     baseY: parcel.foundation.topY + body.scale[1] * 0.45,
-    width: parcel.width * 0.22, height: towerHeight, depth: parcel.width * 0.22,
-    color: palette[1], priority: 104, visibilityBand: 'skyline', collidable: true, essential: true,
-  }));
+    width: parcel.width * 0.25, height: towerHeight, depth: parcel.width * 0.25,
+    color: palette[1], priority: 118, visibilityBand: 'skyline', collidable: true, essential: true,
+  });
+  descriptors.push(tower);
   descriptors.push(part(parcel, 'spire', {
-    category: 'roofs', primitive: 'cone', role: 'civic-spire', localZ: parcel.depth * 0.36,
-    baseY: parcel.foundation.topY + body.scale[1] * 0.45 + towerHeight,
-    width: parcel.width * 0.18, height: 12, depth: parcel.width * 0.18,
-    color: '#4d5552', surface: 'roof', priority: 86, visibilityBand: 'skyline', essential: true,
+    category: 'roofs', primitive: 'cone', role: 'civic-spire', localZ: parcel.depth * 0.28,
+    baseY: tower.position[1] + tower.scale[1] * 0.5,
+    width: parcel.width * 0.20, height: 18, depth: parcel.width * 0.20,
+    color: roof, surface: 'roof', priority: 100, visibilityBand: 'skyline', essential: true,
   }));
-  descriptors.push(...windowDescriptors(parcel, body, { floors: 2, columns: 5, sideColumns: 2, rank: 1, fraction: 0.16 }));
+  descriptors.push(...windowDescriptors(parcel, body, { floors: 2, columns: 6, sideColumns: 2, rank: 2, fraction: 0.11 }));
 }
 
 function gabledResidential(parcel, random, descriptors, role, units = 1) {
@@ -373,7 +392,7 @@ function gabledResidential(parcel, random, descriptors, role, units = 1) {
     descriptors.push(body);
     addRoofCap(parcel, body, descriptors, {
       primitive: 'gable', height: Math.min(7, unitWidth * 0.28), overhang: 1.05,
-      color: index % 2 ? '#514a43' : '#4d5351', rank: 0, role: 'gable-roof',
+      color: roofColorFor(parcel), rank: 0, role: 'gable-roof',
     });
     descriptors.push(...windowDescriptors(parcel, body, {
       floors: Math.max(1, Math.floor(parcel.height / 5)),
@@ -418,7 +437,7 @@ function warehouse(parcel, random, descriptors, factory = false, dock = false) {
     primitive: factory ? 'sawtooth' : 'gable',
     height: factory ? 5.5 : 6.5,
     overhang: 1.01,
-    color: '#4e5657',
+    color: roofColorFor(parcel),
     rank: 0,
     role: factory ? 'sawtooth-roof' : 'industrial-roof',
   });
@@ -490,7 +509,7 @@ function farmBuilding(parcel, random, descriptors, barn = false) {
   descriptors.push(body);
   addRoofCap(parcel, body, descriptors, {
     primitive: 'gable', height: barn ? 8 : 5.5, overhang: 1.06,
-    color: barn ? '#514a41' : '#505552', rank: 0, role: barn ? 'barn-roof' : 'farmhouse-roof',
+    color: roofColorFor(parcel), rank: 0, role: barn ? 'barn-roof' : 'farmhouse-roof',
   });
   if (!barn) descriptors.push(...windowDescriptors(parcel, body, { floors: 2, columns: 2, sideColumns: 1, rank: 1, fraction: 0.18 }));
   if (barn) {
@@ -504,9 +523,113 @@ function farmBuilding(parcel, random, descriptors, barn = false) {
   }
 }
 
+function signatureNeedle(parcel, random, descriptors) {
+  const palette = paletteFor(parcel);
+  const roof = roofColorFor(parcel);
+  const podium = part(parcel, 'signature-podium', {
+    role: 'signature-needle-podium', width: parcel.width, height: 24, depth: parcel.depth,
+    color: palette[1], priority: 150, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(podium);
+  const shaft = part(parcel, 'signature-shaft', {
+    primitive: 'octagon', role: 'signature-needle-shaft', baseY: parcel.foundation.topY + 24,
+    width: parcel.width * 0.48, height: parcel.height * 0.66, depth: parcel.depth * 0.48,
+    color: palette[0], priority: 160, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(shaft);
+  const upper = part(parcel, 'signature-upper', {
+    primitive: 'tapered', role: 'signature-needle-upper', baseY: shaft.position[1] + shaft.scale[1] * 0.5,
+    width: parcel.width * 0.38, height: parcel.height * 0.30, depth: parcel.depth * 0.38,
+    color: palette[2], priority: 164, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(upper);
+  descriptors.push(part(parcel, 'signature-spire', {
+    category: 'roofs', primitive: 'cone', role: 'signature-needle-spire',
+    baseY: upper.position[1] + upper.scale[1] * 0.5,
+    width: parcel.width * 0.18, height: Math.max(26, parcel.height * 0.17), depth: parcel.depth * 0.18,
+    color: roof, surface: 'roof', priority: 170, visibilityBand: 'skyline', essential: true,
+  }));
+}
+
+function signatureCrown(parcel, random, descriptors) {
+  const palette = paletteFor(parcel);
+  const roof = roofColorFor(parcel);
+  const podium = part(parcel, 'crown-podium', {
+    role: 'signature-crown-podium', width: parcel.width, height: 20, depth: parcel.depth,
+    color: palette[1], priority: 145, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(podium);
+  const slab = part(parcel, 'crown-slab', {
+    primitive: 'slab_taper', role: 'signature-crown-slab', baseY: parcel.foundation.topY + 20,
+    width: parcel.width * 0.58, height: parcel.height * 0.72, depth: parcel.depth * 0.40,
+    color: palette[0], priority: 158, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(slab);
+  descriptors.push(part(parcel, 'crown-top', {
+    category: 'roofs', primitive: 'stepped', role: 'signature-stepped-crown',
+    baseY: slab.position[1] + slab.scale[1] * 0.5,
+    width: parcel.width * 0.50, height: Math.max(18, parcel.height * 0.16), depth: parcel.depth * 0.34,
+    color: roof, surface: 'roof', priority: 165, visibilityBand: 'skyline', essential: true,
+  }));
+}
+
+function signatureGateway(parcel, random, descriptors) {
+  const palette = paletteFor(parcel);
+  const roof = roofColorFor(parcel);
+  const towerWidth = parcel.width * 0.30;
+  const towerDepth = parcel.depth * 0.62;
+  for (const side of [-1, 1]) {
+    descriptors.push(part(parcel, `gateway-tower-${side}`, {
+      primitive: 'slab_taper', role: 'signature-gateway-tower', localX: side * parcel.width * 0.30,
+      width: towerWidth, height: parcel.height, depth: towerDepth,
+      color: palette[side > 0 ? 0 : 2], priority: 158,
+      collidable: true, essential: true, visibilityBand: 'skyline',
+    }));
+  }
+  descriptors.push(part(parcel, 'gateway-bridge', {
+    role: 'signature-skybridge', baseY: parcel.foundation.topY + parcel.height * 0.64,
+    width: parcel.width * 0.42, height: 10, depth: towerDepth * 0.62,
+    color: roof, surface: 'metal', priority: 166, collidable: true, essential: true, visibilityBand: 'skyline',
+  }));
+}
+
+function civicRotunda(parcel, random, descriptors) {
+  const palette = paletteFor(parcel);
+  const roof = roofColorFor(parcel);
+  descriptors.push(part(parcel, 'rotunda-base', {
+    role: 'civic-rotunda-base', width: parcel.width, height: parcel.height * 0.32, depth: parcel.depth,
+    color: palette[0], priority: 142, collidable: true, essential: true, visibilityBand: 'skyline',
+  }));
+  const drum = part(parcel, 'rotunda-drum', {
+    primitive: 'octagon', role: 'civic-rotunda-drum', baseY: parcel.foundation.topY + parcel.height * 0.32,
+    width: Math.min(parcel.width, parcel.depth) * 0.58, height: parcel.height * 0.38,
+    depth: Math.min(parcel.width, parcel.depth) * 0.58, color: palette[1],
+    priority: 150, collidable: true, essential: true, visibilityBand: 'skyline',
+  });
+  descriptors.push(drum);
+  descriptors.push(part(parcel, 'rotunda-dome', {
+    category: 'roofs', primitive: 'dome', role: 'civic-dome',
+    baseY: drum.position[1] + drum.scale[1] * 0.5,
+    width: drum.scale[0] * 1.05, height: parcel.height * 0.30, depth: drum.scale[2] * 1.05,
+    color: roof, surface: 'roof', priority: 160, visibilityBand: 'skyline', essential: true,
+  }));
+}
+
 export function buildParcelDescriptors(parcel, random) {
   const descriptors = [foundation(parcel)];
   switch (parcel.family) {
+    case 'signature_needle':
+      signatureNeedle(parcel, random, descriptors);
+      break;
+    case 'signature_crown':
+      signatureCrown(parcel, random, descriptors);
+      break;
+    case 'signature_gateway':
+      signatureGateway(parcel, random, descriptors);
+      break;
+    case 'civic_rotunda':
+      civicRotunda(parcel, random, descriptors);
+      break;
     case 'skyline_tower':
       urbanTower(parcel, random, descriptors, false);
       break;

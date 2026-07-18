@@ -5,12 +5,12 @@ import { buildCatalog } from './testContext.mjs';
 const catalog = buildCatalog();
 
 test('harbour modules retain exact shoreline and road linkage', () => {
-  const piers = catalog.allDescriptors.filter(item => item.role === 'harbour-pier');
+  const piers = catalog.allDescriptors.filter(item => item.role === 'harbour-cargo-pier');
   const walls = catalog.allDescriptors.filter(item => item.role === 'harbour-seawall');
-  const cranes = catalog.allDescriptors.filter(item => item.role === 'harbour-crane');
-  assert.equal(piers.length, 6);
-  assert.equal(walls.length, 8);
-  assert.ok(cranes.length >= 3);
+  const cranes = catalog.allDescriptors.filter(item => item.role === 'harbour-gantry-crane');
+  assert.equal(piers.length, 5);
+  assert.equal(walls.length, 10);
+  assert.equal(cranes.length, 2);
   assert.ok(piers.every(item => item.meta.shorelineRef === 'main-coast'));
   assert.ok(piers.every(item => item.meta.roadRef === 'dock-road' || item.meta.roadRef === 'industrial-link'));
   assert.ok(piers.every(item => item.meta.intentionalOverWater === true));

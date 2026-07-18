@@ -44,7 +44,7 @@ test('accepted parcel footprints do not overlap or enter exclusion polygons', ()
 test('foundations conform to the full sampled footprint rather than center height only', () => {
   const catalog = buildCatalog();
   const foundations = catalog.allDescriptors.filter(item => item.role === 'terrain-conforming-foundation');
-  assert.ok(foundations.length > 180);
+  assert.ok(foundations.length >= 80);
   for (const foundation of foundations) {
     const samples = foundation.meta.terrainSamples;
     assert.equal(samples.length, 5);

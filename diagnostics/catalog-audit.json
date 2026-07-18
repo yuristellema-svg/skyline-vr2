@@ -4,7 +4,7 @@
   "districtCount": 15,
   "landmarkCount": 9,
   "roadLinkedParcels": true,
-  "terrainSampledFoundations": 234,
+  "terrainSampledFoundations": 82,
   "wholeBuildingEmission": false,
   "explicitEmissiveRoles": [
     "actual-signal-lamp",
