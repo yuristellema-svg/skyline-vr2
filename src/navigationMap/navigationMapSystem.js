@@ -286,16 +286,22 @@ export class NavigationMapSystem {
     const beamMaterial = new THREE.MeshBasicMaterial({
       color: 0xff4fa3,
       transparent: true,
-      opacity: 0.20,
+      opacity: 0.42,
+      depthTest: false,
       depthWrite: false,
       side: THREE.DoubleSide,
+      fog: false,
+      toneMapped: false,
     });
 
     const ringMaterial = new THREE.MeshBasicMaterial({
       color: 0xff4fa3,
       transparent: true,
-      opacity: 0.82,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
+      fog: false,
+      toneMapped: false,
     });
 
     this.beacon = new THREE.Group();
@@ -323,6 +329,16 @@ export class NavigationMapSystem {
     this.cap.rotation.z = Math.PI;
 
     this.beacon.add(this.beam, this.ring, this.cap);
+
+    for (const part of [
+      this.beam,
+      this.ring,
+      this.cap,
+    ]) {
+      part.frustumCulled = false;
+      part.renderOrder = 18000;
+    }
+
     this.scene.add(this.beacon);
 
     this.hudCanvas = document.createElement('canvas');
@@ -336,6 +352,8 @@ export class NavigationMapSystem {
       depthTest: false,
       depthWrite: false,
       side: THREE.DoubleSide,
+      fog: false,
+      toneMapped: false,
     });
 
     this.hudRoot = new THREE.Group();
@@ -346,11 +364,33 @@ export class NavigationMapSystem {
       new THREE.PlaneGeometry(0.72, 0.144),
       this.hudMaterial,
     );
-    this.hudPlane.renderOrder = 225;
+    this.hudPlane.renderOrder = 19000;
     this.hudPlane.frustumCulled = false;
     this.hudRoot.frustumCulled = false;
     this.hudRoot.add(this.hudPlane);
-    this.uiScene.add(this.hudRoot);
+
+    /*
+     * Do not add the flight indicator to uiScene here. uiScene receives the
+     * floating-origin translation, which can move a camera-positioned HUD away
+     * from the eyes. It is attached directly to the active camera in flight.
+     */
+  }
+
+  _attachHudToCamera(camera) {
+    if (!camera?.add) return false;
+
+    if (this.hudRoot.parent !== camera) {
+      this.hudRoot.parent?.remove?.(
+        this.hudRoot
+      );
+      camera.add(this.hudRoot);
+    }
+
+    this.hudRoot.position.set(0, 0, 0);
+    this.hudRoot.quaternion.identity();
+    this.hudRoot.scale.setScalar(1);
+    this.hudRoot.updateMatrixWorld(true);
+    return true;
   }
 
   setManifest(manifest) {
@@ -1117,7 +1157,7 @@ export class NavigationMapSystem {
         align: 'right',
         size: 19,
         weight: 800,
-        color: COLORS.accent,
+        color: COLORS.ping,
       },
     );
 
@@ -1289,9 +1329,22 @@ export class NavigationMapSystem {
       this.ping.position,
     );
 
+    /*
+     * A distant 4-metre beam was effectively invisible across a 16 km world.
+     * Scale the physical pin with distance so its angular size stays useful.
+     */
     const worldScale =
-      Math.max(0.8, Math.min(3.2, distance / 1800));
-    this.beacon.scale.setScalar(worldScale);
+      Math.max(
+        1.35,
+        Math.min(
+          8,
+          distance / 1050,
+        ),
+      );
+
+    this.beacon.scale.setScalar(
+      worldScale
+    );
 
     if (
       !active ||
@@ -1355,34 +1408,38 @@ export class NavigationMapSystem {
     const clamped =
       Math.max(-0.82, Math.min(0.82, bearing));
 
+    if (
+      !this._attachHudToCamera(camera)
+    ) {
+      this.hudRoot.visible = false;
+      return;
+    }
+
     this.hudRoot.visible = true;
-    this.hudRoot.position.copy(camera.position);
-    this.hudRoot.quaternion.copy(camera.quaternion);
 
     /*
-     * This is intentionally a small indicator on phone VR, always constrained
-     * to the comfortable central view. The parent follows the headset pose;
-     * the panel itself stays front-facing and never uses a world-origin lookAt.
+     * Camera-local placement is immune to floating-origin shifts. Keep it
+     * inside the central phone-VR view, but large enough to read immediately.
      */
     const radius =
-      this.phoneMode ? 0.82 : 0.96;
+      this.phoneMode ? 0.78 : 0.92;
 
     const horizontal =
-      this.phoneMode ? 0.31 : 0.48;
+      this.phoneMode ? 0.34 : 0.48;
 
     this.hudPlane.position.set(
       Math.sin(clamped) * horizontal,
-      this.phoneMode ? 0.27 : 0.31,
+      this.phoneMode ? 0.32 : 0.34,
       -Math.cos(clamped) * radius,
     );
 
     this.hudPlane.quaternion.identity();
     this.hudPlane.scale.setScalar(
-      this.phoneMode ? 0.62 : 0.82
+      this.phoneMode ? 0.88 : 0.94
     );
 
     this._hudAccumulator += dt;
-    if (this._hudAccumulator >= 0.16) {
+    if (this._hudAccumulator >= 0.05) {
       this._hudAccumulator = 0;
       this._drawHud(bearing, distance);
     }
@@ -1505,7 +1562,9 @@ export class NavigationMapSystem {
     this.close();
 
     this.uiScene.remove(this.root);
-    this.uiScene.remove(this.hudRoot);
+    this.hudRoot.parent?.remove?.(
+      this.hudRoot
+    );
     this.scene.remove(this.beacon);
 
     this.mapPlane.geometry.dispose();
