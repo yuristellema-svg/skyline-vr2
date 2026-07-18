@@ -5,6 +5,7 @@ import { createStructureLayer } from './features/structures.js';
 import { createWaterLayer } from './features/water.js';
 import { createCityLayer } from './features/city.js';
 import { createPropLayer } from './features/props.js';
+import { createWorldExpansion } from '../worldExpansion/index.js';
 
 const STATIC_TRIANGLE_RESERVE = 18000;
 
@@ -412,6 +413,7 @@ export class SkylineWorld {
     this.city = null;
     this.water = null;
     this.props = null;
+    this.expansion = null;
     this.elapsed = 0;
     this.error = null;
 
@@ -454,6 +456,14 @@ export class SkylineWorld {
       totalWorldTriangles: 0,
       worldDrawCalls: 0,
       propInstances: 0,
+      expansionLoadedChunks: 0,
+      expansionTerrainTriangles: 0,
+      expansionDrawCalls: 0,
+      expansionFeatureTriangles: 0,
+      expansionCacheEntries: 0,
+      expansionCacheHits: 0,
+      expansionBatchRebuilds: 0,
+      worldManifestVersion: 0,
       revision: 0,
       error: '',
     };
@@ -466,6 +476,14 @@ export class SkylineWorld {
         'features.json',
       );
 
+    const expansionManifestUrl =
+      joinUrl(
+        CONFIG.world
+          .assetRoot,
+
+        'world-core-v2-manifest.json',
+      );
+
     this.ready =
       Promise.all([
         this.terrain.ready,
@@ -474,12 +492,18 @@ export class SkylineWorld {
           this.fetchFn,
           featureUrl,
         ),
+
+        loadJson(
+          this.fetchFn,
+          expansionManifestUrl,
+        ),
       ])
         .then(
           (
             [
               ,
               features,
+              expansionManifest,
             ],
           ) => {
             this.features =
@@ -573,6 +597,24 @@ export class SkylineWorld {
                 collision,
               );
 
+            this.expansion =
+              createWorldExpansion(
+                this.root,
+                collision,
+                expansionManifest,
+                {
+                  coreSampleHeight:
+                    this.terrain
+                      .sampleHeight
+                      .bind(
+                        this.terrain,
+                      ),
+                },
+              );
+
+            this.stats.worldManifestVersion =
+              expansionManifest.version;
+
             this._staticMetrics =
               countVisuals(
                 this.root,
@@ -607,17 +649,98 @@ export class SkylineWorld {
     x,
     z,
   ) {
-    const height =
+    const coreHeight =
       this.terrain.sampleHeight(
         x,
         z,
       );
 
+    if (
+      Number.isFinite(
+        coreHeight,
+      )
+    ) {
+      return coreHeight;
+    }
+
+    const expansionHeight =
+      this.expansion
+        ?.sampleHeight(
+          x,
+          z,
+        );
+
     return Number.isFinite(
-      height,
+      expansionHeight,
     )
-      ? height
+      ? expansionHeight
       : 0;
+  }
+
+
+  sampleSlope(
+    x,
+    z,
+    spacing = 12,
+  ) {
+    const expansionSlope =
+      this.expansion
+        ?.sampleSlope(
+          x,
+          z,
+          spacing,
+        );
+
+    return Number.isFinite(
+      expansionSlope,
+    )
+      ? expansionSlope
+      : 0;
+  }
+
+  getWorldManifest() {
+    return this.expansion
+      ?.getManifest() ||
+      null;
+  }
+
+  getLandingCatalog() {
+    return this.expansion
+      ?.getLandingCatalog() ||
+      [];
+  }
+
+  getSettlementCatalog() {
+    return this.expansion
+      ?.getSettlementCatalog() ||
+      {
+        settlements: [],
+        lots: [],
+      };
+  }
+
+  getRoadCatalog() {
+    return this.expansion
+      ?.getRoadCatalog() ||
+      [];
+  }
+
+  getAirfieldCatalog() {
+    return this.expansion
+      ?.getAirfieldCatalog() ||
+      [];
+  }
+
+  getWaterCatalog() {
+    return this.expansion
+      ?.getWaterCatalog() ||
+      null;
+  }
+
+  getWorldDiagnostics() {
+    return this.expansion
+      ?.getDiagnostics() ||
+      null;
   }
 
   async preloadSpawn(
@@ -628,6 +751,11 @@ export class SkylineWorld {
 
     await this.terrain
       .preloadSpawn(
+        position,
+      );
+
+    await this.expansion
+      ?.preload(
         position,
       );
 
@@ -671,6 +799,13 @@ export class SkylineWorld {
     const terrainStats =
       this.terrain.update(
         playerPosition,
+      );
+
+    this.expansion
+      ?.update(
+        playerPosition,
+        camera,
+        dt,
       );
 
     if (camera) {
@@ -885,6 +1020,20 @@ export class SkylineWorld {
     const terrain =
       this.terrain.getStats();
 
+    const expansion =
+      this.expansion
+        ?.getStats() ||
+      {
+        loadedChunks: 0,
+        terrainDrawCalls: 0,
+        terrainTriangles: 0,
+        featureTriangles: 0,
+        cacheEntries: 0,
+        cacheHits: 0,
+        batchRebuilds: 0,
+        error: '',
+      };
+
     const prop =
       this.props
         ?.getBudgetReport() ||
@@ -932,6 +1081,8 @@ export class SkylineWorld {
     this.stats.totalWorldTriangles =
       terrain
         .visibleTerrainTriangles +
+      expansion
+        .terrainTriangles +
       prop
         .estimatedTriangles +
       this
@@ -941,6 +1092,8 @@ export class SkylineWorld {
     this.stats.worldDrawCalls =
       terrain
         .terrainDrawCalls +
+      expansion
+        .terrainDrawCalls +
       propDraws +
       this
         ._staticMetrics
@@ -949,8 +1102,34 @@ export class SkylineWorld {
     this.stats.propInstances =
       prop.instances;
 
+    this.stats.expansionLoadedChunks =
+      expansion.loadedChunks;
+
+    this.stats.expansionTerrainTriangles =
+      expansion.terrainTriangles;
+
+    this.stats.expansionDrawCalls =
+      expansion.totalDrawCalls ||
+      expansion.terrainDrawCalls;
+
+    this.stats.expansionFeatureTriangles =
+      expansion.featureTriangles;
+
+    this.stats.expansionCacheEntries =
+      expansion.cacheEntries ||
+      0;
+
+    this.stats.expansionCacheHits =
+      expansion.cacheHits ||
+      0;
+
+    this.stats.expansionBatchRebuilds =
+      expansion.batchRebuilds ||
+      0;
+
     this.stats.error =
       terrain.lastError ||
+      expansion.error ||
       this.error?.message ||
       '';
   }
@@ -972,6 +1151,11 @@ export class SkylineWorld {
     await this.terrain
       .reset();
 
+    this.expansion
+      ?.reset(
+        position,
+      );
+
     this._rebuildProps(
       position.x ??
         position[0],
@@ -985,6 +1169,7 @@ export class SkylineWorld {
 
   dispose() {
     this.terrain.dispose();
+    this.expansion?.dispose();
     this.structures?.dispose();
     this.city?.dispose();
     this.water?.dispose();
