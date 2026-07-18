@@ -379,6 +379,8 @@ export class GazeMenu {
       if (result) this.cameraName = String(result).toUpperCase();
     } else if (id === 'aircraft') {
       window.dispatchEvent(new CustomEvent('skyline:aircraft-next'));
+    } else if (id === 'map') {
+      result = this.actions.map?.();
     } else if (id === 'effects') {
       result = this.actions.effects?.();
       if (result) this.effectsName = String(result).toUpperCase();

@@ -1,0 +1,22 @@
+{
+  "repository": "yuristellema-svg/skyline-vr2",
+  "baselineSha": "d3e48499e90affe4dcf01fda1fdfa882fbaef8bd",
+  "inspectedPath": "assets/world/features.json",
+  "compatible": false,
+  "available": [
+    "river and lake definitions",
+    "one city plateau and legacy procedural grid settings",
+    "bridge anchors",
+    "general world landmarks"
+  ],
+  "missing": [
+    "roads[] with widths and authoritative polylines",
+    "shorelines[] with explicit waterSide direction",
+    "exclusions[] for runways, approach corridors, open water and protected areas",
+    "settlements[] with externally authored footprints and roadRefs",
+    "district polygons and per-district roadRefs",
+    "settlement-specific landmark anchors in the placement catalog",
+    "waterLevel at the placement-catalog root"
+  ],
+  "integrationDecision": "Do not infer or invent these inputs inside src/settlements. World Core must publish settlementPlacement version 2 or an equivalent catalog validated against settlementPlacement.schema.json."
+}

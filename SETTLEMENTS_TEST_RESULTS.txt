@@ -1,0 +1,61 @@
+SKYLINE SETTLEMENTS V1 — VISUAL AND URBAN-DESIGN PASS
+
+Branch target:
+  skyline-settlements-v1
+
+Previous remote head inspected:
+  97dac3e2d4469b5e50649bce617e66a3510b38dc
+
+Original required baseline:
+  d3e48499e90affe4dcf01fda1fdfa882fbaef8bd
+
+Validation:
+  production JavaScript under src/settlements: 3,479 lines
+  syntax checks: PASS for production, preview, diagnostics and tests
+  settlement suite: 39 passed, 0 failed
+  stress matrix: 3 terrain samplers × 4 deterministic seeds × 3 quality tiers
+  repeated diagnostics: byte-identical JSON and SVG output
+  forbidden runtime imports: none
+  private animation loops/timers: none
+  scene traversal/recolouring: none
+  src/main.js modified: no
+  src/world/world.js modified: no
+  gh-pages modified: no
+
+Reference catalog:
+  settlements: 11
+  districts: 16
+  landmarks: 9
+  parcels: 82
+  public-space surfaces: 18
+  high descriptors: 934
+  medium descriptors: 791
+  phone descriptors: 576
+  collision boxes: 305
+  spatial cells: 35
+
+Phone tier:
+  instances: 576
+  estimated triangles: 11,362
+  estimated draw calls: 42
+  foundations: 92
+  structures: 178
+  roofs: 144
+  public spaces: 18
+
+Actual preview proof:
+  renderer: THREE.WebGLRenderer
+  production geometry/materials/instancing: yes
+  screenshot size: 1440 × 810
+  phone/high main city: captured
+  low flight approach: captured
+  skyline profile: captured
+  civic/old-quarter comparison: captured
+  harbour approach: captured
+  town/village views: captured
+  day/sunset/night: captured
+  before/after comparison: generated
+# tests 39
+# pass 39
+# fail 0
+# duration_ms 1038.674443

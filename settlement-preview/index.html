@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Skyline Settlements Visual Preview</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <canvas id="preview"></canvas>
+  <aside id="controls">
+    <strong>SETTLEMENT PREVIEW</strong>
+    <label>Quality <select id="quality"><option value="low">PHONE</option><option value="medium">MEDIUM</option><option value="high" selected>HIGH</option></select></label>
+    <label>Light <select id="light"><option value="day" selected>DAY</option><option value="sunset">SUNSET</option><option value="night">NIGHT</option></select></label>
+    <label>View <select id="view"><option value="aerial">AERIAL</option><option value="approach">LOW APPROACH</option><option value="downtown">DOWNTOWN</option><option value="skyline">SKYLINE PROFILE</option><option value="civic">CIVIC</option><option value="oldquarter">OLD QUARTER</option><option value="harbour">HARBOUR</option><option value="town">TOWN</option><option value="village">VILLAGE</option></select></label>
+    <div id="status"></div>
+  </aside>
+  <script type="module" src="./preview.js"></script>
+</body>
+</html>

@@ -1,0 +1,703 @@
+{
+  "worldId": "skyline-settlements-v1-isolated-reference",
+  "qualities": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "settlements": {
+    "aster-core": {
+      "name": "Aster City",
+      "kind": "city",
+      "parcels": 25,
+      "low": {
+        "total": 192,
+        "publicSpaces": 5,
+        "foundations": 25,
+        "structures": 76,
+        "roofs": 54,
+        "windows": 32,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 284,
+        "publicSpaces": 5,
+        "foundations": 25,
+        "structures": 76,
+        "roofs": 54,
+        "windows": 117,
+        "details": 7,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 361,
+        "publicSpaces": 5,
+        "foundations": 25,
+        "structures": 76,
+        "roofs": 54,
+        "windows": 184,
+        "details": 17,
+        "landmarks": 0
+      }
+    },
+    "aster-north": {
+      "name": "North Aster",
+      "kind": "suburb",
+      "parcels": 10,
+      "low": {
+        "total": 65,
+        "publicSpaces": 2,
+        "foundations": 10,
+        "structures": 18,
+        "roofs": 18,
+        "windows": 17,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 78,
+        "publicSpaces": 2,
+        "foundations": 10,
+        "structures": 18,
+        "roofs": 18,
+        "windows": 30,
+        "details": 0,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 88,
+        "publicSpaces": 2,
+        "foundations": 10,
+        "structures": 18,
+        "roofs": 18,
+        "windows": 30,
+        "details": 10,
+        "landmarks": 0
+      }
+    },
+    "aster-east": {
+      "name": "East Aster",
+      "kind": "suburb",
+      "parcels": 10,
+      "low": {
+        "total": 58,
+        "publicSpaces": 1,
+        "foundations": 10,
+        "structures": 19,
+        "roofs": 18,
+        "windows": 10,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 68,
+        "publicSpaces": 1,
+        "foundations": 10,
+        "structures": 19,
+        "roofs": 18,
+        "windows": 20,
+        "details": 0,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 84,
+        "publicSpaces": 1,
+        "foundations": 10,
+        "structures": 19,
+        "roofs": 18,
+        "windows": 28,
+        "details": 8,
+        "landmarks": 0
+      }
+    },
+    "forge-district": {
+      "name": "Forge Industrial District",
+      "kind": "industrial",
+      "parcels": 3,
+      "low": {
+        "total": 18,
+        "publicSpaces": 3,
+        "foundations": 3,
+        "structures": 3,
+        "roofs": 2,
+        "windows": 5,
+        "details": 2,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 30,
+        "publicSpaces": 3,
+        "foundations": 3,
+        "structures": 5,
+        "roofs": 2,
+        "windows": 12,
+        "details": 5,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 30,
+        "publicSpaces": 3,
+        "foundations": 3,
+        "structures": 5,
+        "roofs": 2,
+        "windows": 12,
+        "details": 5,
+        "landmarks": 0
+      }
+    },
+    "port-aster": {
+      "name": "Port Aster",
+      "kind": "harbour",
+      "parcels": 3,
+      "low": {
+        "total": 37,
+        "publicSpaces": 3,
+        "foundations": 13,
+        "structures": 13,
+        "roofs": 3,
+        "windows": 3,
+        "details": 0,
+        "landmarks": 2
+      },
+      "medium": {
+        "total": 64,
+        "publicSpaces": 3,
+        "foundations": 13,
+        "structures": 13,
+        "roofs": 3,
+        "windows": 8,
+        "details": 22,
+        "landmarks": 2
+      },
+      "high": {
+        "total": 84,
+        "publicSpaces": 3,
+        "foundations": 13,
+        "structures": 13,
+        "roofs": 3,
+        "windows": 8,
+        "details": 42,
+        "landmarks": 2
+      }
+    },
+    "birch-town": {
+      "name": "Birch Crossing",
+      "kind": "town",
+      "parcels": 1,
+      "low": {
+        "total": 6,
+        "publicSpaces": 1,
+        "foundations": 1,
+        "structures": 2,
+        "roofs": 2,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 7,
+        "publicSpaces": 1,
+        "foundations": 1,
+        "structures": 2,
+        "roofs": 2,
+        "windows": 1,
+        "details": 0,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 11,
+        "publicSpaces": 1,
+        "foundations": 1,
+        "structures": 2,
+        "roofs": 2,
+        "windows": 5,
+        "details": 0,
+        "landmarks": 0
+      }
+    },
+    "cedar-town": {
+      "name": "Cedar Hollow",
+      "kind": "town",
+      "parcels": 3,
+      "low": {
+        "total": 51,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 12,
+        "roofs": 12,
+        "windows": 23,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 69,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 12,
+        "roofs": 12,
+        "windows": 40,
+        "details": 1,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 72,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 12,
+        "roofs": 12,
+        "windows": 40,
+        "details": 4,
+        "landmarks": 0
+      }
+    },
+    "stone-village": {
+      "name": "Stonefield",
+      "kind": "village",
+      "parcels": 4,
+      "low": {
+        "total": 30,
+        "publicSpaces": 1,
+        "foundations": 4,
+        "structures": 7,
+        "roofs": 7,
+        "windows": 11,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 37,
+        "publicSpaces": 1,
+        "foundations": 4,
+        "structures": 7,
+        "roofs": 7,
+        "windows": 18,
+        "details": 0,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 41,
+        "publicSpaces": 1,
+        "foundations": 4,
+        "structures": 7,
+        "roofs": 7,
+        "windows": 18,
+        "details": 4,
+        "landmarks": 0
+      }
+    },
+    "ridge-hamlet": {
+      "name": "Ridge Hamlet",
+      "kind": "village",
+      "parcels": 3,
+      "low": {
+        "total": 28,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 8,
+        "roofs": 8,
+        "windows": 8,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 37,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 8,
+        "roofs": 8,
+        "windows": 17,
+        "details": 0,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 40,
+        "publicSpaces": 1,
+        "foundations": 3,
+        "structures": 8,
+        "roofs": 8,
+        "windows": 17,
+        "details": 3,
+        "landmarks": 0
+      }
+    },
+    "west-farms": {
+      "name": "West Ridge Farms",
+      "kind": "farm",
+      "parcels": 10,
+      "low": {
+        "total": 34,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 4,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 45,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 10,
+        "details": 5,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 45,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 10,
+        "details": 5,
+        "landmarks": 0
+      }
+    },
+    "east-farms": {
+      "name": "East Valley Farms",
+      "kind": "farm",
+      "parcels": 10,
+      "low": {
+        "total": 35,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 5,
+        "details": 0,
+        "landmarks": 0
+      },
+      "medium": {
+        "total": 46,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 11,
+        "details": 5,
+        "landmarks": 0
+      },
+      "high": {
+        "total": 46,
+        "publicSpaces": 0,
+        "foundations": 10,
+        "structures": 10,
+        "roofs": 10,
+        "windows": 11,
+        "details": 5,
+        "landmarks": 0
+      }
+    }
+  },
+  "landmarks": {
+    "aster-radio": {
+      "name": "Aster Radio Tower",
+      "kind": "radio_tower",
+      "low": {
+        "total": 4,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 4
+      },
+      "medium": {
+        "total": 6,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 6
+      },
+      "high": {
+        "total": 9,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 9
+      }
+    },
+    "east-antenna": {
+      "name": "East Ridge Antenna",
+      "kind": "antenna_mast",
+      "low": {
+        "total": 4,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 4
+      },
+      "medium": {
+        "total": 6,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 6
+      },
+      "high": {
+        "total": 9,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 9
+      }
+    },
+    "port-beacon": {
+      "name": "Port Aviation Beacon",
+      "kind": "aviation_beacon",
+      "low": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      },
+      "medium": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      },
+      "high": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      }
+    },
+    "birch-water": {
+      "name": "Birch Water Tower",
+      "kind": "water_tower",
+      "low": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      },
+      "medium": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      },
+      "high": {
+        "total": 3,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 3
+      }
+    },
+    "stone-spire": {
+      "name": "Stonefield Church",
+      "kind": "church_spire",
+      "low": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "medium": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "high": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      }
+    },
+    "forge-stack": {
+      "name": "Forge Stack",
+      "kind": "smokestack",
+      "low": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "medium": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "high": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      }
+    },
+    "port-crane": {
+      "name": "Port Gantry Crane",
+      "kind": "harbour_crane",
+      "low": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      },
+      "medium": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      },
+      "high": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      }
+    },
+    "west-silo": {
+      "name": "West Grain Silo",
+      "kind": "silo",
+      "low": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      },
+      "medium": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      },
+      "high": {
+        "total": 1,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 1
+      }
+    },
+    "coast-light": {
+      "name": "Aster Coast Light",
+      "kind": "lighthouse",
+      "low": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "medium": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      },
+      "high": {
+        "total": 2,
+        "publicSpaces": 0,
+        "foundations": 0,
+        "structures": 0,
+        "roofs": 0,
+        "windows": 0,
+        "details": 0,
+        "landmarks": 2
+      }
+    }
+  }
+}

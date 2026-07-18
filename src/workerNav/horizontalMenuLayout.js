@@ -12,6 +12,7 @@ const PHONE_FLIGHT_LAYOUT = Object.freeze([
 
   { id: 'effects', yaw: -24, pitch: -10 },
   { id: 'respawn', yaw: 0, pitch: -10 },
+  { id: 'map', yaw: -36, pitch: -10 },
   { id: 'restart', yaw: 24, pitch: -10 },
 ]);
 
@@ -61,6 +62,11 @@ function labelFor(id, state) {
     aircraft: [
       'AIRCRAFT',
       state.aircraftName || 'A6M ZERO',
+    ],
+
+    map: [
+      'MAP',
+      'NAVIGATION + PING',
     ],
 
     effects: [
@@ -137,6 +143,13 @@ export function buildDesktopMenuDefinitions({
         pitch: 3,
       },
       {
+      id: 'map',
+      title: 'MAP',
+      subtitle: 'NAVIGATION + PING',
+      yaw: -27,
+      pitch: -9,
+    },
+    {
         id: 'restart',
         title: 'REBUILD',
         subtitle: 'RELOAD WORLD',

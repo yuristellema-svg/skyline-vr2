@@ -23,6 +23,18 @@ import {
 import {
   createLivingAirspaceSystem,
 } from './livingAirspace/index.js';
+import {
+  createSettlementSystem,
+} from './settlements/index.js';
+import {
+  createLocalInfrastructureSystem,
+  createOuterDetailSystem,
+  createWorldLivingAirspaceCatalog,
+  createWorldSettlementManifest,
+} from './worldCompletion/index.js';
+import {
+  createNavigationMapSystem,
+} from './navigationMap/index.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
 import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-zero-radio-v4';
@@ -58,6 +70,14 @@ let sharedRenderPose = renderPose;
 const collision = new CollisionSystem();
 const world = createWorld(scene, collision);
 
+const worldManifest =
+  world.getWorldManifest?.() || {};
+
+const settlementManifest =
+  createWorldSettlementManifest(
+    worldManifest
+  );
+
 collision.setHeightSampler(world.sampleHeight);
 
 const cameraRig = new CameraRig(
@@ -68,6 +88,49 @@ const cameraRig = new CameraRig(
 
 const effects = new EffectsSystem(scene);
 const hud = new MonoHud(hudRoot);
+
+let settlementNightFactor = 0;
+
+window.addEventListener(
+  'skyline:time-of-day',
+  event => {
+    settlementNightFactor =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          1 -
+            (
+              Number(
+                event?.detail?.daylight
+              ) || 0
+            ),
+        ),
+      );
+  },
+);
+
+const navigationMap =
+  createNavigationMapSystem({
+    scene,
+    uiScene:
+      stereo.uiScene,
+    input,
+    sampleHeight:
+      world.sampleHeight,
+    onBack:
+      () =>
+        returnToMenuFromNavigationMap(),
+    onPing:
+      destination =>
+        handleNavigationPing(
+          destination
+        ),
+  });
+
+navigationMap.setManifest(
+  worldManifest
+);
 
 const vrMenuBeacon =
   new VrMenuBeacon(
@@ -118,6 +181,44 @@ const livingAirspace =
       world.sampleHeight,
     phone: false,
     quality: 'auto',
+    catalog:
+      createWorldLivingAirspaceCatalog(
+        worldManifest
+      ),
+  });
+
+const settlements =
+  createSettlementSystem({
+    scene,
+    manifest:
+      settlementManifest,
+    sampleHeight:
+      world.sampleHeight,
+    collision,
+    quality:
+      'high',
+    phoneMode:
+      false,
+  });
+
+const localInfrastructure =
+  createLocalInfrastructureSystem({
+    scene,
+    manifest:
+      settlementManifest,
+    sampleHeight:
+      world.sampleHeight,
+  });
+
+const outerDetail =
+  createOuterDetailSystem({
+    scene,
+    manifest:
+      worldManifest,
+    sampleHeight:
+      world.sampleHeight,
+    phoneMode:
+      false,
   });
 
 const worldPolish = new WorldPolishSystem(
@@ -230,6 +331,10 @@ const menu = new GazeMenu(
       return mode;
     },
 
+    map: () => {
+      openNavigationMap();
+    },
+
     respawn: () => {
       if (phase === 'crashed') {
         finishRespawn();
@@ -250,6 +355,62 @@ const menu = new GazeMenu(
 
 menu.aircraftName = aircraftVisuals.name;
 
+function isPauseUiOpen() {
+  return (
+    menu.isOpen ||
+    navigationMap.isOpen
+  );
+}
+
+function openNavigationMap() {
+  if (
+    phase !== 'paused' ||
+    !menu.isOpen
+  ) {
+    return;
+  }
+
+  menu.close();
+
+  navigationMap.open({
+    position:
+      stereo.camera.position,
+    quaternion:
+      stereo.camera.quaternion,
+    camera:
+      stereo.camera,
+    phoneMode,
+    playerPosition:
+      flight.position,
+    velocity:
+      flight.velocity,
+  });
+}
+
+function returnToMenuFromNavigationMap() {
+  if (phase !== 'paused') {
+    return;
+  }
+
+  navigationMap.close();
+
+  menu.open(
+    stereo.camera.position,
+    stereo.camera.quaternion,
+    false,
+    stereo.camera,
+  );
+}
+
+function handleNavigationPing(destination) {
+  showTransient(
+    `PING ${destination.label}`,
+    2.1,
+  );
+
+  resumeFromMenu();
+}
+
 function beginHeadRecalibration() {
   if (!phoneMode) {
     input.recenter();
@@ -267,6 +428,7 @@ function beginHeadRecalibration() {
    * sideways at a menu card. Close everything and
    * allow three seconds to face naturally forward.
    */
+  navigationMap.close();
   menu.close();
   cameraRig.endMenuPose();
   powerStrip.close();
@@ -832,6 +994,9 @@ function startSession(phone) {
 
   nearWorld.setPhoneMode(phone);
   livingAirspace.setPhoneMode(phone);
+  settlements.setPhoneMode(phone);
+  outerDetail.setPhoneMode(phone);
+  navigationMap.setPhoneMode(phone);
   powerControl.reset();
   landingSystem.reset();
   resetFlight();
@@ -1064,7 +1229,7 @@ desktopStart.addEventListener(
 function openMenu(
   crashMode = false
 ) {
-  if (menu.isOpen) {
+  if (isPauseUiOpen()) {
     return;
   }
 
@@ -1125,6 +1290,7 @@ function resumeFromMenu() {
     return;
   }
 
+  navigationMap.close();
   menu.close();
   cameraRig.endMenuPose();
 
@@ -1237,6 +1403,7 @@ function finishRespawn() {
   powerControl.reset();
   resetFlight();
   input.recenter();
+  navigationMap.close();
   menu.close();
   cameraRig.endMenuPose();
 
@@ -1376,7 +1543,9 @@ function updateInputAndState(
   if (
     input.consumeMenuRequest()
   ) {
-    if (phase === 'flying') {
+    if (navigationMap.isOpen) {
+      resumeFromMenu();
+    } else if (phase === 'flying') {
       openMenu(false);
     } else if (
       phase === 'paused'
@@ -1541,6 +1710,9 @@ function frame(milliseconds) {
         flight,
         phase,
       );
+      settlements.fixedStepUpdate?.(
+        CONFIG.physics.fixedStep
+      );
 
       const collisionHit =
         !landingResult.suppressCollision &&
@@ -1581,6 +1753,24 @@ function frame(milliseconds) {
     menu.update(frameDt);
   }
 
+  navigationMap.update(
+    frameDt,
+    {
+      camera:
+        stereo.camera,
+      playerPosition:
+        flight.position,
+      velocity:
+        flight.velocity,
+      active:
+        phase === 'flying',
+      phoneMode,
+    },
+  )
+
+  const pauseUiOpen =
+    isPauseUiOpen();
+
   const originShifted = updateFloatingOrigin(
     flight.position
   );
@@ -1606,7 +1796,7 @@ function frame(milliseconds) {
     stereo.camera
   );
 
-  if (menu.isOpen) {
+  if (pauseUiOpen) {
     menuCameraLook.yaw =
       phoneMode
         ? Number(
@@ -1626,16 +1816,16 @@ function frame(milliseconds) {
     frameDt,
     sharedRenderPose,
     stereo.stereoEnabled,
-    menu.isOpen
+    pauseUiOpen
       ? menuCameraLook
       : null,
-    menu.isOpen
+    pauseUiOpen
       ? 0
       : effects.shakePitch,
-    menu.isOpen
+    pauseUiOpen
       ? 0
       : effects.shakeYaw,
-    menu.isOpen
+    pauseUiOpen
       ? 0
       : effects.shakeRoll,
     effects.viewSqueeze
@@ -1772,6 +1962,30 @@ function frame(milliseconds) {
     phase,
   );
 
+  settlements.update(
+    frameDt,
+    {
+      camera:
+        stereo.camera,
+      nightFactor:
+        settlementNightFactor,
+      worldTimeSeconds:
+        now,
+    },
+  );
+
+  localInfrastructure.update(
+    frameDt,
+    flight,
+    stereo.camera,
+  );
+
+  outerDetail.update(
+    frameDt,
+    flight,
+    stereo.camera,
+  );
+
   nearWorld.update(frameDt, flight);
   landingSystem.update(frameDt, flight);
   runwayGuidance.update(flight);
@@ -1807,12 +2021,15 @@ function frame(milliseconds) {
     phoneMode
       ? Math.max(
           menu.isOpen ? menu.dwellProgress : 0,
+          navigationMap.isOpen
+            ? navigationMap.dwellProgress
+            : 0,
           powerStrip.progress,
           radioBeacon.progress,
         )
       : 0,
     phase !== 'boot' &&
-      (!menu.isOpen || phoneMode)
+      (!pauseUiOpen || phoneMode)
   );
 
   stereo.setOverlay(
@@ -1897,6 +2114,26 @@ window.skylineWorldCoreDiagnostics =
         ?.settlements?.length || 0,
   });
 
+window.skylineSettlementDiagnostics =
+  () =>
+    settlements.getStatus();
+
+window.skylineOuterDetailDiagnostics =
+  () =>
+    outerDetail.getStatus();
+
+window.skylineLocalInfrastructureDiagnostics =
+  () =>
+    localInfrastructure.getStatus();
+
+window.skylineNavigationMapDiagnostics =
+  () =>
+    navigationMap.getStatus();
+
+window.skylineNavigationMapPing =
+  id =>
+    navigationMap.pingById(id);
+
 window.skylineLivingAirspaceDiagnostics =
   () =>
     livingAirspace.getStatus();
@@ -1909,6 +2146,10 @@ window.addEventListener(
   'pagehide',
   event => {
     if (!event.persisted) {
+      navigationMap.dispose?.();
+      settlements.dispose?.();
+      localInfrastructure.dispose?.();
+      outerDetail.dispose?.();
       livingAirspace.dispose?.();
     }
   },
