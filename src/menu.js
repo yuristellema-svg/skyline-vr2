@@ -293,6 +293,7 @@ export class GazeMenu {
     quaternion,
     crashMode = false,
     camera = null,
+    lookReference = 'current',
   ) {
     this.camera =
       camera ||
@@ -304,7 +305,7 @@ export class GazeMenu {
       this.input?.mode === 'phone';
 
     const rootScale =
-      phoneMode ? 1 : 1.18;
+      phoneMode ? 1 : 1;
 
     this.root.scale.set(
       rootScale,
@@ -334,7 +335,9 @@ export class GazeMenu {
     this._blockedPhoneId = null;
 
     document.body.classList.add('menu-open');
-    this.input?.beginMenuLook?.();
+    this.input?.beginMenuLook?.(
+      lookReference
+    );
     this._buildPanels();
     this.reanchor(position, quaternion);
   }

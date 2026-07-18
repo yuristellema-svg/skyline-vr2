@@ -8,12 +8,12 @@ import {
   worldToMapPixel,
 } from './mapCatalog.js';
 
-const MAP_WIDTH = 2.72;
-const MAP_HEIGHT = 1.75;
-const MAP_DEPTH = 2.08;
+const MAP_WIDTH = 3.8;
+const MAP_HEIGHT = 2.45;
+const MAP_DEPTH = 2.6;
 
-const PHONE_SCALE = 0.53;
-const DESKTOP_SCALE = 1;
+const PHONE_SCALE = 0.92;
+const DESKTOP_SCALE = 1.08;
 
 const CANVAS_WIDTH = 1400;
 const CANVAS_HEIGHT = 900;
@@ -45,6 +45,7 @@ const COLORS = Object.freeze({
   text: '#f0e8c8',
   muted: '#a9a185',
   accent: '#ffcf5c',
+  ping: '#ff4fa3',
   current: '#ffdf73',
   danger: '#c96154',
   hover: '#fff3bd',
@@ -172,6 +173,7 @@ export class NavigationMapSystem {
     this._hasSmoothedLook = false;
     this._pointerPoint = null;
     this._pointerMoved = false;
+    this._gazePoint = null;
     this._drawAccumulator = 0;
     this._hudAccumulator = 0;
     this._pulseTime = 0;
@@ -282,7 +284,7 @@ export class NavigationMapSystem {
 
   _createWaypointVisuals() {
     const beamMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf0cb63,
+      color: 0xff4fa3,
       transparent: true,
       opacity: 0.20,
       depthWrite: false,
@@ -290,7 +292,7 @@ export class NavigationMapSystem {
     });
 
     const ringMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffdf74,
+      color: 0xff4fa3,
       transparent: true,
       opacity: 0.82,
       depthWrite: false,
@@ -376,6 +378,7 @@ export class NavigationMapSystem {
     phoneMode = this.phoneMode,
     playerPosition,
     velocity,
+    lookReference = 'current',
   } = {}) {
     this.phoneMode = Boolean(phoneMode);
     this.camera = camera ?? this.camera;
@@ -405,7 +408,9 @@ export class NavigationMapSystem {
     }
 
     document.body.classList.add('menu-open');
-    this.input?.beginMenuLook?.();
+    this.input?.beginMenuLook?.(
+      lookReference
+    );
 
     this._lastDrawKey = '';
     this._drawMap(true);
@@ -418,6 +423,7 @@ export class NavigationMapSystem {
     this.dwellElapsed = 0;
     this.dwellProgress = 0;
     this._pointerPoint = null;
+    this._gazePoint = null;
     document.body.classList.remove('menu-open');
   }
 
@@ -772,13 +778,16 @@ export class NavigationMapSystem {
         0,
         Math.PI * 2,
       );
-      context.fillStyle = colorForKind(destination.kind);
+      context.fillStyle =
+        isPing
+          ? COLORS.ping
+          : colorForKind(destination.kind);
       context.fill();
 
-      context.lineWidth = isPing ? 4 : isHover ? 3 : 1.5;
+      context.lineWidth = isPing ? 5 : isHover ? 3 : 1.5;
       context.strokeStyle =
         isPing
-          ? COLORS.accent
+          ? COLORS.ping
           : isHover
             ? COLORS.hover
             : 'rgba(10, 15, 12, .75)';
@@ -793,7 +802,7 @@ export class NavigationMapSystem {
           0,
           Math.PI * 2,
         );
-        context.strokeStyle = 'rgba(230, 196, 95, .72)';
+        context.strokeStyle = COLORS.ping;
         context.lineWidth = 2;
         context.stroke();
       }
@@ -953,7 +962,7 @@ export class NavigationMapSystem {
           align: 'right',
           size: 17,
           weight: 900,
-          color: isPing ? COLORS.accent : COLORS.muted,
+          color: isPing ? COLORS.ping : COLORS.muted,
         },
       );
 
@@ -1068,6 +1077,8 @@ export class NavigationMapSystem {
       Math.round(this.playerPosition.z / 30),
       Math.round(this.playerVelocity.x / 5),
       Math.round(this.playerVelocity.z / 5),
+      Math.round((this._gazePoint?.x ?? -1) / 8),
+      Math.round((this._gazePoint?.y ?? -1) / 8),
     ].join('|');
 
     if (!force && key === this._lastDrawKey) return;
@@ -1113,6 +1124,31 @@ export class NavigationMapSystem {
     this._drawWorldLayer(context);
     this._drawDestinationList(context);
     this._drawButtons(context);
+
+    if (
+      this.phoneMode &&
+      this._gazePoint
+    ) {
+      const x = this._gazePoint.x;
+      const y = this._gazePoint.y;
+
+      context.beginPath();
+      context.arc(x, y, 16, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(8, 10, 9, .78)';
+      context.fill();
+      context.strokeStyle = COLORS.ping;
+      context.lineWidth = 5;
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(x - 9, y);
+      context.lineTo(x + 9, y);
+      context.moveTo(x, y - 9);
+      context.lineTo(x, y + 9);
+      context.strokeStyle = COLORS.hover;
+      context.lineWidth = 2;
+      context.stroke();
+    }
 
     drawText(
       context,
@@ -1185,7 +1221,7 @@ export class NavigationMapSystem {
     roundedRect(context, 12, 14, 876, 152, 22);
     context.fillStyle = 'rgba(14, 20, 18, .82)';
     context.fill();
-    context.strokeStyle = COLORS.accent;
+    context.strokeStyle = COLORS.ping;
     context.lineWidth = 5;
     context.stroke();
 
@@ -1196,7 +1232,7 @@ export class NavigationMapSystem {
       bearing < -0.10 ? -1 : bearing > 0.10 ? 1 : 0,
       bearing < -0.10 || bearing > 0.10 ? 0 : -1,
       34,
-      COLORS.accent,
+      COLORS.ping,
     );
 
     drawText(
@@ -1385,6 +1421,7 @@ export class NavigationMapSystem {
 
     if (this.phoneMode) {
       const point = this._pointFromPhoneLook(safeDt);
+      this._gazePoint = point;
       this._updateHoveredFromPoint(point);
 
       if (

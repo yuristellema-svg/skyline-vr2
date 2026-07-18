@@ -5,15 +5,15 @@ import {
 } from './navContracts.js';
 
 const PHONE_FLIGHT_LAYOUT = Object.freeze([
-  { id: 'resume', yaw: -36, pitch: 10 },
-  { id: 'recenter', yaw: -12, pitch: 10 },
-  { id: 'camera', yaw: 12, pitch: 10 },
-  { id: 'aircraft', yaw: 36, pitch: 10 },
+  { id: 'resume', yaw: -39, pitch: 12 },
+  { id: 'recenter', yaw: -13, pitch: 12 },
+  { id: 'camera', yaw: 13, pitch: 12 },
+  { id: 'aircraft', yaw: 39, pitch: 12 },
 
-  { id: 'effects', yaw: -24, pitch: -10 },
-  { id: 'respawn', yaw: 0, pitch: -10 },
-  { id: 'map', yaw: -36, pitch: -10 },
-  { id: 'restart', yaw: 24, pitch: -10 },
+  { id: 'map', yaw: -39, pitch: -12 },
+  { id: 'effects', yaw: -13, pitch: -12 },
+  { id: 'respawn', yaw: 13, pitch: -12 },
+  { id: 'restart', yaw: 39, pitch: -12 },
 ]);
 
 const PHONE_CRASH_LAYOUT = Object.freeze([
@@ -23,19 +23,19 @@ const PHONE_CRASH_LAYOUT = Object.freeze([
 ]);
 
 export const PHONE_MENU_CONFIG = Object.freeze({
-  depth: 0.9,
+  depth: 1.1,
 
-  panelWidth: 0.4,
-  panelHeight: 0.25,
-  panelScale: 1.1,
+  panelWidth: 0.36,
+  panelHeight: 0.24,
+  panelScale: 1.08,
 
-  enterHalfAngle: 9 * DEG,
-  exitHalfAngle: 11 * DEG,
+  enterHalfAngle: 8 * DEG,
+  exitHalfAngle: 10 * DEG,
 
   enterPitchHalfAngle: 7 * DEG,
   exitPitchHalfAngle: 9 * DEG,
 
-  pitchHalfAngle: 14 * DEG,
+  pitchHalfAngle: 16 * DEG,
 
   dwellSeconds: 1.05,
   destructiveDwellSeconds: 1.55,
@@ -143,13 +143,6 @@ export function buildDesktopMenuDefinitions({
         pitch: 3,
       },
       {
-      id: 'map',
-      title: 'MAP',
-      subtitle: 'NAVIGATION + PING',
-      yaw: -27,
-      pitch: -9,
-    },
-    {
         id: 'restart',
         title: 'REBUILD',
         subtitle: 'RELOAD WORLD',
@@ -165,49 +158,56 @@ export function buildDesktopMenuDefinitions({
       id: 'resume',
       title: 'RESUME',
       subtitle: 'BACK TO FLIGHT',
-      yaw: -27,
-      pitch: 8,
+      yaw: -30,
+      pitch: 9,
     },
     {
       id: 'recenter',
       title: 'RECENTER',
       subtitle: 'RESET NEUTRAL',
-      yaw: -9,
-      pitch: 8,
+      yaw: -10,
+      pitch: 9,
     },
     {
       id: 'camera',
       title: 'VIEW',
       subtitle: cameraName,
-      yaw: 9,
-      pitch: 8,
+      yaw: 10,
+      pitch: 9,
     },
     {
       id: 'aircraft',
       title: 'AIRCRAFT',
       subtitle: aircraftName,
-      yaw: 27,
-      pitch: 8,
+      yaw: 30,
+      pitch: 9,
+    },
+    {
+      id: 'map',
+      title: 'MAP',
+      subtitle: 'NAVIGATION + PING',
+      yaw: -30,
+      pitch: -9,
     },
     {
       id: 'effects',
       title: 'EFFECTS',
       subtitle: effectsName,
-      yaw: -18,
+      yaw: -10,
       pitch: -9,
     },
     {
       id: 'respawn',
       title: 'RETURN',
       subtitle: 'START POSITION',
-      yaw: 0,
+      yaw: 10,
       pitch: -9,
     },
     {
       id: 'restart',
       title: 'REBUILD',
       subtitle: 'RELOAD WORLD',
-      yaw: 18,
+      yaw: 30,
       pitch: -9,
       danger: true,
     },

@@ -231,6 +231,7 @@ export class InputController {
     this._menuCenterHeading = 0;
     this._menuCenterMouseX = 0;
     this._menuCenterMouseY = 0;
+    this._menuYawScale = 1;
 
     this._cameraToggle = false;
     this._respawnRequested = false;
@@ -722,12 +723,60 @@ export class InputController {
      */
   }
 
-  beginMenuLook() {
+  beginMenuLook(
+    reference = 'current',
+  ) {
+    const mode =
+      typeof reference === 'object'
+        ? reference.mode
+        : reference;
+
+    if (mode === 'preserve') {
+      return;
+    }
+
     this._menuCenterPitch =
       this.latestPitch;
 
-    this._menuCenterHeading =
-      this.latestHeading;
+    if (
+      this.mode === 'phone' &&
+      mode === 'flight'
+    ) {
+      /*
+       * Zero yaw is the calibrated flight-forward direction. The initial
+       * scale preserves the exact currently rendered head yaw, then naturally
+       * reaches zero when the player turns back to centre.
+       */
+      this._menuCenterHeading =
+        this.baselineHeading;
+
+      const rawYaw =
+        wrapPi(
+          this.latestHeading -
+          this.baselineHeading,
+        );
+
+      const renderedYaw =
+        Number(
+          typeof reference === 'object'
+            ? reference.renderedYaw
+            : rawYaw
+        );
+
+      this._menuYawScale =
+        Math.abs(rawYaw) > 1e-4 &&
+        Number.isFinite(renderedYaw)
+          ? clamp(
+              renderedYaw / rawYaw,
+              0.35,
+              1.4,
+            )
+          : 1;
+    } else {
+      this._menuCenterHeading =
+        this.latestHeading;
+      this._menuYawScale = 1;
+    }
 
     this._menuCenterMouseX =
       this.mouseX;
@@ -745,7 +794,8 @@ export class InputController {
         wrapPi(
           this.latestHeading -
           this._menuCenterHeading,
-        );
+        ) *
+        this._menuYawScale;
 
       this.menuLook.pitch =
         wrapPi(

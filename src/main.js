@@ -288,6 +288,14 @@ const menuCameraLook = {
   pitch: 0,
 };
 
+const pauseUiAnchorPosition =
+  new THREE.Vector3();
+
+const pauseUiAnchorQuaternion =
+  new THREE.Quaternion();
+
+let pauseUiAnchorValid = false;
+
 let worldFlightReady = false;
 let worldResetPromise = null;
 let renderOriginX = 0;
@@ -320,7 +328,10 @@ const menu = new GazeMenu(
         }),
       );
 
-      if (phoneMode) {
+      if (
+        phoneMode &&
+        !isPauseUiOpen()
+      ) {
         input.recenterViewYaw?.();
       }
 
@@ -362,12 +373,35 @@ function isPauseUiOpen() {
   );
 }
 
-function capturePauseUiPose() {
+function refreshPauseUiForwardAnchor() {
+  if (phoneMode) {
+    pauseUiAnchorPosition.copy(
+      cameraRig.basePosition
+    );
+
+    pauseUiAnchorQuaternion.copy(
+      cameraRig.baseQuaternion
+    );
+  } else {
+    pauseUiAnchorPosition.copy(
+      stereo.camera.position
+    );
+
+    pauseUiAnchorQuaternion.copy(
+      stereo.camera.quaternion
+    );
+  }
+
+  pauseUiAnchorValid = true;
+}
+
+function phoneForwardLookReference() {
   return {
-    position:
-      stereo.camera.position.clone(),
-    quaternion:
-      stereo.camera.quaternion.clone(),
+    mode: 'flight',
+    renderedYaw:
+      Number(
+        sharedRenderPose?.viewYaw
+      ) || 0,
   };
 }
 
@@ -379,26 +413,26 @@ function openNavigationMap() {
     return;
   }
 
-  /*
-   * The MAP card is deliberately off-centre. Capture the exact headset view
-   * used to select it, then make that view the new neutral pause pose before
-   * beginMenuLook() resets its relative yaw and pitch.
-   */
-  const anchor =
-    capturePauseUiPose();
+  if (!pauseUiAnchorValid) {
+    refreshPauseUiForwardAnchor();
+  }
 
+  /*
+   * MENU and MAP share one aircraft-forward anchor. Selecting MAP does not
+   * move the anchor and does not reset the active gaze reference.
+   */
   cameraRig.beginMenuPose(
-    anchor.position,
-    anchor.quaternion,
+    pauseUiAnchorPosition,
+    pauseUiAnchorQuaternion,
   );
 
   menu.close();
 
   navigationMap.open({
     position:
-      anchor.position,
+      pauseUiAnchorPosition,
     quaternion:
-      anchor.quaternion,
+      pauseUiAnchorQuaternion,
     camera:
       stereo.camera,
     phoneMode,
@@ -406,6 +440,8 @@ function openNavigationMap() {
       flight.position,
     velocity:
       flight.velocity,
+    lookReference:
+      'preserve',
   });
 }
 
@@ -414,25 +450,19 @@ function returnToMenuFromNavigationMap() {
     return;
   }
 
-  /*
-   * BACK receives the same no-snap treatment. The menu appears directly in
-   * front of the view used to select BACK rather than returning sideways.
-   */
-  const anchor =
-    capturePauseUiPose();
-
-  cameraRig.beginMenuPose(
-    anchor.position,
-    anchor.quaternion,
-  );
-
   navigationMap.close();
 
+  cameraRig.beginMenuPose(
+    pauseUiAnchorPosition,
+    pauseUiAnchorQuaternion,
+  );
+
   menu.open(
-    anchor.position,
-    anchor.quaternion,
+    pauseUiAnchorPosition,
+    pauseUiAnchorQuaternion,
     false,
     stereo.camera,
+    'preserve',
   );
 }
 
@@ -1269,7 +1299,6 @@ function openMenu(
 
   accumulator = 0;
 
-  // Never leave the desktop control hint over the pause menu.
   transientMessage = '';
   transientUntil = 0;
   setEyeMessage('');
@@ -1278,15 +1307,6 @@ function openMenu(
     phase = 'paused';
   }
 
-  /*
-   * Normal pause:
-   * Keep the exact camera/headset pose from the instant the menu was opened.
-   * Do not recalculate aircraft-forward and do not modify the user's view.
-   *
-   * Crash pause:
-   * The old current-position correction is still required because collision
-   * can be detected before the newest camera update.
-   */
   if (crashMode) {
     cameraRig.reset(
       renderPoseInterpolator.sampleCurrent(
@@ -1306,8 +1326,12 @@ function openMenu(
     );
   }
 
-  const anchor =
-    capturePauseUiPose();
+  /*
+   * The trigger remains on the left, but the pause UI is always authored at
+   * aircraft-forward 0 degrees. The camera remains at the current head angle,
+   * so the player simply turns back toward centre to see the menu.
+   */
+  refreshPauseUiForwardAnchor();
 
   menu.cameraName =
     cameraRig.mode.toUpperCase();
@@ -1319,15 +1343,18 @@ function openMenu(
   radioBeacon.close();
 
   cameraRig.beginMenuPose(
-    anchor.position,
-    anchor.quaternion,
+    pauseUiAnchorPosition,
+    pauseUiAnchorQuaternion,
   );
 
   menu.open(
-    anchor.position,
-    anchor.quaternion,
+    pauseUiAnchorPosition,
+    pauseUiAnchorQuaternion,
     crashMode,
     stereo.camera,
+    phoneMode
+      ? phoneForwardLookReference()
+      : 'current',
   );
 }
 
@@ -1339,6 +1366,7 @@ function resumeFromMenu() {
   navigationMap.close();
   menu.close();
   cameraRig.endMenuPose();
+  pauseUiAnchorValid = false;
 
   phase = 'flying';
 
@@ -1453,6 +1481,7 @@ function finishRespawn() {
   navigationMap.close();
   menu.close();
   cameraRig.endMenuPose();
+  pauseUiAnchorValid = false;
 
   phase = 'flying';
 
@@ -1922,10 +1951,32 @@ function frame(milliseconds) {
   ) {
     cameraRig.endMenuPose();
 
+    cameraRig.update(
+      0,
+      sharedRenderPose,
+      stereo.stereoEnabled,
+      null,
+      0,
+      0,
+      0,
+      0
+    );
+
+    refreshPauseUiForwardAnchor();
+
+    cameraRig.beginMenuPose(
+      pauseUiAnchorPosition,
+      pauseUiAnchorQuaternion,
+    );
+
+    menu.reanchor(
+      pauseUiAnchorPosition,
+      pauseUiAnchorQuaternion
+    );
+
     /*
-     * Preserve the user's current relative menu gaze while changing VIEW.
-     * The new camera mode is evaluated at that gaze, captured, then made the
-     * new zero-angle pose before menu-look input resets.
+     * Restore the active head angle in the same frame. The anchor remains at
+     * zero degrees and the player experiences no rendered camera jump.
      */
     cameraRig.update(
       0,
@@ -1936,21 +1987,6 @@ function frame(milliseconds) {
       0,
       0,
       0
-    );
-
-    const anchor =
-      capturePauseUiPose();
-
-    cameraRig.beginMenuPose(
-      anchor.position,
-      anchor.quaternion,
-    );
-
-    input.beginMenuLook();
-
-    menu.reanchor(
-      anchor.position,
-      anchor.quaternion
     );
 
     menuNeedsReanchor = false;

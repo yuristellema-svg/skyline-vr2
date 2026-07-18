@@ -1,3 +1,4 @@
+// SKYLINE_VR_MENU_MAP_FORWARD_V2
 // SKYLINE_VR_UI_ANCHOR_PING_V1
 const SHELL_CACHE = 'skyline-biplane-zero-radio-v4-20260718';
 
