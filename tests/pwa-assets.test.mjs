@@ -80,7 +80,7 @@ test('service worker contains the current runtime and new assets', () => {
 
   assert.match(
     sw,
-    /skyline-biplane-audio-view-v1-r2-20260718/,
+    /skyline-biplane-mobile-audio-controls-v2-20260718/,
   );
 });
 
@@ -133,11 +133,14 @@ test('all local JavaScript imports resolve', () => {
         continue;
       }
 
+      const fileSpecifier =
+        specifier.replace(/[?#].*$/, '');
+
       assert.ok(
         fs.existsSync(
           path.resolve(
             path.dirname(file),
-            specifier,
+            fileSpecifier,
           ),
         ),
         `${file}: ${specifier}`,

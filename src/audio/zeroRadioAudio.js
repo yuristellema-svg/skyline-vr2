@@ -17,6 +17,8 @@ export class ZeroRadioAudio {
     this.disposed = false;
     this.buffer = null;
     this.source = null;
+    this.loading = null;
+    this.loadFailed = false;
     this.failedReason = '';
 
     this.highpass = context.createBiquadFilter();
@@ -35,16 +37,45 @@ export class ZeroRadioAudio {
     this.highpass.connect(this.lowpass);
     this.lowpass.connect(this.gain);
     this.gain.connect(output);
+  }
 
-    this.loading = this._load();
+  _beginLoad(forceRetry = false) {
+    if (
+      this.disposed ||
+      this.buffer ||
+      this.loading ||
+      (this.loadFailed && !forceRetry)
+    ) {
+      return this.loading;
+    }
+
+    this.loadFailed = false;
+    this.loading = this._load()
+      .then(success => {
+        this.loadFailed = !success;
+        return success;
+      })
+      .finally(() => {
+        this.loading = null;
+      });
+
+    return this.loading;
   }
 
   async _load() {
     try {
-      const response = await fetch(RADIO_URL, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`Radio sample HTTP ${response.status}`);
+      const response = await fetch(
+        RADIO_URL,
+        { cache: 'force-cache' },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Radio sample HTTP ${response.status}`);
+      }
+
       const bytes = await response.arrayBuffer();
       this.buffer = await this.context.decodeAudioData(bytes.slice(0));
+      this.failedReason = '';
       return true;
     } catch (error) {
       this.failedReason = error instanceof Error ? error.message : String(error);
@@ -67,14 +98,24 @@ export class ZeroRadioAudio {
   }
 
   setEnabled(enabled) {
-    this.enabled = Boolean(enabled);
+    const next = Boolean(enabled);
+    const changed = next !== this.enabled;
+    this.enabled = next;
+    if (this.enabled && changed) void this._beginLoad(true);
     return this.enabled;
   }
 
   update(profile, phase = 'flying') {
     if (this.disposed) return;
+
+    const audible =
+      this.enabled &&
+      profile === 'zero' &&
+      phase === 'flying';
+
+    if (audible && !this.buffer) void this._beginLoad(false);
     this._ensureSource();
-    const audible = this.enabled && profile === 'zero' && phase === 'flying';
+
     safeSetTarget(
       this.gain.gain,
       audible ? 0.30 : 0.0001,
@@ -87,6 +128,7 @@ export class ZeroRadioAudio {
     return {
       enabled: this.enabled,
       loaded: Boolean(this.buffer),
+      loading: Boolean(this.loading),
       failedReason: this.failedReason,
     };
   }
@@ -101,5 +143,6 @@ export class ZeroRadioAudio {
     safeDisconnect(this.gain);
     this.source = null;
     this.buffer = null;
+    this.loading = null;
   }
 }

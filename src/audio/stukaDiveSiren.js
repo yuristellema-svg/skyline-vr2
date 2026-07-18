@@ -27,30 +27,12 @@ export function stukaSirenDemand(
   flight,
   phase = 'flying',
 ) {
-  if (
-    profile !== 'stuka' ||
-    phase !== 'flying'
-  ) {
-    return 0;
-  }
+  if (profile !== 'stuka' || phase !== 'flying') return 0;
 
-  const speed =
-    Math.max(
-      0,
-      Number(flight?.speed) || 0,
-    );
-
-  const diveAngle =
-    Math.max(
-      0,
-      -(Number(flight?.pathAngle) || 0),
-    );
-
-  const explicitVertical =
-    Number(flight?.verticalSpeed);
-
-  const velocityY =
-    Number(flight?.velocity?.y);
+  const speed = Math.max(0, Number(flight?.speed) || 0);
+  const diveAngle = Math.max(0, -(Number(flight?.pathAngle) || 0));
+  const explicitVertical = Number(flight?.verticalSpeed);
+  const velocityY = Number(flight?.velocity?.y);
 
   const verticalSpeed =
     Number.isFinite(explicitVertical)
@@ -59,31 +41,10 @@ export function stukaSirenDemand(
         ? Math.max(0, -velocityY)
         : speed * Math.sin(diveAngle);
 
-  const speedDemand =
-    smoothstep(
-      42,
-      76,
-      speed,
-    );
-
-  const diveDemand =
-    smoothstep(
-      0.24,
-      0.62,
-      diveAngle,
-    );
-
-  const descentDemand =
-    smoothstep(
-      10,
-      38,
-      verticalSpeed,
-    );
-
   return (
-    speedDemand *
-    diveDemand *
-    descentDemand
+    smoothstep(42, 76, speed) *
+    smoothstep(0.24, 0.62, diveAngle) *
+    smoothstep(10, 38, verticalSpeed)
   );
 }
 
@@ -95,6 +56,9 @@ export class StukaDiveSiren {
     this.disposed = false;
     this.buffer = null;
     this.source = null;
+    this.loading = null;
+    this.loadFailed = false;
+    this.wasStuka = false;
     this.failedReason = '';
 
     this.highpass = context.createBiquadFilter();
@@ -113,16 +77,41 @@ export class StukaDiveSiren {
     this.highpass.connect(this.lowpass);
     this.lowpass.connect(this.outputGain);
     this.outputGain.connect(output);
+  }
 
-    this.loading = this._load();
+  _beginLoad(forceRetry = false) {
+    if (
+      this.disposed ||
+      this.buffer ||
+      this.loading ||
+      (this.loadFailed && !forceRetry)
+    ) {
+      return this.loading;
+    }
+
+    this.loadFailed = false;
+    this.loading = this._load()
+      .then(success => {
+        this.loadFailed = !success;
+        return success;
+      })
+      .finally(() => {
+        this.loading = null;
+      });
+
+    return this.loading;
   }
 
   async _load() {
     try {
-      const response = await fetch(SIREN_URL, { cache: 'force-cache' });
+      const response = await fetch(
+        SIREN_URL,
+        { cache: 'force-cache' },
+      );
       if (!response.ok) throw new Error(`Stuka siren HTTP ${response.status}`);
       const bytes = await response.arrayBuffer();
       this.buffer = await this.context.decodeAudioData(bytes.slice(0));
+      this.failedReason = '';
       return true;
     } catch (error) {
       this.failedReason = error instanceof Error ? error.message : String(error);
@@ -147,10 +136,15 @@ export class StukaDiveSiren {
 
   update(profile, flight, phase) {
     if (this.disposed) return;
-    this._ensureSource();
-    this.demand = stukaSirenDemand(profile, flight, phase);
-    const now = this.context.currentTime;
 
+    const stukaActive = profile === 'stuka' && phase === 'flying';
+    if (stukaActive && !this.wasStuka) void this._beginLoad(true);
+    this.wasStuka = stukaActive;
+
+    this.demand = stukaSirenDemand(profile, flight, phase);
+    this._ensureSource();
+
+    const now = this.context.currentTime;
     safeSetTarget(
       this.outputGain.gain,
       0.0001 + this.demand * 0.42,
@@ -173,6 +167,7 @@ export class StukaDiveSiren {
       active: this.demand > 0.05,
       demand: this.demand,
       loaded: Boolean(this.buffer),
+      loading: Boolean(this.loading),
       failedReason: this.failedReason,
     };
   }
@@ -187,5 +182,6 @@ export class StukaDiveSiren {
     safeDisconnect(this.outputGain);
     this.source = null;
     this.buffer = null;
+    this.loading = null;
   }
 }

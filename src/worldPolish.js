@@ -9,7 +9,7 @@ import {
 
 import {
   WindAudioSystem,
-} from './windAudio.js';
+} from './windAudio.js?v=biplane-mobile-audio-controls-v2';
 
 export class WorldPolishSystem {
   constructor(

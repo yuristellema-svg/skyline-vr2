@@ -3,8 +3,8 @@ import { AirflowAudio } from './audio/airflowAudio.js';
 import { BoostAudio } from './audio/boostAudio.js';
 import { FlightWarningAudio } from './audio/flightWarningAudio.js';
 import { PositionalTrafficAudio } from './audio/positionalTrafficAudio.js';
-import { StukaDiveSiren } from './audio/stukaDiveSiren.js';
-import { ZeroRadioAudio } from './audio/zeroRadioAudio.js';
+import { StukaDiveSiren } from './audio/stukaDiveSiren.js?v=biplane-mobile-audio-controls-v2';
+import { ZeroRadioAudio } from './audio/zeroRadioAudio.js?v=biplane-mobile-audio-controls-v2';
 import { LandingAudio } from './expansion/landingAudio.js';
 import {
   safeDisconnect,

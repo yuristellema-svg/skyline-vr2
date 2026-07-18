@@ -14,15 +14,15 @@ import { initialViewMode } from './workerNav/phoneViewModes.js';
 // SKYLINE_WORKER_NAV_V1_MAIN
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
-import { WorldPolishSystem } from './worldPolish.js';
-import { AircraftVisualSystem } from './aircraftVisuals.js';
+import { WorldPolishSystem } from './worldPolish.js?v=biplane-mobile-audio-controls-v2';
+import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-mobile-audio-controls-v2';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 import {
   createLazyWorkerWorld,
 } from './workerRuntime/lazyWorldRuntime.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
-import { RadioBeacon } from './expansion/radioBeacon.js';
+import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-mobile-audio-controls-v2';
 import { LandingSystem } from './expansion/landingSystem.js';
 import { NearWorldSystem } from './expansion/nearWorldSystem.js';
 import { RunwayGuidanceSystem } from './expansion/runwayGuidance.js';
@@ -196,6 +196,12 @@ const menu = new GazeMenu(
     camera: () => {
       const mode = cameraRig.toggle(phoneMode);
 
+      window.dispatchEvent(
+        new CustomEvent('skyline:view-changed', {
+          detail: { mode },
+        }),
+      );
+
       if (phoneMode) {
         input.recenterViewYaw?.();
       }
@@ -224,6 +230,8 @@ const menu = new GazeMenu(
     },
   }
 );
+
+menu.aircraftName = aircraftVisuals.name;
 
 function beginHeadRecalibration() {
   if (!phoneMode) {
@@ -757,6 +765,11 @@ function startSession(phone) {
 
   // SKYLINE_V42_CLEAN_START_VIEW
   cameraRig.setMode(initialViewMode({ phone }));
+  window.dispatchEvent(
+    new CustomEvent('skyline:view-changed', {
+      detail: { mode: cameraRig.mode },
+    }),
+  );
   cameraRig.reset(renderPoseInterpolator.sampleCurrent(renderPose));
 
   phaseStarted =
@@ -1264,7 +1277,12 @@ function updateInputAndState(
     phase !== 'boot' &&
     phase !== 'calibrating'
   ) {
-    cameraRig.toggle(phoneMode);
+    const mode = cameraRig.toggle(phoneMode);
+    window.dispatchEvent(
+      new CustomEvent('skyline:view-changed', {
+        detail: { mode },
+      }),
+    );
     if (phoneMode) {
       input.recenterViewYaw?.();
     }
@@ -1575,6 +1593,10 @@ function frame(milliseconds) {
         cameraRig.basePosition,
       baseQuaternion:
         cameraRig.baseQuaternion,
+      aircraftId:
+        aircraftVisuals.profile.id,
+      cameraMode:
+        cameraRig.mode,
     },
   );
 
