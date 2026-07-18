@@ -14,15 +14,15 @@ import { initialViewMode } from './workerNav/phoneViewModes.js';
 // SKYLINE_WORKER_NAV_V1_MAIN
 import { MonoHud } from './hud.js';
 import { createWorld } from './world/world.js';
-import { WorldPolishSystem } from './worldPolish.js?v=biplane-mobile-audio-controls-v3';
-import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-mobile-audio-controls-v3';
+import { WorldPolishSystem } from './worldPolish.js?v=biplane-zero-radio-v4';
+import { AircraftVisualSystem } from './aircraftVisuals.js?v=biplane-zero-radio-v4';
 import { RenderPoseInterpolator, renderInterpolationAlpha } from './renderPoseInterpolator.js';
 import {
   createLazyWorkerWorld,
 } from './workerRuntime/lazyWorldRuntime.js';
 import { PowerControlSystem } from './expansion/powerControl.js';
 import { PowerStrip } from './expansion/powerStrip.js';
-import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-mobile-audio-controls-v3';
+import { RadioBeacon } from './expansion/radioBeacon.js?v=biplane-zero-radio-v4';
 import { LandingSystem } from './expansion/landingSystem.js';
 import { NearWorldSystem } from './expansion/nearWorldSystem.js';
 import { RunwayGuidanceSystem } from './expansion/runwayGuidance.js';
@@ -372,7 +372,7 @@ async function completePhoneAudioGesture() {
 
   const unlocked =
     await requestAudioFromGesture(
-      false,
+      true,
     );
 
   if (
@@ -412,6 +412,10 @@ async function completePhoneAudioGesture() {
  * dialogs or other awaited work can interrupt the gesture.
  */
 const directAudioUnlock = () => {
+  if (awaitingPhoneAudioGesture) {
+    return;
+  }
+
   void requestAudioFromGesture(false);
 };
 
