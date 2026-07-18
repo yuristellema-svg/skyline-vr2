@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skyline-vr2.local/schemas/airfield-catalog-v2.json",
+  "title": "Skyline VR2 Airfield Catalog v2",
+  "type": "object",
+  "required": ["schemaVersion", "coordinateSystem", "fields"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "coordinateSystem": { "const": "world-xz-metres-y-up-heading-clockwise-from-north" },
+    "source": { "type": "string" },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "center", "headingDegrees", "length", "width"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "name": { "type": "string" },
+          "shortName": { "type": "string" },
+          "kind": { "enum": ["primary", "mountain", "emergency", "regional"] },
+          "center": {
+            "type": "object",
+            "required": ["x", "z"],
+            "properties": { "x": { "type": "number" }, "z": { "type": "number" } }
+          },
+          "headingDegrees": { "type": "number" },
+          "length": { "type": "number", "exclusiveMinimum": 0 },
+          "width": { "type": "number", "exclusiveMinimum": 0 },
+          "surface": { "type": "object" },
+          "approach": { "type": "object" },
+          "operations": {
+            "type": "object",
+            "properties": {
+              "landingDirections": { "type": "array", "items": { "enum": [-1, 1] }, "minItems": 1 },
+              "takeoffDirections": { "type": "array", "items": { "enum": [-1, 1] }, "minItems": 1 },
+              "allowedAircraft": { "type": "array", "items": { "type": "string" } },
+              "takeoffAircraft": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "lighting": { "type": "object" },
+          "navigation": { "type": "object" }
+        }
+      }
+    }
+  }
+}
