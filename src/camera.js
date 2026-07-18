@@ -420,10 +420,24 @@ export class CameraRig {
     return mesh;
   }
 
-  beginMenuPose() {
+  beginMenuPose(
+    position = this.camera.position,
+    quaternion = this.camera.quaternion,
+  ) {
     this._menuPoseActive = true;
-    this._menuPosition.copy(this.camera.position);
-    this._menuQuaternion.copy(this.camera.quaternion);
+
+    this._menuPosition.copy(
+      position?.isVector3
+        ? position
+        : this.camera.position,
+    );
+
+    this._menuQuaternion.copy(
+      quaternion?.isQuaternion
+        ? quaternion
+        : this.camera.quaternion,
+    );
+
     this._menuFov = this.camera.fov;
   }
 

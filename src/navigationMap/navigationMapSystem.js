@@ -44,7 +44,7 @@ const COLORS = Object.freeze({
   lake: '#4b8497',
   text: '#f0e8c8',
   muted: '#a9a185',
-  accent: '#e6c45f',
+  accent: '#ffcf5c',
   current: '#ffdf73',
   danger: '#c96154',
   hover: '#fff3bd',
@@ -155,6 +155,11 @@ export class NavigationMapSystem {
 
     this.playerPosition = new THREE.Vector3();
     this.playerVelocity = new THREE.Vector3(0, 0, -1);
+
+    this._waypointDirection =
+      new THREE.Vector3();
+    this._cameraForward =
+      new THREE.Vector3(0, 0, -1);
 
     this.ping = null;
     this.hoveredTarget = null;
@@ -340,6 +345,8 @@ export class NavigationMapSystem {
       this.hudMaterial,
     );
     this.hudPlane.renderOrder = 225;
+    this.hudPlane.frustumCulled = false;
+    this.hudRoot.frustumCulled = false;
     this.hudRoot.add(this.hudPlane);
     this.uiScene.add(this.hudRoot);
   }
@@ -1260,30 +1267,83 @@ export class NavigationMapSystem {
       return;
     }
 
-    const local = new THREE.Vector3(
+    /*
+     * Use horizontal bearing only. Aircraft pitch and roll must not push the
+     * navigation indicator sideways or behind the headset.
+     */
+    this._waypointDirection.set(
       x - this.playerPosition.x,
       0,
       z - this.playerPosition.z,
     );
 
-    const inverse = camera.quaternion.clone().invert();
-    local.applyQuaternion(inverse);
+    if (
+      this._waypointDirection.lengthSq() >
+      1e-6
+    ) {
+      this._waypointDirection.normalize();
+    } else {
+      this._waypointDirection.set(0, 0, -1);
+    }
 
-    const bearing = Math.atan2(local.x, -local.z);
+    camera.getWorldDirection(
+      this._cameraForward
+    );
+
+    this._cameraForward.y = 0;
+
+    if (
+      this._cameraForward.lengthSq() >
+      1e-6
+    ) {
+      this._cameraForward.normalize();
+    } else {
+      this._cameraForward.set(0, 0, -1);
+    }
+
+    const cross =
+      this._cameraForward.x *
+        this._waypointDirection.z -
+      this._cameraForward.z *
+        this._waypointDirection.x;
+
+    const dot =
+      this._cameraForward.x *
+        this._waypointDirection.x +
+      this._cameraForward.z *
+        this._waypointDirection.z;
+
+    const bearing =
+      Math.atan2(cross, dot);
+
     const clamped =
-      Math.max(-0.70, Math.min(0.70, bearing));
+      Math.max(-0.82, Math.min(0.82, bearing));
 
     this.hudRoot.visible = true;
     this.hudRoot.position.copy(camera.position);
     this.hudRoot.quaternion.copy(camera.quaternion);
 
-    const radius = 1.03;
+    /*
+     * This is intentionally a small indicator on phone VR, always constrained
+     * to the comfortable central view. The parent follows the headset pose;
+     * the panel itself stays front-facing and never uses a world-origin lookAt.
+     */
+    const radius =
+      this.phoneMode ? 0.82 : 0.96;
+
+    const horizontal =
+      this.phoneMode ? 0.31 : 0.48;
+
     this.hudPlane.position.set(
-      Math.sin(clamped) * 0.62,
-      0.31,
+      Math.sin(clamped) * horizontal,
+      this.phoneMode ? 0.27 : 0.31,
       -Math.cos(clamped) * radius,
     );
-    this.hudPlane.lookAt(0, 0, 0);
+
+    this.hudPlane.quaternion.identity();
+    this.hudPlane.scale.setScalar(
+      this.phoneMode ? 0.62 : 0.82
+    );
 
     this._hudAccumulator += dt;
     if (this._hudAccumulator >= 0.16) {
