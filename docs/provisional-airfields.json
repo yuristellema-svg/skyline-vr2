@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "coordinateSystem": "world-xz-metres-y-up-heading-clockwise-from-north",
+  "source": "d3e48499e90affe4dcf01fda1fdfa882fbaef8bd packed-terrain audit",
+  "fields": [
+    {
+      "id": "skyline-municipal",
+      "kind": "primary",
+      "center": { "x": -1750, "z": -500 },
+      "headingDegrees": 15,
+      "length": 900,
+      "width": 72,
+      "landingDirections": [1],
+      "takeoffDirections": [-1, 1]
+    },
+    {
+      "id": "crown-ridge",
+      "kind": "mountain",
+      "center": { "x": -500, "z": 1000 },
+      "headingDegrees": 90,
+      "length": 520,
+      "width": 58,
+      "landingDirections": [1],
+      "takeoffDirections": [-1],
+      "allowedAircraft": ["scout", "biplane", "glider"]
+    },
+    {
+      "id": "east-meadow-relief",
+      "kind": "emergency",
+      "center": { "x": -2000, "z": -250 },
+      "headingDegrees": 165,
+      "length": 470,
+      "width": 52,
+      "landingDirections": [-1],
+      "takeoffDirections": [1]
+    }
+  ]
+}

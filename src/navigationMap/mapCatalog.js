@@ -7,6 +7,30 @@ const FALLBACK_BOUNDS = Object.freeze({
 
 const CURATED = Object.freeze([
   Object.freeze({
+    id: 'operational-skyline-municipal',
+    label: 'SKYLINE MUNICIPAL',
+    subtitle: 'Primary terrain-fitted operational runway',
+    kind: 'airfield',
+    fallback: [-1750.000, -500.000],
+    sourceIds: ['skyline-municipal'],
+  }),
+  Object.freeze({
+    id: 'operational-crown-ridge',
+    label: 'CROWN RIDGE STRIP',
+    subtitle: 'One-way mountain landing strip',
+    kind: 'airfield',
+    fallback: [-500.000, 1000.000],
+    sourceIds: ['crown-ridge'],
+  }),
+  Object.freeze({
+    id: 'operational-east-meadow-relief',
+    label: 'EAST MEADOW RELIEF FIELD',
+    subtitle: 'Emergency and relief landing field',
+    kind: 'airfield',
+    fallback: [-2000.000, -250.000],
+    sourceIds: ['east-meadow-relief'],
+  }),
+  Object.freeze({
     id: 'skyline-city',
     label: 'SKYLINE CITY',
     subtitle: 'Main skyline, civic centre and old quarter',

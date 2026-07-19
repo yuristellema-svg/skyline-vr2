@@ -1,3 +1,4 @@
+// SKYLINE_AIRFIELDS_LIVE_INTEGRATION_V2
 // SKYLINE_NAVIGATION_PIN_VISIBLE_V1
 // SKYLINE_VR_MENU_MAP_FORWARD_V2
 // SKYLINE_VR_UI_ANCHOR_PING_V1
@@ -39,6 +40,23 @@ const SHELL_FILES = [
   './src/livingAirspace/clouds.js',
   './src/livingAirspace/depth.js',
   './src/navigationMap/index.js',
+  './src/airfields/airfieldCatalog.js',
+  './src/airfields/airfieldDiagnostics.js',
+  './src/airfields/airfieldGeometry.js',
+  './src/airfields/airfieldVisuals.js',
+  './src/airfields/landingCapability.js',
+  './src/airfields/landingMath.js',
+  './src/airfields/lightingPlan.js',
+  './src/airfields/obstacleClearance.js',
+  './src/airfields/operations.js',
+  './src/airfields/terrainFit.js',
+  './src/airfields/worldIntegration.js',
+  './src/navigation/approachGuidance.js',
+  './src/navigation/fieldSelection.js',
+  './src/navigation/navigationVisuals.js',
+  './src/navigation/radioNavigation.js',
+  './src/expansion/landingSystem.js',
+  './src/expansion/runwayGuidance.js',
   './src/navigationMap/mapCatalog.js',
   './src/navigationMap/navigationMapSystem.js',
   './src/worldCompletion/index.js',

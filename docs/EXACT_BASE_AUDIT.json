@@ -1,0 +1,14 @@
+{
+  "baseSha": "d3e48499e90affe4dcf01fda1fdfa882fbaef8bd",
+  "sampler": "4 m coarse interpolation plus packed 0.7 m fine detail",
+  "terrain": [
+    { "id": "skyline-municipal", "operational": true, "longitudinalGrade": 0.0467314592, "crossGrade": 0.0358327111, "roughness": 2.579955203, "maxEarthwork": 2.999955203 },
+    { "id": "crown-ridge", "operational": true, "longitudinalGrade": 0.0790531876, "crossGrade": 0.0570831647, "roughness": 3.310823555, "maxEarthwork": 3.570823555 },
+    { "id": "east-meadow-relief", "operational": true, "longitudinalGrade": 0.0589289858, "crossGrade": 0.0230546484, "roughness": 1.526116647, "maxEarthwork": 1.866116647 }
+  ],
+  "approaches": [
+    { "id": "skyline-municipal", "directionSign": 1, "operational": true, "minimumClearance": 6.429291671, "minimumMargin": 1.329291671 },
+    { "id": "crown-ridge", "directionSign": 1, "operational": true, "minimumClearance": 19.440077467, "minimumMargin": 14.340077467 },
+    { "id": "east-meadow-relief", "directionSign": -1, "operational": true, "minimumClearance": 12.489198923, "minimumMargin": 7.389198923 }
+  ]
+}
