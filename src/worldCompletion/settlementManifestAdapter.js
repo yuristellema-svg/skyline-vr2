@@ -2,6 +2,8 @@ import {
   SAMPLE_WORLD_MANIFEST,
 } from '../settlements/sampleCatalog.js';
 
+// SKYLINE_LIVE_CITY_GROUNDING_V5
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -66,11 +68,21 @@ function makeTransform(source) {
    * while spreading its towns, harbour, farms and industry across the new
    * south/east regions. The shape is preserved rather than randomly scattered.
    */
-  const scale = Math.min(1.55, 10600 / Math.max(width, depth));
+  /*
+   * Keep the complete authored settlement network inside the locked 8 km core.
+   * The old 1.55 scale pushed outlying farms beyond the heightfield and enlarged
+   * every terrain mismatch.
+   */
+  const scale = Math.min(1, 7600 / Math.max(width, depth));
   const sourceCenterX = (minX + maxX) * 0.5;
   const sourceCenterZ = (minZ + maxZ) * 0.5;
-  const targetCenterX = 2450;
-  const targetCenterZ = -2050;
+  /*
+   * Exact packed-terrain signature-site audit, July 2026. This western site
+   * keeps the entire authored settlement network in bounds and permits every
+   * signature building to use a shallow, restrained foundation.
+   */
+  const targetCenterX = -1965;
+  const targetCenterZ = -451;
 
   return point => [
     targetCenterX + (point[0] - sourceCenterX) * scale,
@@ -199,6 +211,23 @@ export function createWorldSettlementManifest(
       site.width *= 1.08;
       site.depth *= 1.08;
       site.height *= 1.14;
+
+      /*
+       * Signature buildings are authored landmarks. The selected site was
+       * audited against the packed 2 m heightfield. Permit only a restrained
+       * engineered terrace rather than accepting giant plinths or burying the
+       * landmark in the terrain.
+       */
+      site.maxTerrainDelta = Math.max(
+        Number(site.maxTerrainDelta) || 0,
+        4.25,
+      );
+      site.maxFoundationDepth = Math.max(
+        Number(site.maxFoundationDepth) || 0,
+        8,
+      );
+      site.terrainTreatment =
+        'engineered-signature-terrace';
     }
 
     if (settlement.heightProfile?.anchor) {

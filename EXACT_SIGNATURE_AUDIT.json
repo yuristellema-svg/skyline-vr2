@@ -1,0 +1,29 @@
+{
+  "baseCommit": "09d0b01fb626a29e45a262583fe1f88173939a09",
+  "terrainSampler": "current packed-world 4 m interpolation plus 0.7 m fine detail fixture",
+  "settlementTransform": {
+    "scale": 1,
+    "sourceCenter": [0, 155],
+    "targetCenter": [-1965, -451]
+  },
+  "limits": {
+    "maximumSignatureTerrainDeltaMeters": 4.25,
+    "maximumFoundationDepthMeters": 8
+  },
+  "observedMaximums": {
+    "terrainDeltaMeters": 3.916879911411044,
+    "foundationDepthMeters": 4.716879911411044
+  },
+  "signatureSites": [
+    {"settlement":"aster-core","id":"needle","position":[-2070,-686],"terrainDeltaMeters":0.9165448183892053,"foundationDepthMeters":1.7165448183892054},
+    {"settlement":"aster-core","id":"crown","position":[-1885,-721],"terrainDeltaMeters":0.6076178762573292,"foundationDepthMeters":1.4076178762573293},
+    {"settlement":"aster-core","id":"gateway","position":[-2045,-406],"terrainDeltaMeters":2.5466435744398694,"foundationDepthMeters":3.3466435744398693},
+    {"settlement":"aster-core","id":"rotunda","position":[-2330,-681],"terrainDeltaMeters":2.1345334969551573,"foundationDepthMeters":2.934533496955157},
+    {"settlement":"forge-district","id":"forge-hall","position":[-1885,-186],"terrainDeltaMeters":3.909991396503223,"foundationDepthMeters":4.709991396503223},
+    {"settlement":"forge-district","id":"forge-tanks","position":[-1730,-136],"terrainDeltaMeters":2.804276935847831,"foundationDepthMeters":3.604276935847831},
+    {"settlement":"port-aster","id":"dock-hall-west","position":[-2475,44],"terrainDeltaMeters":3.907448530953417,"foundationDepthMeters":4.707448530953417},
+    {"settlement":"port-aster","id":"dock-hall-east","position":[-1995,-6],"terrainDeltaMeters":2.2956025888500022,"foundationDepthMeters":3.095602588850002},
+    {"settlement":"birch-town","id":"birch-hall","position":[-1160,-1161],"terrainDeltaMeters":3.916879911411044,"foundationDepthMeters":4.716879911411044},
+    {"settlement":"cedar-town","id":"cedar-market-hall","position":[-1465,-1151],"terrainDeltaMeters":3.8368036778094563,"foundationDepthMeters":4.636803677809456}
+  ]
+}

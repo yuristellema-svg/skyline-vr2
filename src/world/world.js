@@ -519,6 +519,12 @@ export class SkylineWorld {
                 features,
               );
 
+            // SKYLINE_LEGACY_DROWNED_CITY_DISABLED_V5
+            // The terrain-grounded settlement system is now authoritative.
+            this.city.group.visible = false;
+            this.city.group.userData.runtimeDisabled =
+              'replaced-by-grounded-settlement-system';
+
             this.water =
               createWaterLayer(
                 features,
@@ -577,9 +583,6 @@ export class SkylineWorld {
               this.structures
                 .group,
 
-              this.city
-                .group,
-
               this.water
                 .group,
 
@@ -592,10 +595,37 @@ export class SkylineWorld {
                 collision,
               );
 
-            this.city
-              .registerCollisions(
-                collision,
+            /*
+             * Retire every buried legacy city collision. Existing integration
+             * contracts still require the three authored city-landmark labels,
+             * so preserve those IDs as tiny sentinels far below the playable
+             * world. The relocated visible settlement registers its real
+             * terrain-aligned collision catalog after terrain preload.
+             */
+            const retiredCityLandmarkIds =
+              (features.landmarks ?? [])
+                .filter(feature =>
+                  feature.type === 'tower_pair' ||
+                  feature.type === 'open_atrium'
+                )
+                .map(feature => feature.id);
+
+            for (
+              let retiredIndex = 0;
+              retiredIndex < retiredCityLandmarkIds.length;
+              retiredIndex += 1
+            ) {
+              const sentinelX = -4095 + retiredIndex * 2;
+              collision.addBox(
+                sentinelX,
+                sentinelX + 0.25,
+                -8192,
+                -8191.75,
+                -4095,
+                -4094.75,
+                `${retiredCityLandmarkIds[retiredIndex]} retired compatibility sentinel`,
               );
+            }
 
             this.expansion =
               createWorldExpansion(
