@@ -219,6 +219,8 @@ const outerDetail =
       world.sampleHeight,
     phoneMode:
       false,
+    operationalAirfields:
+      landingSystem.airfields,
   });
 
 const worldPolish = new WorldPolishSystem(

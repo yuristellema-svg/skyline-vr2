@@ -1,4 +1,5 @@
 import * as THREE from '../../vendor/three.module.min.js';
+import { pointExcludedByAirfield } from '../airfields/worldIntegration.js';
 
 function hash01(a, b, c = 0) {
   let value =
@@ -30,7 +31,23 @@ function distanceToRect(x, z, center, radius) {
   return Math.hypot(dx, dz);
 }
 
-function excluded(x, z, manifest) {
+function excluded(
+  x,
+  z,
+  manifest,
+  operationalAirfields = [],
+) {
+  if (
+    pointExcludedByAirfield(
+      operationalAirfields,
+      x,
+      z,
+      55,
+    )
+  ) {
+    return true;
+  }
+
   for (const field of manifest.airfields ?? []) {
     const center = field.center;
     const radiusX =
@@ -186,11 +203,16 @@ export class OuterDetailSystem {
     manifest,
     sampleHeight,
     phoneMode = false,
+    operationalAirfields = [],
   } = {}) {
     this.scene = scene;
     this.manifest = manifest ?? {};
     this.sampleHeight = sampleHeight;
     this.phoneMode = Boolean(phoneMode);
+    this.operationalAirfields =
+      Array.isArray(operationalAirfields)
+        ? operationalAirfields
+        : [];
     this.root = new THREE.Group();
     this.root.name = 'skyline-outer-world-detail-v1';
     this.scene.add(this.root);
@@ -347,7 +369,12 @@ export class OuterDetailSystem {
           continue;
         }
 
-        if (excluded(point[0], point[1], this.manifest)) {
+        if (excluded(
+            point[0],
+            point[1],
+            this.manifest,
+            this.operationalAirfields,
+          )) {
           continue;
         }
 
@@ -489,7 +516,14 @@ export class OuterDetailSystem {
           ) {
             continue;
           }
-          if (excluded(x, z, this.manifest)) continue;
+          if (
+            excluded(
+              x,
+              z,
+              this.manifest,
+              this.operationalAirfields,
+            )
+          ) continue;
 
           const rightX = -dz / Math.max(1, length);
           const rightZ = dx / Math.max(1, length);

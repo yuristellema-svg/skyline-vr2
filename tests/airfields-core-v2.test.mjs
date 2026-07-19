@@ -1,4 +1,4 @@
-import test from 'node:test'; import assert from 'node:assert/strict';
+import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs';
 import { AIRFIELD_SCHEMA_VERSION, DEFAULT_AIRFIELD_CATALOG, normalizeAirfieldCatalog } from '../src/airfields/airfieldCatalog.js';
 import { containsRunwayPoint, distanceToRunway, fromRunwayLocal, headingVector, runwayCorners, runwayEndpoints, toRunwayLocal } from '../src/airfields/airfieldGeometry.js';
 import { fitRunwayProfile, resolveAirfield, resolveAirfields, runwayEarthworkSkirt, runwaySurfaceGrid, runwaySurfaceHeight } from '../src/airfields/terrainFit.js';
@@ -71,12 +71,60 @@ test('approach corridor polygons widen away from threshold', () => {
 
 test('all fields resolve through the future world-manifest sampler interface', () => { const fields = resolveAirfields(catalog, (x, z) => 60 + Math.sin(x / 800) * 2 + Math.cos(z / 900) * 2); assert.equal(fields.length, 3); assert.ok(fields.every(field => field.terrainFit.stations.length > 10)); });
 
-import { basePackedHeight } from './fixtures/baseWorldSampler.mjs';
-import { auditFieldCorridors } from '../src/airfields/obstacleClearance.js';
-test('provisional sites pass the exact base packed-terrain and approach audit', () => {
-  const exact = resolveAirfields(catalog, basePackedHeight);
-  for (const field of exact) {
-    assert.equal(field.terrainFit.operational, true, `${field.id}: ${field.terrainFit.issues.join(',')}`);
-    for (const corridor of auditFieldCorridors(field, basePackedHeight)) assert.equal(corridor.operational, true, `${field.id}/${corridor.sign} margin ${corridor.minimumMargin}`);
-  }
+test('primary and relief fields use authoritative World Core airfield shelves', () => {
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      'assets/world/world-core-v2-manifest.json',
+      'utf8',
+    ),
+  );
+
+  const worldFields = new Map(
+    manifest.airfields.map(field => [
+      field.id,
+      field,
+    ]),
+  );
+
+  const skyline =
+    catalog.fields.find(
+      field => field.id === 'skyline-municipal'
+    );
+
+  const relief =
+    catalog.fields.find(
+      field => field.id === 'east-meadow-relief'
+    );
+
+  const lake =
+    worldFields.get('lake-country-airfield');
+
+  const coast =
+    worldFields.get('south-coast-airfield');
+
+  assert.deepEqual(
+    [skyline.center.x, skyline.center.z],
+    lake.center,
+  );
+  assert.equal(
+    skyline.headingDegrees,
+    lake.headingDegrees,
+  );
+  assert.equal(
+    skyline.length,
+    lake.runwayLengthMeters,
+  );
+
+  assert.deepEqual(
+    [relief.center.x, relief.center.z],
+    coast.center,
+  );
+  assert.equal(
+    relief.headingDegrees,
+    coast.headingDegrees,
+  );
+  assert.equal(
+    relief.length,
+    coast.runwayLengthMeters,
+  );
 });

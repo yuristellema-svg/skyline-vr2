@@ -75,7 +75,7 @@ test('catalog keeps the full curated destination set', () => {
     catalog.destinations.length,
     NAVIGATION_MAP_DESTINATION_COUNT,
   );
-  assert.equal(NAVIGATION_MAP_DESTINATION_COUNT, 13);
+  assert.equal(NAVIGATION_MAP_DESTINATION_COUNT, 11);
   assert.equal(catalog.roads.length, 1);
   assert.equal(catalog.rivers.length, 1);
   assert.equal(catalog.lakes.length, 1);

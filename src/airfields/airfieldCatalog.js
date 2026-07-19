@@ -45,11 +45,11 @@ const DEFAULTS = Object.freeze({
 export const DEFAULT_AIRFIELD_CATALOG = deepFreeze({
   schemaVersion: AIRFIELD_SCHEMA_VERSION,
   coordinateSystem: 'world-xz-metres-y-up-heading-clockwise-from-north',
-  source: 'skyline-airfields-navigation-v1-provisional-sites-for-world-core-v2',
+  source: 'skyline-world-core-v2-authoritative-airfield-sites',
   fields: [
     {
       id: 'skyline-municipal', name: 'SKYLINE MUNICIPAL', shortName: 'MUNICIPAL', kind: 'primary',
-      center: { x: -1750, z: -500 }, headingDegrees: 15, length: 900, width: 72,
+      center: { x: -6200, z: 800 }, headingDegrees: 25, length: 1280, width: 48,
       surface: { type: 'paved', color: 0x3f4241, clearance: 0.42, rollingDragScale: 0.94, brakeScale: 1.1, lateralGrip: 1.12, maxLongitudinalGrade: 0.055, maxCrossGrade: 0.045, maxRoughness: 4.2, maxEarthwork: 8 },
       operations: { shoulder: 12, overrun: 70, startInset: 75, landingDirections: [1], takeoffDirections: [-1, 1], displacedThreshold: { '-1': 35, '1': 35 } },
       lighting: { enabled: true, approach: 'precision-short', edgeSpacing: 90, desktopLightBudget: 92, mobileLightBudget: 34, papi: true, locator: true },
@@ -66,7 +66,7 @@ export const DEFAULT_AIRFIELD_CATALOG = deepFreeze({
     },
     {
       id: 'east-meadow-relief', name: 'EAST MEADOW RELIEF FIELD', shortName: 'EAST MEADOW', kind: 'emergency',
-      center: { x: -2000, z: -250 }, headingDegrees: 165, length: 470, width: 52,
+      center: { x: 4200, z: -5900 }, headingDegrees: -10, length: 1540, width: 55,
       surface: { type: 'gravel', color: 0x777267, clearance: 0.34, rollingDragScale: 1.48, brakeScale: 0.86, lateralGrip: 0.82, maxLongitudinalGrade: 0.075, maxCrossGrade: 0.055, maxRoughness: 2.8, maxEarthwork: 5.5, profileStationMeters: 18 },
       approach: { glideSlopeDegrees: 3.9, corridorLength: 1200, corridorWidthMultiplier: 5.8, departureLength: 760, maxAltitude: 380, touchdownZoneFraction: 0.30, papiDistance: 130 },
       operations: { shoulder: 8, overrun: 30, startInset: 46, landingDirections: [-1], takeoffDirections: [1], displacedThreshold: { '-1': 18, '1': 18 } },

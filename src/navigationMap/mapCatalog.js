@@ -9,10 +9,10 @@ const CURATED = Object.freeze([
   Object.freeze({
     id: 'operational-skyline-municipal',
     label: 'SKYLINE MUNICIPAL',
-    subtitle: 'Primary terrain-fitted operational runway',
+    subtitle: 'Operational runway on the Lake Country shelf',
     kind: 'airfield',
-    fallback: [-1750.000, -500.000],
-    sourceIds: ['skyline-municipal'],
+    fallback: [-6200, 800],
+    sourceIds: ['lake-country-airfield', 'skyline-municipal'],
   }),
   Object.freeze({
     id: 'operational-crown-ridge',
@@ -25,10 +25,10 @@ const CURATED = Object.freeze([
   Object.freeze({
     id: 'operational-east-meadow-relief',
     label: 'EAST MEADOW RELIEF FIELD',
-    subtitle: 'Emergency and relief landing field',
+    subtitle: 'Operational relief runway on the South Coast shelf',
     kind: 'airfield',
-    fallback: [-2000.000, -250.000],
-    sourceIds: ['east-meadow-relief'],
+    fallback: [4200, -5900],
+    sourceIds: ['south-coast-airfield', 'east-meadow-relief'],
   }),
   Object.freeze({
     id: 'skyline-city',
@@ -63,14 +63,6 @@ const CURATED = Object.freeze([
     sourceIds: ['aurora-lake', 'aurora-town', 'west-lake-country'],
   }),
   Object.freeze({
-    id: 'lake-country-airfield',
-    label: 'LAKE AIRFIELD',
-    subtitle: 'Long western runway',
-    kind: 'airfield',
-    fallback: [-6200, 800],
-    sourceIds: ['lake-country-airfield'],
-  }),
-  Object.freeze({
     id: 'ironworks',
     label: 'IRONWORKS',
     subtitle: 'Industrial plateau and reservoir',
@@ -85,14 +77,6 @@ const CURATED = Object.freeze([
     kind: 'canyon',
     fallback: [6600, -3500],
     sourceIds: ['red-canyon', 'southeast-red-canyon'],
-  }),
-  Object.freeze({
-    id: 'south-coast-airfield',
-    label: 'COAST AIRFIELD',
-    subtitle: 'Main asphalt runway by the sea',
-    kind: 'airfield',
-    fallback: [4200, -5900],
-    sourceIds: ['south-coast-airfield'],
   }),
   Object.freeze({
     id: 'harbour-town',
