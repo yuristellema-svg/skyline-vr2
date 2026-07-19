@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "center": [
+    -2350,
+    -3000
+  ],
+  "bounds": {
+    "min": [
+      -2810,
+      -3460
+    ],
+    "max": [
+      -1890,
+      -2540
+    ],
+    "elevationMeters": 40,
+    "featherMeters": 260
+  },
+  "samples": 576,
+  "terrain": {
+    "minHeight": 40,
+    "maxHeight": 40,
+    "maxErrorFromCityElevation": 0
+  },
+  "clearance": {
+    "riverMeters": 3693.2912151629744,
+    "lakeMeters": 4543.087512083443,
+    "canyonMeters": 6273.686047628127,
+    "nearestAirfieldOperationalClearanceMeters": 1470.4537877448645
+  },
+  "cityLandmarks": [
+    {
+      "id": "north-tower-thread",
+      "position": [
+        -2165,
+        -2695
+      ]
+    },
+    {
+      "id": "south-tower-thread",
+      "position": [
+        -2400,
+        -3290
+      ]
+    },
+    {
+      "id": "open-atrium",
+      "position": [
+        -2610,
+        -2810
+      ]
+    }
+  ],
+  "pass": true
+}

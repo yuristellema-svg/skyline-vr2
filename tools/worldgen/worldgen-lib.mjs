@@ -259,7 +259,7 @@ export function createAnalyticSampler(recipe) {
     height += eastStrength * east.heightMeters * (0.25 + ridges * 0.8);
 
     const plateau = cityInfluence(x, z);
-    height = lerp(height, city.elevationMeters, plateau * 0.96);
+    height = lerp(height, city.elevationMeters, plateau);
 
     distanceToPolyline(canyonLine, x, z, canyonOut);
     if (canyonOut[0] < canyon.outerWidthMeters) {

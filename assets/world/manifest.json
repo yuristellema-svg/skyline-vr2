@@ -1,8 +1,8 @@
 {
   "format": "skyline-world-manifest",
   "version": 3,
-  "contentHash": "f2d009d8a0eff1d93a83a9524985631d1f91ef836797a6335c551fe6eef3fcb3",
-  "recipeSha256": "a2f9e11821f18e15573bd08078e7d31d5aa4c9f48062585e3a8354f4da357828",
+  "contentHash": "27434b0db25072cd208a36babbd30959c29b485ad72c2179d3611116d5636886",
+  "recipeSha256": "70aefdedf9094b475198d1b5fde01cc64837bdbb1a677a58a15d588ca1479a97",
   "generator": {
     "name": "Skyline deterministic offline worldgen",
     "version": "3.0.0",
@@ -173,30 +173,30 @@
   },
   "features": {
     "url": "features.json",
-    "byteLength": 6026,
-    "sha256": "a1c56524a2d198d89c0c032faa9a230bd0c3f1eb911d8aa05d4d4d6c459e2888",
+    "byteLength": 5998,
+    "sha256": "7a6aa92d2292400445e758b5b7ef1490b6aa37270b4dd975cc80f4aa0d9c2ca7",
     "bridgeCount": 5,
     "landmarkCount": 8
   },
   "summary": {
-    "packBytes": 40326280,
-    "propCount": 199478,
+    "packBytes": 40274140,
+    "propCount": 195133,
     "propCounts": {
-      "pine": 42241,
-      "cedar": 21198,
-      "broadleaf": 20385,
-      "rock": 50967,
-      "scrub": 63943,
-      "post": 744
+      "pine": 39084,
+      "cedar": 20052,
+      "broadleaf": 20759,
+      "rock": 50752,
+      "scrub": 64171,
+      "post": 315
     },
     "propCountsByBiome": {
-      "meadow": 34043,
-      "conifer_forest": 67246,
+      "meadow": 36175,
+      "conifer_forest": 60841,
       "broadleaf_forest": 23994,
       "alpine_rock": 27572,
-      "ochre_canyon": 38125,
-      "riparian_wetland": 6668,
-      "urban": 1830,
+      "ochre_canyon": 38240,
+      "riparian_wetland": 7643,
+      "urban": 668,
       "water": 0
     }
   },
@@ -243,20 +243,20 @@
         "maxX": -2048,
         "maxZ": -3072
       },
-      "byteLength": 648472,
-      "sha256": "17d24eaf21b3dc641da3dac951cf7e5957399420ae2c779ee48cdcd7fe71e60b",
+      "byteLength": 624940,
+      "sha256": "ca62fd00ef10dd77c76bc70f0893e2aeccab9d4d9ae2b42d98ba8256cde6328d",
       "heightRangeMeters": [
-        25.8,
+        31.7,
         74
       ],
-      "propCount": 4648,
+      "propCount": 2687,
       "propCounts": {
-        "pine": 2346,
-        "cedar": 868,
-        "broadleaf": 24,
-        "rock": 424,
-        "scrub": 986,
-        "post": 0
+        "pine": 1211,
+        "cedar": 457,
+        "broadleaf": 69,
+        "rock": 242,
+        "scrub": 608,
+        "post": 100
       }
     },
     {
@@ -272,20 +272,20 @@
         "maxX": -1024,
         "maxZ": -3072
       },
-      "byteLength": 643408,
-      "sha256": "1f83581a7da7ca287da4dc3b9cf65931907272258e5eb0051fb4ac5d80e6cc3f",
+      "byteLength": 636760,
+      "sha256": "93fac9b8abe12139cda8d12557e29fc56058874c04811eaeed1eca6e33557d1c",
       "heightRangeMeters": [
-        43.1,
+        39.3,
         128.5
       ],
-      "propCount": 4226,
+      "propCount": 3672,
       "propCounts": {
-        "pine": 1924,
-        "cedar": 752,
-        "broadleaf": 59,
-        "rock": 410,
-        "scrub": 1081,
-        "post": 0
+        "pine": 1561,
+        "cedar": 614,
+        "broadleaf": 86,
+        "rock": 373,
+        "scrub": 989,
+        "post": 49
       }
     },
     {
@@ -475,20 +475,20 @@
         "maxX": -2048,
         "maxZ": -2048
       },
-      "byteLength": 652816,
-      "sha256": "062d2811fe9559b193db33adb8b8a038abf980362c3fdff607782d993a127066",
+      "byteLength": 622576,
+      "sha256": "f50351496dcaf6d5f48b7e73a8bbde237ed7bd17b107c4348734f406ed5fb9e9",
       "heightRangeMeters": [
-        27.2,
+        39.3,
         103.9
       ],
-      "propCount": 5010,
+      "propCount": 2490,
       "propCounts": {
-        "pine": 2569,
-        "cedar": 1016,
-        "broadleaf": 0,
-        "rock": 440,
-        "scrub": 985,
-        "post": 0
+        "pine": 1192,
+        "cedar": 454,
+        "broadleaf": 48,
+        "rock": 204,
+        "scrub": 489,
+        "post": 103
       }
     },
     {
@@ -504,20 +504,20 @@
         "maxX": -1024,
         "maxZ": -2048
       },
-      "byteLength": 652564,
-      "sha256": "35f4def598733b27b4893f792778943f874a1b2abe7bcdc730ed905c6245c1be",
+      "byteLength": 644140,
+      "sha256": "6869ed95348b38323675a3261087c5909dc796bb2a051f8e0e84eb24fb336d23",
       "heightRangeMeters": [
-        41.8,
+        39.3,
         106.9
       ],
-      "propCount": 4989,
+      "propCount": 4287,
       "propCounts": {
-        "pine": 2589,
-        "cedar": 1002,
-        "broadleaf": 0,
-        "rock": 465,
-        "scrub": 933,
-        "post": 0
+        "pine": 2136,
+        "cedar": 822,
+        "broadleaf": 29,
+        "rock": 411,
+        "scrub": 826,
+        "post": 63
       }
     },
     {
@@ -794,20 +794,20 @@
         "maxX": 1024,
         "maxZ": -1024
       },
-      "byteLength": 617068,
-      "sha256": "2b174d61cff7bf598dfac1fae2fe7bb477aed9d3abf40eab50df9d6fa28e1475",
+      "byteLength": 619276,
+      "sha256": "c21937c32da9e63e442f26a592621536f1e2e01d0a28c12eeacc17ff1908578d",
       "heightRangeMeters": [
-        32,
+        30.6,
         156.2
       ],
-      "propCount": 2031,
+      "propCount": 2215,
       "propCounts": {
-        "pine": 102,
-        "cedar": 0,
-        "broadleaf": 252,
-        "rock": 314,
-        "scrub": 1162,
-        "post": 201
+        "pine": 155,
+        "cedar": 3,
+        "broadleaf": 237,
+        "rock": 381,
+        "scrub": 1439,
+        "post": 0
       }
     },
     {
@@ -823,20 +823,20 @@
         "maxX": 2048,
         "maxZ": -1024
       },
-      "byteLength": 621412,
-      "sha256": "4769cda43ebdfd6607159cfbff08ea9766f229b44cd9e2a492f7c51bfc1be452",
+      "byteLength": 625408,
+      "sha256": "55cde66bfd9e70949def711a487509256d2501567ff88b6ffd446bc3d7a9bc68",
       "heightRangeMeters": [
         20.1,
         95.6
       ],
-      "propCount": 2393,
+      "propCount": 2726,
       "propCounts": {
-        "pine": 87,
-        "cedar": 189,
-        "broadleaf": 464,
-        "rock": 622,
-        "scrub": 974,
-        "post": 57
+        "pine": 102,
+        "cedar": 241,
+        "broadleaf": 605,
+        "rock": 645,
+        "scrub": 1133,
+        "post": 0
       }
     },
     {
@@ -1026,20 +1026,20 @@
         "maxX": 1024,
         "maxZ": 0
       },
-      "byteLength": 614044,
-      "sha256": "76f7c5dc3e1e1f67f633f0715de43c88c8393b1aaa0cabe99d3816b06b2a5112",
+      "byteLength": 620608,
+      "sha256": "c768c148b950f31dae2b12b3faded9b9af511524f897140e1d0901cc9a8d0f5f",
       "heightRangeMeters": [
-        26.3,
-        95.2
+        25.8,
+        111.1
       ],
-      "propCount": 1779,
+      "propCount": 2326,
       "propCounts": {
-        "pine": 49,
-        "cedar": 52,
-        "broadleaf": 392,
-        "rock": 244,
-        "scrub": 832,
-        "post": 210
+        "pine": 91,
+        "cedar": 120,
+        "broadleaf": 529,
+        "rock": 331,
+        "scrub": 1255,
+        "post": 0
       }
     },
     {
@@ -1055,20 +1055,20 @@
         "maxX": 2048,
         "maxZ": 0
       },
-      "byteLength": 620320,
-      "sha256": "a38a25e3b8fa1cde1b9809e34fedda717d4a3d50ade91b83b13d47f0786ab49e",
+      "byteLength": 624256,
+      "sha256": "6b055ca37c2bb13477f45283f409cc8fa25d70195bd8219fa2be93e2a0e7b4e9",
       "heightRangeMeters": [
-        25.9,
+        25.4,
         197.2
       ],
-      "propCount": 2302,
+      "propCount": 2630,
       "propCounts": {
-        "pine": 62,
-        "cedar": 133,
-        "broadleaf": 157,
-        "rock": 949,
-        "scrub": 725,
-        "post": 276
+        "pine": 123,
+        "cedar": 155,
+        "broadleaf": 119,
+        "rock": 1066,
+        "scrub": 1167,
+        "post": 0
       }
     },
     {

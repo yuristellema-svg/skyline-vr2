@@ -1,6 +1,6 @@
 {
-  "contentHash": "f2d009d8a0eff1d93a83a9524985631d1f91ef836797a6335c551fe6eef3fcb3",
-  "recipeSha256": "a2f9e11821f18e15573bd08078e7d31d5aa4c9f48062585e3a8354f4da357828",
+  "contentHash": "27434b0db25072cd208a36babbd30959c29b485ad72c2179d3611116d5636886",
+  "recipeSha256": "70aefdedf9094b475198d1b5fde01cc64837bdbb1a677a58a15d588ca1479a97",
   "world": {
     "sizeMeters": 8192,
     "bounds": {
@@ -21,31 +21,31 @@
     "packsTotal": 64
   },
   "summary": {
-    "packBytes": 40326280,
-    "propCount": 199478,
+    "packBytes": 40274140,
+    "propCount": 195133,
     "propCounts": {
-      "pine": 42241,
-      "cedar": 21198,
-      "broadleaf": 20385,
-      "rock": 50967,
-      "scrub": 63943,
-      "post": 744
+      "pine": 39084,
+      "cedar": 20052,
+      "broadleaf": 20759,
+      "rock": 50752,
+      "scrub": 64171,
+      "post": 315
     },
     "propCountsByBiome": {
-      "meadow": 34043,
-      "conifer_forest": 67246,
+      "meadow": 36175,
+      "conifer_forest": 60841,
       "broadleaf_forest": 23994,
       "alpine_rock": 27572,
-      "ochre_canyon": 38125,
-      "riparian_wetland": 6668,
-      "urban": 1830,
+      "ochre_canyon": 38240,
+      "riparian_wetland": 7643,
+      "urban": 668,
       "water": 0
     }
   },
   "files": {
-    "manifestBytes": 42360,
-    "featuresBytes": 6026,
-    "packBytes": 40326280,
-    "totalBytes": 40374666
+    "manifestBytes": 42367,
+    "featuresBytes": 5998,
+    "packBytes": 40274140,
+    "totalBytes": 40322505
   }
 }

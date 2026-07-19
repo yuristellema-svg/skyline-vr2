@@ -1,0 +1,21 @@
+{
+  "source": "exact base packed-terrain sampler before city shaping",
+  "center": [-2350, -3000],
+  "bounds": { "min": [-2810, -3460], "max": [-1890, -2540] },
+  "sampleSpacingMeters": 40,
+  "sampleCount": 576,
+  "naturalTerrainMeters": {
+    "minimum": 26.276333905775868,
+    "maximum": 62.08477749130791,
+    "range": 35.808443585532046,
+    "average": 40.11157070297123,
+    "maximumGradient": 0.2173763486588541,
+    "averageGradient": 0.0724609322640193
+  },
+  "centerClearanceMeters": {
+    "river": 3693.291215162975,
+    "lake": 4543.087512083443,
+    "canyon": 6273.686047628127
+  },
+  "selectedCityElevationMeters": 40
+}

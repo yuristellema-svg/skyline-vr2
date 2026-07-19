@@ -103,6 +103,7 @@ const recipe = JSON.parse(recipeBytes.toString('utf8'));
 validateRecipe(recipe);
 
 const sampler = createAnalyticSampler(recipe);
+const cityPlateau = recipe.city.plateau;
 const world = recipe.world;
 const worldMaxX = world.minX + world.sizeMeters;
 const worldMaxZ = world.minZ + world.sizeMeters;
@@ -264,6 +265,13 @@ for (let regionZ = 0; regionZ < packsPerSide; regionZ += 1) {
         for (let candidate = 0; candidate < recipe.props.candidatesPerChunk; candidate += 1) {
           const x = chunkMinX + (1.5 + random() * (world.chunkSizeMeters - 3));
           const z = chunkMinZ + (1.5 + random() * (world.chunkSizeMeters - 3));
+          const cityClearance = 18;
+          if (
+            x >= cityPlateau.min[0] - cityClearance &&
+            x <= cityPlateau.max[0] + cityClearance &&
+            z >= cityPlateau.min[1] - cityClearance &&
+            z <= cityPlateau.max[1] + cityClearance
+          ) continue;
           const height = sampleCoarse(x, z);
           const slope = slopeAt(x, z);
           const biomeByte = sampler.encodeBiomeAt(x, z, height, slope);

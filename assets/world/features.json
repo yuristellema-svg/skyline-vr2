@@ -105,33 +105,33 @@
     "id": "skyline-city",
     "plateau": {
       "min": [
-        420,
-        -1390
+        -2810,
+        -3460
       ],
       "max": [
-        1480,
-        -330
+        -1890,
+        -2540
       ],
-      "elevationMeters": 94,
-      "featherMeters": 145
+      "elevationMeters": 40,
+      "featherMeters": 260
     },
     "grid": {
-      "blockMinMeters": 60,
-      "blockMaxMeters": 90,
-      "streetMeters": 18,
+      "blockMinMeters": 58,
+      "blockMaxMeters": 86,
+      "streetMeters": 22,
       "towerPairPositions": [
         [
-          1020,
-          -480
+          -2165,
+          -2695
         ],
         [
-          650,
-          -1140
+          -2400,
+          -3290
         ]
       ],
       "openAtriumPosition": [
-        1130,
-        -720
+        -2610,
+        -2810
       ]
     }
   },
@@ -255,31 +255,31 @@
       "id": "north-tower-thread",
       "type": "tower_pair",
       "position": [
-        1020,
-        -480
+        -2165,
+        -2695
       ],
-      "headingDegrees": 35,
-      "y": 92.52027893066406
+      "headingDegrees": 24,
+      "y": 40
     },
     {
       "id": "south-tower-thread",
       "type": "tower_pair",
       "position": [
-        650,
-        -1140
+        -2400,
+        -3290
       ],
       "headingDegrees": -28,
-      "y": 94.70497131347656
+      "y": 40
     },
     {
       "id": "open-atrium",
       "type": "open_atrium",
       "position": [
-        1130,
-        -720
+        -2610,
+        -2810
       ],
       "headingDegrees": 0,
-      "y": 92.4326400756836
+      "y": 40
     },
     {
       "id": "red-canyon-arch",

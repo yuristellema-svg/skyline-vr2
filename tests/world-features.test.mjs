@@ -168,17 +168,20 @@ test('prop LOD is deterministic and the hard triangle budget cannot be exceeded'
   second.dispose();
 });
 
-test('city generation is deterministic with dense blocks and three protected flight corridors', () => {
+test('relocated city generation is deterministic, district-readable, and terrain-safe', () => {
   const first = createCityLayer(features);
   const second = createCityLayer(features);
-  assert.ok(first.blockCount >= 80, `only ${first.blockCount} city blocks`);
+  assert.ok(first.blockCount >= 60, `only ${first.blockCount} occupied city blocks`);
   assert.equal(first.blockCount, second.blockCount);
-  assert.equal(first.descriptors.length, second.descriptors.length);
   assert.deepEqual(first.descriptors, second.descriptors);
+  assert.deepEqual(first.roads, second.roads);
   assert.equal(first.threadCorridors.length, 3);
   assert.equal(first.threadCorridors.filter(item => item.id.includes('tower')).length, 2);
-  assert.ok(first.threadCorridors.every(item => item.width >= 46 && item.height >= 56));
-  assert.equal(first.group.children.length, 1, 'all city solids share one instanced draw call');
+  assert.ok(first.threadCorridors.every(item => item.width >= 48 && item.height >= 58));
+  assert.ok(first.roads.length >= 18, `only ${first.roads.length} road strips`);
+  assert.ok(first.parks.length >= 3, `only ${first.parks.length} parks/plazas`);
+  assert.deepEqual(new Set(Object.keys(first.districtCounts)), new Set(['downtown', 'civic', 'residential', 'industrial']));
+  assert.equal(first.drawCallCount, 2, `city uses ${first.drawCallCount} draw calls`);
   const collision = collisionProbe();
   assert.equal(first.registerCollisions(collision), first.descriptors.length);
   assert.equal(collision.boxes.length, first.descriptors.length);
