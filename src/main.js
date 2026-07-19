@@ -70,13 +70,11 @@ let sharedRenderPose = renderPose;
 const collision = new CollisionSystem();
 const world = createWorld(scene, collision);
 
-const worldManifest =
-  world.getWorldManifest?.() || {};
-
-const settlementManifest =
-  createWorldSettlementManifest(
-    worldManifest
-  );
+// SKYLINE_LIVE_CITY_GROUNDING_V3
+let worldManifest = {};
+let settlementManifest = null;
+let settlements = null;
+let localInfrastructure = null;
 
 collision.setHeightSampler(world.sampleHeight);
 
@@ -187,29 +185,11 @@ const livingAirspace =
       ),
   });
 
-const settlements =
-  createSettlementSystem({
-    scene,
-    manifest:
-      settlementManifest,
-    sampleHeight:
-      world.sampleHeight,
-    collision,
-    quality:
-      'high',
-    phoneMode:
-      false,
-  });
-
-const localInfrastructure =
-  createLocalInfrastructureSystem({
-    scene,
-    manifest:
-      settlementManifest,
-    sampleHeight:
-      world.sampleHeight,
-  });
-
+/*
+ * Settlements are created only after their complete western terrain region is
+ * preloaded. Building them here used NaN or stale height samples and produced
+ * the drowned city visible in the live screenshots.
+ */
 const outerDetail =
   createOuterDetailSystem({
     scene,
@@ -840,12 +820,126 @@ function updateFloatingOrigin(
   return true;
 }
 
+function settlementTerrainPreloadPosition(manifest) {
+  const points = [];
+
+  for (const settlement of manifest?.settlements ?? []) {
+    for (const point of settlement.footprint ?? []) {
+      if (
+        Array.isArray(point) &&
+        Number.isFinite(point[0]) &&
+        Number.isFinite(point[1])
+      ) {
+        points.push(point);
+      }
+    }
+  }
+
+  if (!points.length) {
+    return {
+      x: CONFIG.world.spawn[0],
+      y: CONFIG.world.spawn[1],
+      z: CONFIG.world.spawn[2],
+    };
+  }
+
+  const xs = points.map(point => point[0]);
+  const zs = points.map(point => point[1]);
+
+  return {
+    x: (Math.min(...xs) + Math.max(...xs)) * 0.5,
+    y: 0,
+    z: (Math.min(...zs) + Math.max(...zs)) * 0.5,
+  };
+}
+
+async function initializeGroundedSettlementWorld() {
+  if (settlements && localInfrastructure) {
+    return;
+  }
+
+  await world.ready;
+
+  worldManifest =
+    world.getWorldManifest?.() || {};
+
+  settlementManifest =
+    createWorldSettlementManifest(
+      worldManifest
+    );
+
+  navigationMap.setManifest(
+    worldManifest
+  );
+
+  const settlementFocus =
+    settlementTerrainPreloadPosition(
+      settlementManifest
+    );
+
+  /*
+   * The settlement planner, road renderer and collision catalog all sample
+   * terrain synchronously. Load the whole relocated settlement footprint first
+   * so every foundation uses the same packed terrain the player later sees.
+   */
+  await world.preloadSpawn(
+    settlementFocus
+  );
+
+  const sampledGround =
+    world.sampleHeight(
+      settlementFocus.x,
+      settlementFocus.z,
+    );
+
+  if (!Number.isFinite(sampledGround)) {
+    throw new Error(
+      'Relocated city terrain was not available after preload.'
+    );
+  }
+
+  const nextSettlements =
+    createSettlementSystem({
+      scene,
+      manifest:
+        settlementManifest,
+      sampleHeight:
+        world.sampleHeight,
+      collision,
+      quality:
+        'high',
+      phoneMode,
+    });
+
+  let nextInfrastructure = null;
+
+  try {
+    nextInfrastructure =
+      createLocalInfrastructureSystem({
+        scene,
+        manifest:
+          settlementManifest,
+        sampleHeight:
+          world.sampleHeight,
+      });
+  } catch (error) {
+    nextSettlements.dispose?.();
+    throw error;
+  }
+
+  settlements = nextSettlements;
+  localInfrastructure = nextInfrastructure;
+  settlements.setPhoneMode(phoneMode);
+}
+
 function ensureInitialWorld() {
   if (!initialWorldPromise) {
     initialWorldPromise =
-      world
-        .preloadSpawn(
-          CONFIG.world.spawn
+      initializeGroundedSettlementWorld()
+        .then(() =>
+          world.preloadSpawn(
+            CONFIG.world.spawn
+          )
         )
         .then(() => {
           worldFlightReady = true;
@@ -1060,7 +1154,7 @@ function startSession(phone) {
 
   nearWorld.setPhoneMode(phone);
   livingAirspace.setPhoneMode(phone);
-  settlements.setPhoneMode(phone);
+  settlements?.setPhoneMode(phone);
   outerDetail.setPhoneMode(phone);
   navigationMap.setPhoneMode(phone);
   powerControl.reset();
@@ -1788,7 +1882,7 @@ function frame(milliseconds) {
         flight,
         phase,
       );
-      settlements.fixedStepUpdate?.(
+      settlements?.fixedStepUpdate?.(
         CONFIG.physics.fixedStep
       );
 
@@ -2059,7 +2153,7 @@ function frame(milliseconds) {
     phase,
   );
 
-  settlements.update(
+  settlements?.update(
     frameDt,
     {
       camera:
@@ -2071,7 +2165,7 @@ function frame(milliseconds) {
     },
   );
 
-  localInfrastructure.update(
+  localInfrastructure?.update(
     frameDt,
     flight,
     stereo.camera,
@@ -2213,7 +2307,7 @@ window.skylineWorldCoreDiagnostics =
 
 window.skylineSettlementDiagnostics =
   () =>
-    settlements.getStatus();
+    settlements?.getStatus?.() || { enabled: false, initializing: true };
 
 window.skylineOuterDetailDiagnostics =
   () =>
@@ -2221,7 +2315,7 @@ window.skylineOuterDetailDiagnostics =
 
 window.skylineLocalInfrastructureDiagnostics =
   () =>
-    localInfrastructure.getStatus();
+    localInfrastructure?.getStatus?.() || { enabled: false, initializing: true };
 
 window.skylineNavigationMapDiagnostics =
   () =>

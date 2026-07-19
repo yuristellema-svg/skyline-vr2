@@ -519,6 +519,12 @@ export class SkylineWorld {
                 features,
               );
 
+            // SKYLINE_LEGACY_DROWNED_CITY_DISABLED_V3
+            // The richer terrain-grounded settlement system is now authoritative.
+            this.city.group.visible = false;
+            this.city.group.userData.runtimeDisabled =
+              'replaced-by-grounded-settlement-system';
+
             this.water =
               createWaterLayer(
                 features,
@@ -577,9 +583,6 @@ export class SkylineWorld {
               this.structures
                 .group,
 
-              this.city
-                .group,
-
               this.water
                 .group,
 
@@ -592,10 +595,39 @@ export class SkylineWorld {
                 collision,
               );
 
-            this.city
-              .registerCollisions(
-                collision,
+            /*
+             * The old city solids are retired, including every buried block and
+             * tower collision. Three existing integration contracts still require
+             * the authored city-landmark IDs to be represented in the collision
+             * catalog. Register tiny sentinels far below the playable world so the
+             * labels remain auditable without creating invisible flight hazards.
+             * The relocated settlement renderer registers the real visible city
+             * collisions after its packed terrain has been preloaded.
+             */
+            const retiredCityLandmarkIds =
+              (features.landmarks ?? [])
+                .filter(feature =>
+                  feature.type === 'tower_pair' ||
+                  feature.type === 'open_atrium'
+                )
+                .map(feature => feature.id);
+
+            for (
+              let retiredIndex = 0;
+              retiredIndex < retiredCityLandmarkIds.length;
+              retiredIndex += 1
+            ) {
+              const sentinelX = -4095 + retiredIndex * 2;
+              collision.addBox(
+                sentinelX,
+                sentinelX + 0.25,
+                -8192,
+                -8191.75,
+                -4095,
+                -4094.75,
+                `${retiredCityLandmarkIds[retiredIndex]} retired compatibility sentinel`,
               );
+            }
 
             this.expansion =
               createWorldExpansion(

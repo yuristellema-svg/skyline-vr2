@@ -1,3 +1,5 @@
+// SKYLINE_LIVE_CITY_GROUNDING_V3
+// Locked asset URLs are preserved; this service-worker source revision refreshes them.
 // SKYLINE_AIRFIELD_WORLD_CORE_REMAP_V3
 // SKYLINE_AIRFIELDS_LIVE_INTEGRATION_V2
 // SKYLINE_NAVIGATION_PIN_VISIBLE_V1

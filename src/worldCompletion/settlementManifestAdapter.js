@@ -2,6 +2,8 @@ import {
   SAMPLE_WORLD_MANIFEST,
 } from '../settlements/sampleCatalog.js';
 
+// SKYLINE_LIVE_CITY_GROUNDING_V3
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -66,11 +68,21 @@ function makeTransform(source) {
    * while spreading its towns, harbour, farms and industry across the new
    * south/east regions. The shape is preserved rather than randomly scattered.
    */
-  const scale = Math.min(1.55, 10600 / Math.max(width, depth));
+  /*
+   * Keep the complete authored settlement network inside the 8 km core. The
+   * previous 1.55 scale pushed the western farms beyond the heightfield when
+   * the city was moved west, and it exaggerated every terrain mismatch.
+   */
+  const scale = Math.min(1, 7600 / Math.max(width, depth));
   const sourceCenterX = (minX + maxX) * 0.5;
   const sourceCenterZ = (minZ + maxZ) * 0.5;
-  const targetCenterX = 2450;
-  const targetCenterZ = -2050;
+  /*
+   * Exact packed-terrain scan, July 2026. This western core site keeps every
+   * transformed settlement inside the authored world, away from the river
+   * trench and outside the active runway surfaces.
+   */
+  const targetCenterX = -2830;
+  const targetCenterZ = -1400;
 
   return point => [
     targetCenterX + (point[0] - sourceCenterX) * scale,
